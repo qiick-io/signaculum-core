@@ -20,6 +20,13 @@ Signaculum is the optional, open-source (MIT), self-hosted **OpenID Connect iden
 - Logout: RP-initiated (`end_session_endpoint`) and back-channel. No front-channel logout.
 - Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social logins.
 
+## Where the OIDC layer lives
+
+- `app/Oidc`: league/Passport extension points — `OidcAuthCodeGrant` (PKCE S256 and nonce rules), `OidcAuthCodeRepository` (stores `nonce` / `auth_time` with the code), `IdTokenResponse` (adds `id_token`). Wired in `AppServiceProvider::configureOpenIdConnect()`.
+- `app/Services`: `IdTokenService`, `OidcClaimsService` (claims shared by id_token and userinfo), `SigningKeyService` (active key, JWKS), `DiscoveryDocumentService`, `PendingAuthorizationService`.
+- `routes/oidc.php`: discovery, JWKS, userinfo (stateless `api` group). Passport registers `/oauth/authorize` and `/oauth/token`.
+- `config/oidc.php`: issuer, id_token TTL, PKCE/nonce strictness (relax only for the conformance suite), key overlap.
+
 ## Stack (Zero-Snowflake, aligned with `qiick-io/excubia-app`)
 
 - PHP 8.4, Laravel 13, official Laravel React starter kit: Inertia 3, React 19, TypeScript, Tailwind CSS v4, Fortify auth, Wayfinder.
@@ -65,7 +72,7 @@ This app follows the shared qiick app UI: https://github.com/qiick-io/app-ui. **
 
 ## Security
 
-- Signing keys are generated on the server and never committed.
+- Passport's access-token keys (`storage/oauth-*.key`, `php artisan passport:keys`) and the id_token signing keys (table `signing_keys`, private keys encrypted with `APP_KEY`, `php artisan signaculum:rotate-signing-key`) are generated on the server and never committed.
 - Redirect URIs match exactly (no prefix or wildcard matching).
 - No telemetry.
 

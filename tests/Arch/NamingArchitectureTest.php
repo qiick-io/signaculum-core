@@ -85,3 +85,8 @@ arch('policies end with Policy')
     ->expect('App\Policies')
     ->classes()
     ->toHaveSuffix('Policy');
+
+arch('listeners end with Listener')
+    ->expect('App\Listeners')
+    ->classes()
+    ->toHaveSuffix('Listener');
