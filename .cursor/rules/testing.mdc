@@ -1,0 +1,14 @@
+---
+description: Pest, Pint, PHPStan and frontend gates for Signaculum.
+globs: "**/*Test.php"
+alwaysApply: false
+---
+
+# Testing
+
+- Prefer behavior-focused Pest feature tests over assertions on private structure.
+- Every protocol rule (PKCE, `state`, `nonce`, redirect URI matching, token claims, signatures, logout) has a test that fails when the rule is removed.
+- Do not delete or weaken an existing test. Add coverage for a behavior change.
+- `tests/Arch/NamingArchitectureTest.php` stays green.
+- No real network: fake HTTP.
+- Quality gate before a pull request: `composer test`, then `npm run lint`, `npm run types` and `npm run build`.
