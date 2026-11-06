@@ -40,6 +40,17 @@ test('userinfo returns the claims of the granted scopes', function () {
         ]);
 });
 
+test('the locale claim follows the user language', function () {
+    $this->user->forceFill(['locale' => 'it'])->save();
+    $accessToken = accessTokenFor($this, 'openid profile');
+    app('auth')->forgetGuards();
+
+    $this->withToken($accessToken)
+        ->get('/oauth/userinfo')
+        ->assertOk()
+        ->assertJsonPath('locale', 'it');
+});
+
 test('userinfo also accepts POST', function () {
     $accessToken = accessTokenFor($this, 'openid');
     app('auth')->forgetGuards();

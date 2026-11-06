@@ -2,8 +2,10 @@
     "a11y": {
         "breadcrumb": "Brotkrümelnavigation",
         "close": "Schließen",
+        "mainNav": "Hauptnavigation",
         "moreActions": "Weitere Aktionen",
         "saving": "Wird gespeichert",
+        "skipToContent": "Zum Inhalt springen",
         "toggleSidebar": "Seitenleiste umschalten"
     },
     "ai": {
@@ -12,8 +14,12 @@
         "openFullPage": "Ganze Seite öffnen"
     },
     "common": {
+        "actions": "Aktionen",
         "cancel": "Abbrechen",
+        "confirmPassword": "Passwort bestätigen",
         "delete": "Löschen",
+        "emailAddress": "E-Mail-Adresse",
+        "name": "Name",
         "offline": "Offline",
         "online": "Online",
         "pageRange": "{{from}}–{{to}} von {{total}}",
@@ -36,6 +42,35 @@
             "moreTags": "{{count}} weitere Tags"
         }
     },
+    "home": {
+        "applications": {
+            "description": "Apps, bei denen Sie sich mit diesem Konto angemeldet haben.",
+            "manage": "Verbundene Apps verwalten",
+            "title": "Verbundene Apps"
+        },
+        "breadcrumb": "Startseite",
+        "head": "Startseite",
+        "stats": {
+            "applications": "Verbundene Apps",
+            "applicationsHeadline": "Apps, die Sie anmelden können",
+            "passkeys": "Passkeys",
+            "passkeysHeadline": "Ohne Passwort anmelden",
+            "sessions": "Angemeldete Browser",
+            "sessionsHeadline": "Sitzungen prüfen",
+            "twoFactor": "Zwei-Faktor-Authentifizierung",
+            "twoFactorEnable": "Jetzt aktivieren",
+            "twoFactorManage": "Sicherheit verwalten",
+            "twoFactorOff": "Aus",
+            "twoFactorOn": "An"
+        }
+    },
+    "nav": {
+        "documentation": "Dokumentation",
+        "home": "Startseite",
+        "platform": "Plattform",
+        "repository": "Repository",
+        "settings": "Einstellungen"
+    },
     "realtime": {
         "connected": "Realtime verbunden",
         "connecting": "Verbinde…",
@@ -47,6 +82,86 @@
             "dark": "Dunkel",
             "light": "Hell",
             "system": "System"
+        },
+        "connectedApplications": {
+            "breadcrumb": "Verbundene Apps",
+            "columns": {
+                "access": "Zugriff",
+                "application": "App",
+                "lastSignIn": "Letzte Anmeldung"
+            },
+            "confirm": {
+                "description": "Ihre Tokens funktionieren ab sofort nicht mehr. Bei der nächsten Anmeldung fragt die App erneut nach Ihrer Erlaubnis.",
+                "title": "Zugriff für {{name}} entfernen?"
+            },
+            "description": "Apps, denen Sie die Anmeldung erlaubt haben. Wenn Sie den Zugriff entfernen, fragt die App beim nächsten Mal erneut nach Ihrer Erlaubnis.",
+            "emptyDescription": "Apps erscheinen hier, sobald Sie sich mit diesem Konto bei ihnen anmelden.",
+            "emptyTitle": "Keine verbundenen Apps",
+            "head": "Verbundene Apps",
+            "removeAccess": "Zugriff entfernen",
+            "title": "Verbundene Apps"
+        },
+        "layout": {
+            "connectedApplications": "Verbundene Apps",
+            "description": "Profil und Kontoeinstellungen verwalten",
+            "navAria": "Einstellungen",
+            "profile": "Profil",
+            "reportBug": "Bug melden",
+            "sectionAccount": "Konto",
+            "security": "Sicherheit",
+            "sessions": "Sitzungen",
+            "title": "Einstellungen"
+        },
+        "profile": {
+            "breadcrumb": "Profileinstellungen",
+            "description": "Aktualisieren Sie Ihre Profildaten und E-Mail-Adresse",
+            "head": "Profileinstellungen",
+            "linkSent": "Ein neuer Bestätigungslink wurde an Ihre E-Mail-Adresse gesendet.",
+            "resend": "Hier klicken, um die Bestätigungs-E-Mail erneut zu senden.",
+            "title": "Profilinformationen",
+            "unverified": "Ihre E-Mail-Adresse ist nicht bestätigt."
+        },
+        "security": {
+            "addPasskey": "Passkey hinzufügen",
+            "breadcrumb": "Sicherheitseinstellungen",
+            "currentPassword": "Aktuelles Passwort",
+            "deletePasskey": "Löschen",
+            "head": "Sicherheitseinstellungen",
+            "newPassword": "Neues Passwort",
+            "passkeyCreated": "Hinzugefügt {{date}}",
+            "passkeyName": "Passkey-Name",
+            "passkeyNamePlaceholder": "z. B. MacBook Pro",
+            "passkeysDescription": "Melden Sie sich ohne Passwort mit einem Geräte-Passkey an. Ein Passkey zählt auch als zweiter Faktor.",
+            "passkeysEmpty": "Noch keine Passkeys registriert.",
+            "passkeysNeedHttps": "Passkeys benötigen HTTPS.",
+            "passkeysTitle": "Passkeys",
+            "passkeysUnsupported": "Passkeys werden in diesem Browser nicht unterstützt.",
+            "passwordDescription": "Verwenden Sie ein langes, zufälliges Passwort, um Ihr Konto zu schützen",
+            "passwordTitle": "Passwort aktualisieren",
+            "savePassword": "Passwort speichern"
+        },
+        "sessions": {
+            "breadcrumb": "Sitzungen",
+            "browserOnPlatform": "{{browser}} auf {{platform}}",
+            "columns": {
+                "browser": "Browser",
+                "ipAddress": "IP-Adresse",
+                "lastActive": "Zuletzt aktiv"
+            },
+            "confirm": {
+                "description": "Der Browser muss sich erneut anmelden, um Ihr Konto zu nutzen.",
+                "othersDescription": "Alle Browser außer diesem müssen sich erneut anmelden. Gespeicherte Anmeldungen funktionieren ebenfalls nicht mehr.",
+                "othersTitle": "Von allen anderen Browsern abmelden?",
+                "title": "Von diesem Browser abmelden?"
+            },
+            "description": "Browser, in denen Ihr Konto angemeldet ist. Melden Sie sich bei unbekannten ab.",
+            "emptyDescription": "Nur dieser Browser ist angemeldet.",
+            "emptyTitle": "Keine weiteren Sitzungen",
+            "head": "Sitzungen",
+            "signOut": "Abmelden",
+            "signOutOthers": "Von allen anderen Browsern abmelden",
+            "thisDevice": "Dieses Gerät",
+            "title": "Angemeldete Browser"
         }
     },
     "userMenu": {

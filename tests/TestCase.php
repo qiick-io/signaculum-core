@@ -17,6 +17,9 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        // Feature tests render the Blade shell; they must not depend on a Vite build.
+        $this->withoutVite();
+
         if (! file_exists(Passport::keyPath('oauth-private.key'))) {
             Artisan::call('passport:keys');
         }

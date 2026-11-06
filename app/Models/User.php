@@ -22,6 +22,7 @@ use Laravel\Passport\HasApiTokens;
  * @property string $subject OpenID Connect `sub`: opaque UUID, never reassigned
  * @property string $name
  * @property string $email
+ * @property string|null $locale UI language, also the OIDC `locale` claim
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret

@@ -2,8 +2,10 @@
     "a11y": {
         "breadcrumb": "Percorso di navigazione",
         "close": "Chiudi",
+        "mainNav": "Navigazione principale",
         "moreActions": "Altre azioni",
         "saving": "Salvataggio",
+        "skipToContent": "Vai al contenuto",
         "toggleSidebar": "Attiva/disattiva barra laterale"
     },
     "ai": {
@@ -12,8 +14,12 @@
         "openFullPage": "Apri a schermo intero"
     },
     "common": {
+        "actions": "Azioni",
         "cancel": "Annulla",
+        "confirmPassword": "Conferma password",
         "delete": "Elimina",
+        "emailAddress": "Indirizzo email",
+        "name": "Nome",
         "offline": "Offline",
         "online": "Online",
         "pageRange": "{{from}}–{{to}} di {{total}}",
@@ -36,6 +42,35 @@
             "moreTags": "{{count}} altri tag"
         }
     },
+    "home": {
+        "applications": {
+            "description": "App in cui hai effettuato l'accesso con questo account.",
+            "manage": "Gestisci le app collegate",
+            "title": "App collegate"
+        },
+        "breadcrumb": "Home",
+        "head": "Home",
+        "stats": {
+            "applications": "App collegate",
+            "applicationsHeadline": "App che possono farti accedere",
+            "passkeys": "Passkey",
+            "passkeysHeadline": "Accedi senza password",
+            "sessions": "Browser connessi",
+            "sessionsHeadline": "Controlla le sessioni",
+            "twoFactor": "Autenticazione a due fattori",
+            "twoFactorEnable": "Attivala",
+            "twoFactorManage": "Gestisci la sicurezza",
+            "twoFactorOff": "Disattivata",
+            "twoFactorOn": "Attiva"
+        }
+    },
+    "nav": {
+        "documentation": "Documentazione",
+        "home": "Home",
+        "platform": "Piattaforma",
+        "repository": "Repository",
+        "settings": "Impostazioni"
+    },
     "realtime": {
         "connected": "Realtime connesso",
         "connecting": "Connessione…",
@@ -47,6 +82,86 @@
             "dark": "Scuro",
             "light": "Chiaro",
             "system": "Sistema"
+        },
+        "connectedApplications": {
+            "breadcrumb": "App collegate",
+            "columns": {
+                "access": "Accesso",
+                "application": "App",
+                "lastSignIn": "Ultimo accesso"
+            },
+            "confirm": {
+                "description": "I suoi token smettono di funzionare subito. Al prossimo accesso ti chiederà di nuovo il permesso.",
+                "title": "Rimuovere l'accesso di {{name}}?"
+            },
+            "description": "App a cui hai permesso di farti accedere. Se rimuovi l'accesso, la prossima volta l'app ti chiederà di nuovo il permesso.",
+            "emptyDescription": "Le app compaiono qui dopo che vi accedi con questo account.",
+            "emptyTitle": "Nessuna app collegata",
+            "head": "App collegate",
+            "removeAccess": "Rimuovi accesso",
+            "title": "App collegate"
+        },
+        "layout": {
+            "connectedApplications": "App collegate",
+            "description": "Gestisci il profilo e le impostazioni dell'account",
+            "navAria": "Impostazioni",
+            "profile": "Profilo",
+            "reportBug": "Segnala un Bug",
+            "sectionAccount": "Account",
+            "security": "Sicurezza",
+            "sessions": "Sessioni",
+            "title": "Impostazioni"
+        },
+        "profile": {
+            "breadcrumb": "Impostazioni profilo",
+            "description": "Aggiorna i dettagli del profilo e l'indirizzo email",
+            "head": "Impostazioni profilo",
+            "linkSent": "Un nuovo link di verifica è stato inviato al tuo indirizzo email.",
+            "resend": "Clicca qui per reinviare l'email di verifica.",
+            "title": "Informazioni profilo",
+            "unverified": "Il tuo indirizzo email non è verificato."
+        },
+        "security": {
+            "addPasskey": "Aggiungi passkey",
+            "breadcrumb": "Impostazioni sicurezza",
+            "currentPassword": "Password attuale",
+            "deletePasskey": "Elimina",
+            "head": "Impostazioni sicurezza",
+            "newPassword": "Nuova password",
+            "passkeyCreated": "Aggiunta {{date}}",
+            "passkeyName": "Nome passkey",
+            "passkeyNamePlaceholder": "es. MacBook Pro",
+            "passkeysDescription": "Accedi senza password con una passkey del dispositivo. Una passkey vale anche come secondo fattore.",
+            "passkeysEmpty": "Nessuna passkey registrata.",
+            "passkeysNeedHttps": "Le passkey richiedono HTTPS.",
+            "passkeysTitle": "Passkey",
+            "passkeysUnsupported": "Le passkey non sono supportate in questo browser.",
+            "passwordDescription": "Usa una password lunga e casuale per mantenere l'account al sicuro",
+            "passwordTitle": "Aggiorna password",
+            "savePassword": "Salva password"
+        },
+        "sessions": {
+            "breadcrumb": "Sessioni",
+            "browserOnPlatform": "{{browser}} su {{platform}}",
+            "columns": {
+                "browser": "Browser",
+                "ipAddress": "Indirizzo IP",
+                "lastActive": "Ultima attività"
+            },
+            "confirm": {
+                "description": "Il browser dovrà accedere di nuovo per usare il tuo account.",
+                "othersDescription": "Tutti i browser tranne questo dovranno accedere di nuovo. Anche gli accessi ricordati smettono di funzionare.",
+                "othersTitle": "Uscire da tutti gli altri browser?",
+                "title": "Uscire da questo browser?"
+            },
+            "description": "I browser in cui il tuo account è connesso. Esci da quelli che non riconosci.",
+            "emptyDescription": "È connesso solo questo browser.",
+            "emptyTitle": "Nessuna altra sessione",
+            "head": "Sessioni",
+            "signOut": "Esci",
+            "signOutOthers": "Esci da tutti gli altri browser",
+            "thisDevice": "Questo dispositivo",
+            "title": "Browser connessi"
         }
     },
     "userMenu": {
