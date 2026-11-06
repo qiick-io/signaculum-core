@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Date;
 beforeEach(function () {
     config(['oidc.issuer' => 'https://id.example.test']);
 
-    $this->user = User::factory()->create(['name' => 'Ada Lovelace', 'email' => 'ada@example.test']);
+    $this->user = User::factory()->create(['first_name' => 'Ada', 'last_name' => 'Lovelace', 'email' => 'ada@example.test']);
     $this->client = createOidcClient();
     $this->pkce = pkcePair();
 });
@@ -60,6 +60,8 @@ test('profile and email claims follow the granted scopes', function () {
     $claims = verifiedIdToken(redeemCode($this->client, $code, $this->pkce['verifier'])->json('id_token'))->claims();
 
     expect($claims->get('name'))->toBe('Ada Lovelace')
+        ->and($claims->get('given_name'))->toBe('Ada')
+        ->and($claims->get('family_name'))->toBe('Lovelace')
         ->and($claims->get('email'))->toBe('ada@example.test')
         ->and($claims->get('email_verified'))->toBeTrue();
 

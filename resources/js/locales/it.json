@@ -19,6 +19,8 @@
         "confirmPassword": "Conferma password",
         "delete": "Elimina",
         "emailAddress": "Indirizzo email",
+        "firstName": "Nome",
+        "lastName": "Cognome",
         "name": "Nome",
         "offline": "Offline",
         "online": "Online",

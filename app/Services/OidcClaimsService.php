@@ -20,7 +20,7 @@ final class OidcClaimsService
      *
      * @var list<string>
      */
-    public const array SUPPORTED_USER_CLAIMS = ['sub', 'name', 'locale', 'updated_at', 'email', 'email_verified'];
+    public const array SUPPORTED_USER_CLAIMS = ['sub', 'name', 'given_name', 'family_name', 'locale', 'updated_at', 'email', 'email_verified'];
 
     /**
      * @param  list<string>  $scopes
@@ -32,6 +32,11 @@ final class OidcClaimsService
 
         if (in_array(OidcScopeEnum::Profile->value, $scopes, true)) {
             $claims['name'] = $user->name;
+            $claims['given_name'] = $user->first_name;
+
+            if ($user->last_name !== null && $user->last_name !== '') {
+                $claims['family_name'] = $user->last_name;
+            }
 
             if ($user->locale !== null) {
                 $claims['locale'] = str_replace('_', '-', $user->locale);

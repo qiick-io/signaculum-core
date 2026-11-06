@@ -27,21 +27,31 @@ export default function Register({ passwordRules }: Props) {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="first_name">First name</Label>
                                 <Input
-                                    id="name"
+                                    id="first_name"
                                     type="text"
                                     required
                                     autoFocus
                                     tabIndex={1}
-                                    autoComplete="name"
-                                    name="name"
-                                    placeholder="Full name"
+                                    autoComplete="given-name"
+                                    name="first_name"
+                                    placeholder="First name"
                                 />
-                                <InputError
-                                    message={errors.name}
-                                    className="mt-2"
+                                <InputError message={errors.first_name} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="last_name">Last name</Label>
+                                <Input
+                                    id="last_name"
+                                    type="text"
+                                    tabIndex={1}
+                                    autoComplete="family-name"
+                                    name="last_name"
+                                    placeholder="Last name"
                                 />
+                                <InputError message={errors.last_name} />
                             </div>
 
                             <div className="grid gap-2">

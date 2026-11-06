@@ -19,6 +19,8 @@
         "confirmPassword": "Passwort bestätigen",
         "delete": "Löschen",
         "emailAddress": "E-Mail-Adresse",
+        "firstName": "Vorname",
+        "lastName": "Nachname",
         "name": "Name",
         "offline": "Offline",
         "online": "Online",

@@ -20,7 +20,9 @@ use Laravel\Passport\HasApiTokens;
 /**
  * @property int $id
  * @property string $subject OpenID Connect `sub`: opaque UUID, never reassigned
- * @property string $name
+ * @property string $first_name
+ * @property string|null $last_name
+ * @property-read string $name first and last name
  * @property string $email
  * @property string|null $locale UI language, also the OIDC `locale` claim
  * @property Carbon|null $email_verified_at
@@ -32,12 +34,27 @@ use Laravel\Passport\HasApiTokens;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['first_name', 'last_name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, OAuthenticatable, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasUuids, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+
+    /**
+     * The full name travels with the user to the pages (avatar, menus).
+     *
+     * @var list<string>
+     */
+    protected $appends = ['name'];
+
+    /**
+     * Full display name from first and last name, as in externa-core (OIDC `name`).
+     */
+    public function getNameAttribute(): string
+    {
+        return trim("{$this->first_name} {$this->last_name}");
+    }
 
     /**
      * Only `subject` is a generated UUID; the primary key stays an auto-increment id.
