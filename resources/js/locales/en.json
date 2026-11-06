@@ -81,9 +81,46 @@
     },
     "settings": {
         "appearance": {
+            "brandContrastWarning": "This brand colour does not meet WCAG AA contrast (4.5:1 text / 3:1 UI). Try a darker or lighter shade.",
+            "brandingDescription": "Brand colour used in the app chrome and on login",
+            "brandingTitle": "Branding",
+            "breadcrumb": "Appearance settings",
+            "changeFile": "Change file",
+            "chooseFile": "Choose file",
+            "clearCustomColor": "Clear custom colour",
+            "clearFile": "Clear",
+            "customColorDescription": "Optional override for primary. Leave empty to use the selected preset.",
+            "customColorTitle": "Custom brand colour",
             "dark": "Dark",
+            "defaultAppearance": "Default appearance",
+            "defaultThemeDescription": "Used when a user has not chosen a personal light/dark preference",
+            "defaultThemeTitle": "Default theme",
+            "description": "Branding, theme and the default light or dark mode",
+            "head": "Appearance settings",
             "light": "Light",
-            "system": "System"
+            "noFile": "No file selected",
+            "presetPreviewDark": "Dark",
+            "presetPreviewLight": "Light",
+            "projectColor": "Brand colour",
+            "projectColorDark": "Brand colour (dark)",
+            "projectLogo": "Logo",
+            "projectLogoDark": "Logo (dark)",
+            "publicFavicon": "Favicon",
+            "sidebar": {
+                "breadcrumb": "Sidebar settings",
+                "head": "Sidebar settings"
+            },
+            "system": "System",
+            "themePresetBlue": "Blue",
+            "themePresetDescription": "Pick a built-in palette. A custom brand colour still overrides primary.",
+            "themePresetIndigo": "Indigo",
+            "themePresetRose": "Rose",
+            "themePresetSignaculum": "Signaculum (default)",
+            "themePresetSlate": "Slate",
+            "themePresetTeal": "Teal",
+            "themePresetTitle": "Theme preset",
+            "themePresetViolet": "Violet",
+            "title": "Appearance settings"
         },
         "connectedApplications": {
             "breadcrumb": "Connected apps",
@@ -103,13 +140,61 @@
             "removeAccess": "Remove access",
             "title": "Connected apps"
         },
+        "instance": {
+            "breadcrumb": "Instance settings",
+            "defaultLanguage": "Default language",
+            "description": "Description",
+            "generalDescription": "Name, description and support link of this Signaculum",
+            "generalTitle": "General",
+            "head": "Instance settings",
+            "localization": {
+                "breadcrumb": "Localization settings",
+                "description": "Default language for people without a personal choice, the login page included",
+                "head": "Localization settings",
+                "title": "Default language"
+            },
+            "loginMaxAttempts": "Max login attempts per minute",
+            "name": "Name",
+            "passwordPolicies": {
+                "medium": {
+                    "description": "Minimum 8 characters, with mixed case letters and at least one number.",
+                    "label": "Medium"
+                },
+                "strong": {
+                    "description": "Minimum 12 characters, mixed case, letters, numbers, symbols, and not found in known data breaches.",
+                    "label": "Strong"
+                },
+                "weak": {
+                    "description": "Minimum 6 characters. No mixed case, numbers, or symbols required.",
+                    "label": "Weak"
+                }
+            },
+            "passwordPolicy": "Password security",
+            "reportBugUrl": "Report bug URL",
+            "reportBugUrlHint": "Leave empty to use the Signaculum issue tracker.",
+            "reportingDescription": "Where \"Report a bug\" in the settings nav points",
+            "reportingTitle": "Bug reports",
+            "securityDescription": "Password strength, login limits, and two-factor policy",
+            "securityNav": {
+                "breadcrumb": "Authentication & security",
+                "head": "Authentication & security"
+            },
+            "securityTitle": "Security",
+            "twoFactorRequired": "Require two-factor authentication for all users",
+            "twoFactorRequiredHint": "When enabled, users must enable TOTP 2FA or register a passkey on the Security page before using the app."
+        },
         "layout": {
+            "appearance": "Appearance",
+            "authSecurity": "Authentication & Security",
             "connectedApplications": "Connected apps",
             "description": "Manage your profile and account settings",
+            "general": "General",
+            "localization": "Localization",
             "navAria": "Settings",
             "profile": "Profile",
             "reportBug": "Report a Bug",
             "sectionAccount": "Account",
+            "sectionInstance": "Instance",
             "security": "Security",
             "sessions": "Sessions",
             "title": "Settings"

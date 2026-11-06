@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Setting;
+use App\Services\SettingsRepositoryService;
+use App\Services\ThemePresetService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,13 +38,28 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $settings = app(SettingsRepositoryService::class);
+
         return [
             ...parent::share($request),
-            'name' => config('app.name'),
+            'name' => $settings->appName(),
             'locale' => app()->getLocale(),
             'availableLocales' => config('i18n.available_locales'),
+            'instanceSettings' => ['reportBugUrl' => $settings->reportBugUrl()],
+            // The saved theme, so the Appearance live preview can restore it when leaving the page.
+            'projectAppearance' => function (): array {
+                $theme = app(ThemePresetService::class)->current();
+
+                return [
+                    'themePreset' => $theme['themePreset'],
+                    ...app(SettingsRepositoryService::class)->brandingUrls(),
+                    'themeCss' => array_intersect_key($theme, array_flip(['light', 'dark', 'brandPrimary', 'brandPrimaryDark', 'brandPrimaryForeground', 'brandPrimaryDarkForeground'])),
+                ];
+            },
             'auth' => [
                 'user' => $request->user(),
+                // Only hides UI: the server still checks every request (SettingPolicy).
+                'canManageSettings' => (bool) $request->user()?->can('update', Setting::class),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

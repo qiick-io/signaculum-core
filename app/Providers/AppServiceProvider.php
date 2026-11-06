@@ -8,6 +8,7 @@ use App\Oidc\IdTokenResponse;
 use App\Oidc\OidcAuthCodeGrant;
 use App\Oidc\OidcAuthCodeRepository;
 use App\Services\PendingAuthorizationService;
+use App\Services\SettingsRepositoryService;
 use Carbon\CarbonImmutable;
 use DateInterval;
 use Illuminate\Auth\Events\Login;
@@ -35,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
         Passport::$deviceCodeGrantEnabled = false;
 
         $this->app->bind(AuthCodeRepository::class, OidcAuthCodeRepository::class);
+        $this->app->singleton(SettingsRepositoryService::class);
     }
 
     /**
@@ -57,15 +59,8 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+        // Settings → Authentication & security; `strong` in production until an admin saves.
+        Password::defaults(fn (): Password => app(SettingsRepositoryService::class)->passwordRule());
     }
 
     /**

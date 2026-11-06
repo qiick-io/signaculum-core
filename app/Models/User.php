@@ -26,6 +26,7 @@ use Laravel\Passport\HasApiTokens;
  * @property string $email
  * @property string|null $locale UI language, also the OIDC `locale` claim
  * @property Carbon|null $email_verified_at
+ * @property bool $is_instance_admin may edit instance settings (SettingPolicy)
  * @property string $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -75,6 +76,7 @@ class User extends Authenticatable implements MustVerifyEmail, OAuthenticatable,
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_instance_admin' => 'boolean',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];

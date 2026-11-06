@@ -18,6 +18,8 @@ export type User = {
 /** Shared auth context: the signed-in user, if any. */
 export type Auth = {
     user: User | null;
+    /** Instance admin: shows the Instance settings group (the server checks too). */
+    canManageSettings: boolean;
 };
 
 /** Passkey registered by the current user (Laravel passkeys). */
