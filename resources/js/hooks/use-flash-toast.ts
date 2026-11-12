@@ -1,17 +1,16 @@
 import { router } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from '@/lib/toast';
-import type { FlashToast } from '@/types';
+import type { FlashToast } from '@/types/ui';
 
 /**
- * Surfaces the server's `Inertia::flash('toast', ...)` as a toast after Inertia visits.
+ * Surfaces Inertia `flash.toast` payloads through the shared `@/lib/toast` channels.
  */
-export function FlashToasts() {
+export function useFlashToast(): void {
     useEffect(() => {
         return router.on('flash', (event) => {
-            const data = (event as CustomEvent).detail?.flash?.toast as
-                | FlashToast
-                | undefined;
+            const flash = (event as CustomEvent).detail?.flash;
+            const data = flash?.toast as FlashToast | undefined;
 
             if (!data) {
                 return;
@@ -20,6 +19,4 @@ export function FlashToasts() {
             toast[data.type](data.message);
         });
     }, []);
-
-    return null;
 }

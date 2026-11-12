@@ -15,6 +15,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useScrollRegion } from '@/hooks/use-scroll-region';
 import { LIST_PER_PAGE_OPTIONS, listUrlWithPerPage } from '@/lib/list-per-page';
 import { cn } from '@/lib/utils';
 
@@ -89,6 +90,8 @@ export function PageLayout({
  * The panel is the scroll container: the Table wrapper's own overflow is
  * released so the header row sticks to the top of the panel while rows scroll
  * (the bottom rule is an inset shadow because collapsed borders scroll away).
+ * While it scrolls it is a named, focusable region and fades out on the side
+ * that hides columns (`useScrollRegion`, the scroll cue in docs/list-page.md).
  *
  * @param {{ children: ReactNode, className?: string, footer?: ReactNode }} props - Panel props.
  * @param {ReactNode} props.children - Table or list content.
@@ -105,6 +108,11 @@ export function TablePanel({
     className?: string;
     footer?: ReactNode;
 }) {
+    const { t } = useTranslation();
+    const scrollRegionRef = useScrollRegion<HTMLDivElement>(
+        t('a11y.scrollableTable'),
+    );
+
     return (
         <div
             className={cn(
@@ -113,8 +121,9 @@ export function TablePanel({
             )}
         >
             <div
+                ref={scrollRegionRef}
                 data-slot="table-panel-scroll"
-                className="min-h-0 flex-1 overflow-auto [&_[data-slot=table-container]]:overflow-visible [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead]:bg-background [&_thead_th]:shadow-[inset_0_-1px_0_var(--color-border)] [&_thead_tr]:border-b-0"
+                className="min-h-0 flex-1 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset [&_[data-slot=table-container]]:overflow-visible [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead]:bg-background [&_thead_th]:shadow-[inset_0_-1px_0_var(--color-border)] [&_thead_tr]:border-b-0"
             >
                 {children}
             </div>
