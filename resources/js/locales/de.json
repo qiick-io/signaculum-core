@@ -4,7 +4,13 @@
         "close": "Schließen",
         "moreActions": "Weitere Aktionen",
         "saving": "Wird gespeichert",
-        "toggleSidebar": "Seitenleiste umschalten"
+        "toggleSidebar": "Seitenleiste umschalten",
+        "loading": "Wird geladen",
+        "notifications": "Benachrichtigungen",
+        "notificationsUnread": "Benachrichtigungen, {{count}} ungelesen",
+        "scrollableTable": "Scrollbare Tabelle",
+        "search": "Suchen",
+        "unreadCount": "{{count}} ungelesen"
     },
     "ai": {
         "fabDescription": "Schnelle Assistenten-Schublade. Öffnen Sie die Vollseite für den Verlauf.",

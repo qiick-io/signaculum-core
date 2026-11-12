@@ -4,7 +4,13 @@
         "close": "Chiudi",
         "moreActions": "Altre azioni",
         "saving": "Salvataggio",
-        "toggleSidebar": "Attiva/disattiva barra laterale"
+        "toggleSidebar": "Attiva/disattiva barra laterale",
+        "loading": "Caricamento",
+        "notifications": "Notifiche",
+        "notificationsUnread": "Notifiche, {{count}} non lette",
+        "scrollableTable": "Tabella scorrevole",
+        "search": "Cerca",
+        "unreadCount": "{{count}} non lette"
     },
     "ai": {
         "fabDescription": "Drawer rapido dell'assistente. Apri la pagina completa per la cronologia.",

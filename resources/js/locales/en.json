@@ -4,7 +4,13 @@
         "close": "Close",
         "moreActions": "More actions",
         "saving": "Saving",
-        "toggleSidebar": "Toggle sidebar"
+        "toggleSidebar": "Toggle sidebar",
+        "loading": "Loading",
+        "notifications": "Notifications",
+        "notificationsUnread": "Notifications, {{count}} unread",
+        "scrollableTable": "Scrollable table",
+        "search": "Search",
+        "unreadCount": "{{count}} unread"
     },
     "ai": {
         "fabDescription": "Quick assistant drawer. Open the full page for history.",
