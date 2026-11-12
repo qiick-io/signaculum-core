@@ -50,7 +50,3 @@ jobs:
       - name: Hard-coded UI strings (ratchet)
         run: npm run lint:i18n
 
-  app-ui-drift:
-    uses: qiick-io/app-ui/.github/workflows/drift-check.yml@develop
-    with:
-      standards: true

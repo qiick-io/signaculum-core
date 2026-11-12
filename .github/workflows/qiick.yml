@@ -1,0 +1,33 @@
+# qiick checks, from qiick-io/app-ui at the pinned release (docs/new-product.md).
+# Bump the ref together with "ref" in qiick-standards.json and the @qiick URL in components.json.
+# distribution-smoke waits for signaculum:install / signaculum:upgrade (S8).
+name: qiick
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-title:
+    if: github.event_name == 'pull_request'
+    uses: qiick-io/app-ui/.github/workflows/pr-title.yml@develop
+
+  app-ui-drift:
+    uses: qiick-io/app-ui/.github/workflows/drift-check.yml@develop
+    with:
+      standards: true
+
+  php-quality:
+    uses: qiick-io/app-ui/.github/workflows/php-quality.yml@develop
+
+  ui-quality:
+    uses: qiick-io/app-ui/.github/workflows/ui-quality.yml@develop
+
+  migrations-frozen:
+    uses: qiick-io/app-ui/.github/workflows/migrations-frozen.yml@develop
