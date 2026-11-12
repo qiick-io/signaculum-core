@@ -1,5 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react';
-import { Toaster } from '@/components/ui/sonner';
+import { AppToaster } from '@/components/app-toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 import { initI18n } from '@/lib/i18n';
@@ -30,7 +30,7 @@ void createInertiaApp({
         return (
             <TooltipProvider delayDuration={0}>
                 {app}
-                <Toaster />
+                <AppToaster />
             </TooltipProvider>
         );
     },
