@@ -1,9 +1,12 @@
 {
     "$schema": "https://unpkg.com/knip@6/schema.json",
-    "entry": ["resources/js/pages/**/*.tsx"],
-    "project": ["resources/js/**/*.{ts,tsx}"],
+    "entry": [
+        "resources/js/pages/**/*.tsx"
+    ],
+    "project": [
+        "resources/js/**/*.{ts,tsx}"
+    ],
     "ignore": [
-        "resources/js/components/ui/**",
         "resources/js/components/admin/actions-overflow.tsx",
         "resources/js/components/admin/data-table-toolbar.tsx",
         "resources/js/components/admin/header-icon-button.tsx",
@@ -15,10 +18,12 @@
         "resources/js/components/layout/page-layout.tsx",
         "resources/js/components/settings-form-actions.tsx",
         "resources/js/components/stat-card.tsx",
+        "resources/js/components/ui/**",
         "resources/js/components/user-menu-content.tsx",
         "resources/js/hooks/use-mobile.tsx",
         "resources/js/hooks/use-scroll-region.ts",
         "resources/js/lib/avatar-tone.ts",
+        "resources/js/lib/clipboard.ts",
         "resources/js/lib/list-per-page.ts",
         "resources/js/lib/live-announcer.ts",
         "resources/js/lib/scroll-cue.ts",
@@ -50,5 +55,7 @@
         "radix-ui",
         "vaul"
     ],
-    "ignoreBinaries": ["oxlint"]
+    "ignoreBinaries": [
+        "oxlint"
+    ]
 }
