@@ -14,6 +14,14 @@ declare(strict_types=1);
  *   rules (`Http\Middleware`, `Actions`, `Services`, …), or `strict types`, `env`, `Data`,
  *   `Enums`, `Contracts`, `traits`.
  * - `suffixes`: extra sub-namespace => suffix pairs for roles of this repo (`Parsers` => `Parser`).
+ *
+ * OpenID Connect Passport extension points live under `App\Oidc` (not a single shared suffix):
+ * - `OidcAuthCodeGrant` (`*Grant`): replaces Passport's authorization_code grant (PKCE S256, nonce).
+ * - `OidcAuthCodeRepository` (`*Repository`): persists `nonce` / `auth_time` with the auth code.
+ * - `IdTokenResponse` (`*Response`): adds the RS256 `id_token` to the token response.
+ * They keep those role nouns because they extend league/Passport / oauth2-server types; the
+ * shared suffix table does not cover `App\Oidc`, and renaming them would break the wiring in
+ * `AppServiceProvider::configureOpenIdConnect()`.
  */
 return [
     'namespace' => 'App',
