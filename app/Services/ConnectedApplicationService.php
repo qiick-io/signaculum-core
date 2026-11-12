@@ -29,9 +29,13 @@ final class ConnectedApplicationService
 
         return array_values($liveTokens
             ->groupBy('client_id')
-            ->map(function ($clientTokens): ConnectedApplicationData {
+            ->map(function ($clientTokens): ?ConnectedApplicationData {
                 /** @var Collection<int, Token> $clientTokens */
                 $firstToken = $clientTokens->first();
+
+                if ($firstToken === null) {
+                    return null;
+                }
 
                 return new ConnectedApplicationData(
                     clientId: (string) $firstToken->client_id,
@@ -41,6 +45,7 @@ final class ConnectedApplicationService
                     lastAuthorizedAt: (int) $clientTokens->max(fn (Token $token): int => (int) $token->created_at?->getTimestamp()),
                 );
             })
+            ->filter()
             ->sortByDesc(fn (ConnectedApplicationData $application): int => $application->lastAuthorizedAt)
             ->all());
     }

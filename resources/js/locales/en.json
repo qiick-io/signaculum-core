@@ -185,5 +185,15 @@
             "permissionsLabel": "Requested permissions",
             "approve": "Authorize"
         }
+    },
+    "errorBoundary": {
+        "title": "Something went wrong",
+        "description": "The interface hit an unexpected error. You can try reloading the page.",
+        "tryAgain": "Try again",
+        "reload": "Reload page"
+    },
+    "auth": {
+        "firstName": "First name",
+        "lastName": "Last name"
     }
 }

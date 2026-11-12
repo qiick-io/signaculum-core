@@ -29,8 +29,14 @@ final class SetLocaleMiddleware
     private function resolve(Request $request): string
     {
         $availableLocales = array_keys((array) config('i18n.available_locales'));
+        $authenticatedUser = $request->user();
+        // Read from the attributes array: a freshly factory-made User may not have
+        // `locale` loaded yet, and Model::shouldBeStrict() would throw on `->locale`.
+        $userLocale = is_object($authenticatedUser)
+            ? ($authenticatedUser->getAttributes()['locale'] ?? null)
+            : null;
 
-        foreach ([$request->user()?->locale, $request->cookie('locale')] as $candidateLocale) {
+        foreach ([$userLocale, $request->cookie('locale')] as $candidateLocale) {
             if (is_string($candidateLocale) && in_array($candidateLocale, $availableLocales, true)) {
                 return $candidateLocale;
             }

@@ -14,11 +14,20 @@
         "resources/js/components/layout/page-layout.tsx",
         "resources/js/components/settings-form-actions.tsx",
         "resources/js/components/user-menu-content.tsx",
-        "resources/js/lib/list-per-page.ts"
+        "resources/js/lib/list-per-page.ts",
+        "resources/js/lib/clipboard.ts",
+        "resources/js/lib/live-announcer.ts",
+        "resources/js/lib/toast.ts",
+        "resources/js/components/stat-card.tsx",
+        "resources/js/hooks/use-appearance.tsx",
+        "resources/js/hooks/use-accessibility-preferences.tsx",
+        "resources/js/hooks/use-current-url.ts",
+        "resources/js/types/auth.ts"
     ],
     "ignoreDependencies": [
         "@inertiajs/core",
         "@radix-ui/react-alert-dialog",
+        "@radix-ui/react-avatar",
         "@radix-ui/react-collapsible",
         "@radix-ui/react-context-menu",
         "@radix-ui/react-navigation-menu",

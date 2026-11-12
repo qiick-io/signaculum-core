@@ -185,5 +185,15 @@
             "permissionsLabel": "Permessi richiesti",
             "approve": "Autorizza"
         }
+    },
+    "errorBoundary": {
+        "title": "Qualcosa è andato storto",
+        "description": "L'interfaccia ha incontrato un errore imprevisto. Puoi riprovare a ricaricare la pagina.",
+        "tryAgain": "Riprova",
+        "reload": "Ricarica la pagina"
+    },
+    "auth": {
+        "firstName": "Nome",
+        "lastName": "Cognome"
     }
 }

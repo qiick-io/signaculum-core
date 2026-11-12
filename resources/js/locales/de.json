@@ -185,5 +185,15 @@
             "permissionsLabel": "Angeforderte Berechtigungen",
             "approve": "Autorisieren"
         }
+    },
+    "errorBoundary": {
+        "title": "Etwas ist schiefgelaufen",
+        "description": "Die Oberfläche ist auf einen unerwarteten Fehler gestoßen. Sie können die Seite neu laden.",
+        "tryAgain": "Erneut versuchen",
+        "reload": "Seite neu laden"
+    },
+    "auth": {
+        "firstName": "Vorname",
+        "lastName": "Nachname"
     }
 }

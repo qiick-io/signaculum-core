@@ -43,11 +43,11 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
 User claims come from `OidcClaimsService` (same values in `id_token` and userinfo). Empty optional claims are omitted, never sent as empty strings.
 
-| Scope | Claims |
-| --- | --- |
-| *(always)* | `sub` (opaque UUIDv7 on `users.subject`, not the DB id) |
-| `profile` | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
-| `email` | `email`, `email_verified` |
+| Scope      | Claims                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _(always)_ | `sub` (opaque UUIDv7 on `users.subject`, not the DB id)                                                                                                       |
+| `profile`  | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
+| `email`    | `email`, `email_verified`                                                                                                                                     |
 
 **Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, optional `auth_time`.
 
