@@ -22,7 +22,10 @@
         "resources/js/hooks/use-appearance.tsx",
         "resources/js/hooks/use-accessibility-preferences.tsx",
         "resources/js/hooks/use-current-url.ts",
-        "resources/js/types/auth.ts"
+        "resources/js/types/auth.ts",
+        "resources/js/lib/theme-css.ts",
+        "resources/js/lib/theme-presets.ts",
+        "resources/js/types/appearance.ts"
     ],
     "ignoreDependencies": [
         "@inertiajs/core",
