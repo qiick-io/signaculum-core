@@ -16,18 +16,18 @@ permissions:
 jobs:
   pr-title:
     if: github.event_name == 'pull_request'
-    uses: qiick-io/app-ui/.github/workflows/pr-title.yml@develop
+    uses: qiick-io/app-ui/.github/workflows/pr-title.yml@v0.6.1
 
   app-ui-drift:
-    uses: qiick-io/app-ui/.github/workflows/drift-check.yml@develop
+    uses: qiick-io/app-ui/.github/workflows/drift-check.yml@v0.6.1
     with:
       standards: true
 
   php-quality:
-    uses: qiick-io/app-ui/.github/workflows/php-quality.yml@develop
+    uses: qiick-io/app-ui/.github/workflows/php-quality.yml@v0.6.1
 
   ui-quality:
-    uses: qiick-io/app-ui/.github/workflows/ui-quality.yml@develop
+    uses: qiick-io/app-ui/.github/workflows/ui-quality.yml@v0.6.1
 
   migrations-frozen:
-    uses: qiick-io/app-ui/.github/workflows/migrations-frozen.yml@develop
+    uses: qiick-io/app-ui/.github/workflows/migrations-frozen.yml@v0.6.1
