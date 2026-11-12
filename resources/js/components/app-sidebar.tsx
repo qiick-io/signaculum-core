@@ -1,5 +1,5 @@
-import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, House, Settings } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { BookOpen, FolderGit2, House, Settings, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLogo from '@/components/app-logo';
 import { AppNavUser } from '@/components/app-user-menu';
@@ -16,15 +16,17 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as adminUsersIndex } from '@/routes/admin/users';
 import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
 
 /**
- * Primary application sidebar (app-ui `shell.md`): logo, the Platform group, then the
- * footer links and the user menu. The Admin group joins with the admin screens.
+ * Primary application sidebar (app-ui `shell.md`): logo, the Platform group, an
+ * Admin group for instance admins, then the footer links and the user menu.
  */
 export function AppSidebar() {
     const { t } = useTranslation();
+    const { canManageUsers } = usePage().props.auth;
 
     const platformNavItems: MainNavItem[] = [
         {
@@ -39,6 +41,17 @@ export function AppSidebar() {
             activePrefix: '/settings',
         },
     ];
+
+    const adminNavItems: MainNavItem[] = canManageUsers
+        ? [
+              {
+                  title: t('nav.users'),
+                  href: adminUsersIndex(),
+                  icon: Users,
+                  activePrefix: '/admin/users',
+              },
+          ]
+        : [];
 
     const footerNavItems: NavItem[] = [
         {
@@ -77,6 +90,7 @@ export function AppSidebar() {
 
                 <SidebarContent>
                     <NavMain items={platformNavItems} />
+                    <NavMain items={adminNavItems} label={t('nav.admin')} />
                 </SidebarContent>
 
                 <SidebarFooter>

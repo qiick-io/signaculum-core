@@ -35,7 +35,13 @@
         "rowsPerPage": "Righe per pagina",
         "save": "Salva",
         "saved": "Salvato",
-        "selectedCount": "{{count}} selezionati"
+        "selectedCount": "{{count}} selezionati",
+        "email": "Email",
+        "password": "Password",
+        "create": "Crea",
+        "clearFilters": "Cancella filtri",
+        "sortAscending": "Ordine crescente",
+        "sortDescending": "Ordine decrescente"
     },
     "confirmDestructive": {
         "typeToConfirm": "Digita \"{{name}}\" per confermare"
@@ -77,7 +83,9 @@
         "home": "Home",
         "platform": "Piattaforma",
         "repository": "Repository",
-        "settings": "Impostazioni"
+        "settings": "Impostazioni",
+        "admin": "Amministrazione",
+        "users": "Utenti"
     },
     "realtime": {
         "connected": "Realtime connesso",
@@ -286,5 +294,47 @@
     "auth": {
         "firstName": "Nome",
         "lastName": "Cognome"
+    },
+    "admin": {
+        "users": {
+            "head": "Utenti",
+            "title": "Utenti",
+            "newUser": "Nuovo utente",
+            "searchPlaceholder": "Cerca utenti…",
+            "sortBy": "Ordina per",
+            "columns": {
+                "created": "Creato",
+                "updated": "Aggiornato",
+                "name": "Nome",
+                "email": "Email",
+                "status": "Stato",
+                "actions": "Azioni"
+            },
+            "actions": {
+                "edit": "Modifica utente"
+            },
+            "status": {
+                "active": "Attivo",
+                "inactive": "Disattivato"
+            },
+            "form": {
+                "editTitle": "Modifica utente",
+                "editDescription": "Aggiorna nome e email. Lascia la password vuota per mantenerla.",
+                "createDescription": "Crea un utente Signaculum. L'email risulta verificata.",
+                "requiredHint": "I campi contrassegnati con * sono obbligatori.",
+                "firstNameRequired": "Nome *",
+                "emailRequired": "Email *",
+                "emailHint": "Usa un indirizzo email valido, ad esempio",
+                "newPasswordOptional": "Nuova password (facoltativa)",
+                "passwordRequired": "Password *"
+            },
+            "empty": {
+                "title": "Nessun utente",
+                "description": "Crea il primo account per questa istanza Signaculum.",
+                "filteredTitle": "Nessun utente corrisponde",
+                "filteredDescription": "Prova un'altra ricerca o cancella i filtri.",
+                "cta": "Nuovo utente"
+            }
+        }
     }
 }

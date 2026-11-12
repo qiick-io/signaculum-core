@@ -20,6 +20,8 @@ export type Auth = {
     user: User | null;
     /** Instance admin: shows the Instance settings group (the server checks too). */
     canManageSettings: boolean;
+    /** Instance admin: shows the Admin → Users nav (the server checks too). */
+    canManageUsers: boolean;
 };
 
 /** Passkey registered by the current user (Laravel passkeys). */

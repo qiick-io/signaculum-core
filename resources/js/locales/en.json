@@ -35,7 +35,13 @@
         "rowsPerPage": "Rows per page",
         "save": "Save",
         "saved": "Saved",
-        "selectedCount": "{{count}} selected"
+        "selectedCount": "{{count}} selected",
+        "email": "Email",
+        "password": "Password",
+        "create": "Create",
+        "clearFilters": "Clear filters",
+        "sortAscending": "Sort ascending",
+        "sortDescending": "Sort descending"
     },
     "confirmDestructive": {
         "typeToConfirm": "Type \"{{name}}\" to confirm"
@@ -77,7 +83,9 @@
         "home": "Home",
         "platform": "Platform",
         "repository": "Repository",
-        "settings": "Settings"
+        "settings": "Settings",
+        "admin": "Admin",
+        "users": "Users"
     },
     "realtime": {
         "connected": "Realtime connected",
@@ -286,5 +294,47 @@
     "auth": {
         "firstName": "First name",
         "lastName": "Last name"
+    },
+    "admin": {
+        "users": {
+            "head": "Users",
+            "title": "Users",
+            "newUser": "New user",
+            "searchPlaceholder": "Search users…",
+            "sortBy": "Sort by",
+            "columns": {
+                "created": "Created",
+                "updated": "Updated",
+                "name": "Name",
+                "email": "Email",
+                "status": "Status",
+                "actions": "Actions"
+            },
+            "actions": {
+                "edit": "Edit user"
+            },
+            "status": {
+                "active": "Active",
+                "inactive": "Inactive"
+            },
+            "form": {
+                "editTitle": "Edit user",
+                "editDescription": "Update the person's name and email. Leave the password empty to keep it.",
+                "createDescription": "Create a Signaculum user. The email counts as verified.",
+                "requiredHint": "Fields marked with * are required.",
+                "firstNameRequired": "First name *",
+                "emailRequired": "Email *",
+                "emailHint": "Use a valid email address, for example",
+                "newPasswordOptional": "New password (optional)",
+                "passwordRequired": "Password *"
+            },
+            "empty": {
+                "title": "No users yet",
+                "description": "Create the first account for this Signaculum instance.",
+                "filteredTitle": "No users match",
+                "filteredDescription": "Try another search or clear the filters.",
+                "cta": "New user"
+            }
+        }
     }
 }
