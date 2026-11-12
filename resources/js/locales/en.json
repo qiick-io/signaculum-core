@@ -2,8 +2,10 @@
     "a11y": {
         "breadcrumb": "Breadcrumb",
         "close": "Close",
+        "mainNav": "Main navigation",
         "moreActions": "More actions",
         "saving": "Saving",
+        "skipToContent": "Skip to content",
         "toggleSidebar": "Toggle sidebar",
         "loading": "Loading",
         "notifications": "Notifications",
@@ -18,8 +20,14 @@
         "openFullPage": "Open full page"
     },
     "common": {
+        "actions": "Actions",
         "cancel": "Cancel",
+        "confirmPassword": "Confirm password",
         "delete": "Delete",
+        "emailAddress": "Email address",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "name": "Name",
         "offline": "Offline",
         "online": "Online",
         "pageRange": "{{from}}–{{to}} of {{total}}",
@@ -42,6 +50,35 @@
             "moreTags": "{{count}} more tags"
         }
     },
+    "home": {
+        "applications": {
+            "description": "Apps you signed in to with this account.",
+            "manage": "Manage connected apps",
+            "title": "Connected apps"
+        },
+        "breadcrumb": "Home",
+        "head": "Home",
+        "stats": {
+            "applications": "Connected apps",
+            "applicationsHeadline": "Apps that can sign you in",
+            "passkeys": "Passkeys",
+            "passkeysHeadline": "Sign in without a password",
+            "sessions": "Signed-in browsers",
+            "sessionsHeadline": "Review your sessions",
+            "twoFactor": "Two-factor authentication",
+            "twoFactorEnable": "Turn it on",
+            "twoFactorManage": "Manage security",
+            "twoFactorOff": "Off",
+            "twoFactorOn": "On"
+        }
+    },
+    "nav": {
+        "documentation": "Documentation",
+        "home": "Home",
+        "platform": "Platform",
+        "repository": "Repository",
+        "settings": "Settings"
+    },
     "realtime": {
         "connected": "Realtime connected",
         "connecting": "Connecting…",
@@ -53,6 +90,86 @@
             "dark": "Dark",
             "light": "Light",
             "system": "System"
+        },
+        "connectedApplications": {
+            "breadcrumb": "Connected apps",
+            "columns": {
+                "access": "Access",
+                "application": "App",
+                "lastSignIn": "Last sign-in"
+            },
+            "confirm": {
+                "description": "Its tokens stop working now. The next time you sign in to it, it asks for your permission again.",
+                "title": "Remove access for {{name}}?"
+            },
+            "description": "Apps you allowed to sign you in. If you remove access, the app asks for your permission again next time.",
+            "emptyDescription": "Apps appear here after you sign in to them with this account.",
+            "emptyTitle": "No connected apps",
+            "head": "Connected apps",
+            "removeAccess": "Remove access",
+            "title": "Connected apps"
+        },
+        "layout": {
+            "connectedApplications": "Connected apps",
+            "description": "Manage your profile and account settings",
+            "navAria": "Settings",
+            "profile": "Profile",
+            "reportBug": "Report a Bug",
+            "sectionAccount": "Account",
+            "security": "Security",
+            "sessions": "Sessions",
+            "title": "Settings"
+        },
+        "profile": {
+            "breadcrumb": "Profile settings",
+            "description": "Update your profile details and email address",
+            "head": "Profile settings",
+            "linkSent": "A new verification link has been sent to your email address.",
+            "resend": "Click here to resend the verification email.",
+            "title": "Profile information",
+            "unverified": "Your email address is unverified."
+        },
+        "security": {
+            "addPasskey": "Add passkey",
+            "breadcrumb": "Security settings",
+            "currentPassword": "Current password",
+            "deletePasskey": "Delete",
+            "head": "Security settings",
+            "newPassword": "New password",
+            "passkeyCreated": "Added {{date}}",
+            "passkeyName": "Passkey name",
+            "passkeyNamePlaceholder": "e.g. MacBook Pro",
+            "passkeysDescription": "Sign in without a password using a device passkey. A passkey also counts as a second factor.",
+            "passkeysEmpty": "No passkeys registered yet.",
+            "passkeysNeedHttps": "Passkeys need HTTPS.",
+            "passkeysTitle": "Passkeys",
+            "passkeysUnsupported": "Passkeys are not supported in this browser.",
+            "passwordDescription": "Ensure your account is using a long, random password to stay secure",
+            "passwordTitle": "Update password",
+            "savePassword": "Save password"
+        },
+        "sessions": {
+            "breadcrumb": "Sessions",
+            "browserOnPlatform": "{{browser}} on {{platform}}",
+            "columns": {
+                "browser": "Browser",
+                "ipAddress": "IP address",
+                "lastActive": "Last active"
+            },
+            "confirm": {
+                "description": "The browser has to sign in again to use your account.",
+                "othersDescription": "Every browser except this one has to sign in again. Remembered logins stop working too.",
+                "othersTitle": "Sign out of all other browsers?",
+                "title": "Sign out of this browser?"
+            },
+            "description": "Browsers where your account is signed in. Sign out of any you do not recognise.",
+            "emptyDescription": "Only this browser is signed in.",
+            "emptyTitle": "No other sessions",
+            "head": "Sessions",
+            "signOut": "Sign out",
+            "signOutOthers": "Sign out of all other browsers",
+            "thisDevice": "This device",
+            "title": "Signed-in browsers"
         }
     },
     "userMenu": {
@@ -74,5 +191,15 @@
             "permissionsLabel": "Requested permissions",
             "approve": "Authorize"
         }
+    },
+    "errorBoundary": {
+        "title": "Something went wrong",
+        "description": "The interface hit an unexpected error. You can try reloading the page.",
+        "tryAgain": "Try again",
+        "reload": "Reload page"
+    },
+    "auth": {
+        "firstName": "First name",
+        "lastName": "Last name"
     }
 }

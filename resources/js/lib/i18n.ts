@@ -58,3 +58,5 @@ export function initI18n(locale = 'en'): typeof i18n {
 
     return i18n;
 }
+
+export default i18n;

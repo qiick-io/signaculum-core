@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -14,6 +15,8 @@ type Props = {
 };
 
 export default function Register({ passwordRules }: Props) {
+    const { t } = useTranslation();
+
     return (
         <>
             <Head title="Register" />
@@ -27,21 +30,35 @@ export default function Register({ passwordRules }: Props) {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="first_name">
+                                    {t('auth.firstName')}
+                                </Label>
                                 <Input
-                                    id="name"
+                                    id="first_name"
                                     type="text"
                                     required
                                     autoFocus
                                     tabIndex={1}
-                                    autoComplete="name"
-                                    name="name"
-                                    placeholder="Full name"
+                                    autoComplete="given-name"
+                                    name="first_name"
+                                    placeholder={t('auth.firstName')}
                                 />
-                                <InputError
-                                    message={errors.name}
-                                    className="mt-2"
+                                <InputError message={errors.first_name} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="last_name">
+                                    {t('auth.lastName')}
+                                </Label>
+                                <Input
+                                    id="last_name"
+                                    type="text"
+                                    tabIndex={1}
+                                    autoComplete="family-name"
+                                    name="last_name"
+                                    placeholder={t('auth.lastName')}
                                 />
+                                <InputError message={errors.last_name} />
                             </div>
 
                             <div className="grid gap-2">

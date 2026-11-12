@@ -43,23 +43,20 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
 User claims come from `OidcClaimsService` (same values in `id_token` and userinfo). Empty optional claims are omitted, never sent as empty strings.
 
-| Scope      | Claims                                                  |
-| ---------- | ------------------------------------------------------- |
-| _(always)_ | `sub` (opaque UUIDv7 on `users.subject`, not the DB id) |
-| `profile`  | `name`, `updated_at` (Unix timestamp when set)          |
-| `email`    | `email`, `email_verified`                               |
+| Scope      | Claims                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _(always)_ | `sub` (opaque UUIDv7 on `users.subject`, not the DB id)                                                                                                       |
+| `profile`  | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
+| `email`    | `email`, `email_verified`                                                                                                                                     |
 
 **Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, optional `auth_time`.
 
-### Target profile (not all on this branch yet)
+Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_name` / `last_name` columns use `given_name` / `family_name` when present (`PersonNameData` in `qiick/laravel-oidc`).
 
-Protocol profile v1 also includes:
+### Still planned (not on this branch)
 
-- `given_name`, `family_name`, `locale` under `profile` (land in `feat/account-area`; approved 2026-11-06; clients map them via `PersonNameData` in `qiick/laravel-oidc`)
 - `preferred_username`, `picture`, `amr`, `acr`
 - Scope `qiick.orgs` with `orgs`: `[{ id, slug, roles }]` and roles `owner` / `admin` / `member` / `billing` (S5)
-
-Update the tables above when those ship.
 
 ## Token response
 

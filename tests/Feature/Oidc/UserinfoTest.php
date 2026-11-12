@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 
 beforeEach(function () {
-    $this->user = User::factory()->create(['name' => 'Ada Lovelace', 'email' => 'ada@example.test']);
+    $this->user = User::factory()->create(['first_name' => 'Ada', 'last_name' => 'Lovelace', 'email' => 'ada@example.test']);
     $this->client = createOidcClient();
     $this->pkce = pkcePair();
 });
@@ -34,10 +34,23 @@ test('userinfo returns the claims of the granted scopes', function () {
         ->assertExactJson([
             'sub' => $this->user->subject,
             'name' => 'Ada Lovelace',
+            'given_name' => 'Ada',
+            'family_name' => 'Lovelace',
             'updated_at' => $this->user->updated_at->getTimestamp(),
             'email' => 'ada@example.test',
             'email_verified' => true,
         ]);
+});
+
+test('the locale claim follows the user language', function () {
+    $this->user->forceFill(['locale' => 'it'])->save();
+    $accessToken = accessTokenFor($this, 'openid profile');
+    app('auth')->forgetGuards();
+
+    $this->withToken($accessToken)
+        ->get('/oauth/userinfo')
+        ->assertOk()
+        ->assertJsonPath('locale', 'it');
 });
 
 test('userinfo also accepts POST', function () {

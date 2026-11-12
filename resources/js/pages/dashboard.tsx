@@ -1,36 +1,156 @@
-import { Head } from '@inertiajs/react';
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { AppWindow } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { PageEmptyState } from '@/components/admin/page-empty-state';
+import { PageLayout } from '@/components/layout/page-layout';
+import { StatCard } from '@/components/stat-card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import AppLayout from '@/layouts/app-layout';
+import { formatRelativeTime } from '@/lib/relative-time';
 import { dashboard } from '@/routes';
+import { index as connectedApplicationsIndex } from '@/routes/connected-applications';
+import { edit as editSecurity } from '@/routes/security';
+import { index as sessionsIndex } from '@/routes/sessions';
+import type { BreadcrumbItem, ConnectedApplication } from '@/types';
 
-export default function Dashboard() {
+type HomeProps = {
+    activeSessionCount: number;
+    connectedApplications: ConnectedApplication[];
+    hasTwoFactor: boolean;
+    passkeyCount: number;
+};
+
+/**
+ * Home: where a direct login lands. Key numbers of the account as StatCards and the
+ * connected applications in a flat card (app-ui `dashboard.md`).
+ */
+export default function Dashboard({
+    activeSessionCount,
+    connectedApplications,
+    hasTwoFactor,
+    passkeyCount,
+}: HomeProps) {
+    const { t } = useTranslation();
+    const { locale } = usePage().props;
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: t('home.breadcrumb'), href: dashboard() },
+    ];
+
     return (
-        <>
-            <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title={t('home.head')} />
+
+            <h1 className="sr-only">{t('home.head')}</h1>
+
+            <PageLayout scrollContent>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-12">
+                    <StatCard
+                        className="xl:col-span-3"
+                        label={t('home.stats.sessions')}
+                        value={String(activeSessionCount)}
+                        headline={
+                            <Link
+                                href={sessionsIndex()}
+                                className="underline-offset-4 hover:underline"
+                            >
+                                {t('home.stats.sessionsHeadline')}
+                            </Link>
+                        }
+                    />
+                    <StatCard
+                        className="xl:col-span-3"
+                        label={t('home.stats.applications')}
+                        value={String(connectedApplications.length)}
+                        headline={t('home.stats.applicationsHeadline')}
+                    />
+                    <StatCard
+                        className="xl:col-span-3"
+                        label={t('home.stats.twoFactor')}
+                        value={
+                            hasTwoFactor
+                                ? t('home.stats.twoFactorOn')
+                                : t('home.stats.twoFactorOff')
+                        }
+                        headline={
+                            <Link
+                                href={editSecurity()}
+                                className="underline-offset-4 hover:underline"
+                            >
+                                {hasTwoFactor
+                                    ? t('home.stats.twoFactorManage')
+                                    : t('home.stats.twoFactorEnable')}
+                            </Link>
+                        }
+                    />
+                    <StatCard
+                        className="xl:col-span-3"
+                        label={t('home.stats.passkeys')}
+                        value={String(passkeyCount)}
+                        headline={t('home.stats.passkeysHeadline')}
+                    />
+
+                    <Card className="xl:col-span-12">
+                        <CardHeader className="pb-3">
+                            <CardTitle>
+                                {t('home.applications.title')}
+                            </CardTitle>
+                            <CardDescription>
+                                {t('home.applications.description')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {connectedApplications.length === 0 ? (
+                                <PageEmptyState
+                                    compact
+                                    icon={AppWindow}
+                                    title={t(
+                                        'settings.connectedApplications.emptyTitle',
+                                    )}
+                                    description={t(
+                                        'settings.connectedApplications.emptyDescription',
+                                    )}
+                                />
+                            ) : (
+                                <ul className="max-h-64 divide-y overflow-auto">
+                                    {connectedApplications.map(
+                                        (application) => (
+                                            <li
+                                                key={application.clientId}
+                                                className="flex items-center justify-between gap-4 py-2"
+                                            >
+                                                <span className="truncate font-medium">
+                                                    {application.name}
+                                                </span>
+                                                <span className="shrink-0 text-sm text-muted-foreground">
+                                                    {formatRelativeTime(
+                                                        application.lastAuthorizedAt,
+                                                        locale,
+                                                    )}
+                                                </span>
+                                            </li>
+                                        ),
+                                    )}
+                                </ul>
+                            )}
+                            {connectedApplications.length > 0 ? (
+                                <Link
+                                    href={connectedApplicationsIndex()}
+                                    className="mt-3 inline-block text-sm underline-offset-4 hover:underline"
+                                >
+                                    {t('home.applications.manage')}
+                                </Link>
+                            ) : null}
+                        </CardContent>
+                    </Card>
                 </div>
-                <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                    <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                </div>
-            </div>
-        </>
+            </PageLayout>
+        </AppLayout>
     );
 }
-
-Dashboard.layout = {
-    breadcrumbs: [
-        {
-            title: 'Dashboard',
-            href: dashboard(),
-        },
-    ],
-};

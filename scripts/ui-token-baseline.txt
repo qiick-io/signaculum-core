@@ -1,14 +1,6 @@
 # Baseline of known raw Tailwind palette / #hex className usages outside components/ui.
 # Maintained with scripts/check-ui-tokens.mjs. Do not grow counts; fix call sites instead.
 # Format: path:kind:token:count
-resources/js/components/appearance-tabs.tsx:palette:bg-neutral-100:1
-resources/js/components/appearance-tabs.tsx:palette:bg-neutral-200/60:1
-resources/js/components/appearance-tabs.tsx:palette:bg-neutral-700:1
-resources/js/components/appearance-tabs.tsx:palette:bg-neutral-700/60:1
-resources/js/components/appearance-tabs.tsx:palette:bg-neutral-800:1
-resources/js/components/appearance-tabs.tsx:palette:text-neutral-100:1
-resources/js/components/appearance-tabs.tsx:palette:text-neutral-400:1
-resources/js/components/appearance-tabs.tsx:palette:text-neutral-500:1
 resources/js/components/delete-user.tsx:palette:bg-red-50:1
 resources/js/components/delete-user.tsx:palette:bg-red-700/10:1
 resources/js/components/delete-user.tsx:palette:border-red-100:1
@@ -21,15 +13,8 @@ resources/js/components/nav-footer.tsx:palette:text-neutral-100:1
 resources/js/components/nav-footer.tsx:palette:text-neutral-300:1
 resources/js/components/nav-footer.tsx:palette:text-neutral-600:1
 resources/js/components/nav-footer.tsx:palette:text-neutral-800:1
-resources/js/components/text-link.tsx:palette:decoration-neutral-300:1
-resources/js/components/text-link.tsx:palette:decoration-neutral-500:1
 resources/js/pages/auth/forgot-password.tsx:palette:text-green-600:1
 resources/js/pages/auth/login.tsx:palette:text-green-600:1
 resources/js/pages/auth/two-factor-challenge.tsx:palette:decoration-neutral-300:1
 resources/js/pages/auth/two-factor-challenge.tsx:palette:decoration-neutral-500:1
 resources/js/pages/auth/verify-email.tsx:palette:text-green-600:1
-resources/js/pages/dashboard.tsx:palette:stroke-neutral-100/20:4
-resources/js/pages/dashboard.tsx:palette:stroke-neutral-900/20:4
-resources/js/pages/settings/profile.tsx:palette:decoration-neutral-300:1
-resources/js/pages/settings/profile.tsx:palette:decoration-neutral-500:1
-resources/js/pages/settings/profile.tsx:palette:text-green-600:1
