@@ -17,6 +17,20 @@ Every qiick app keeps working standalone with its own local login. Signaculum is
 
 Not planned for v1: SAML, SCIM, IdP-initiated login, dynamic client registration and social logins.
 
+## Install
+
+`composer create-project` only copies `.env` and generates `APP_KEY`. It does not migrate or seed. Finish a new tree with:
+
+```bash
+php artisan signaculum:install
+```
+
+Non-interactive (CI and Docker): `php artisan signaculum:install --no-interaction --force`.
+
+Updates use `php artisan signaculum:upgrade` after the new code is in place. Do not run `create-project` again to upgrade.
+
+`GET /health/live` and `GET /health/ready` are the unauthenticated probes. A Compose quick start is in `docker-compose.yml`.
+
 ## Development
 
 Requirements: PHP 8.4, Composer, Node 24. The local site runs on [Laravel Herd](https://herd.laravel.com) at `https://signaculum-core.test`.
