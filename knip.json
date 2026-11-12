@@ -1,7 +1,11 @@
 {
     "$schema": "https://unpkg.com/knip@6/schema.json",
-    "entry": ["resources/js/pages/**/*.tsx"],
-    "project": ["resources/js/**/*.{ts,tsx}"],
+    "entry": [
+        "resources/js/pages/**/*.tsx"
+    ],
+    "project": [
+        "resources/js/**/*.{ts,tsx}"
+    ],
     "ignore": [
         "resources/js/components/ui/**",
         "resources/js/components/admin/actions-overflow.tsx",
@@ -29,7 +33,10 @@
         "@radix-ui/react-toggle-group",
         "concurrently",
         "eslint-plugin-i18next",
+        "radix-ui",
         "vaul"
     ],
-    "ignoreBinaries": ["oxlint"]
+    "ignoreBinaries": [
+        "oxlint"
+    ]
 }
