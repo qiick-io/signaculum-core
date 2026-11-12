@@ -6,8 +6,8 @@ name: qiick
 on:
   push:
     branches: [develop, main]
+  # All PR bases (incl. stacked feat/* → feat/*), so drift/php/ui gates run on #3/#4 too.
   pull_request:
-    branches: [develop, main]
     types: [opened, edited, synchronize, reopened]
 
 permissions:
