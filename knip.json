@@ -1,11 +1,7 @@
 {
     "$schema": "https://unpkg.com/knip@6/schema.json",
-    "entry": [
-        "resources/js/pages/**/*.tsx"
-    ],
-    "project": [
-        "resources/js/**/*.{ts,tsx}"
-    ],
+    "entry": ["resources/js/pages/**/*.tsx"],
+    "project": ["resources/js/**/*.{ts,tsx}"],
     "ignore": [
         "resources/js/components/admin/actions-overflow.tsx",
         "resources/js/components/admin/data-table-toolbar.tsx",
@@ -55,7 +51,5 @@
         "radix-ui",
         "vaul"
     ],
-    "ignoreBinaries": [
-        "oxlint"
-    ]
+    "ignoreBinaries": ["oxlint"]
 }
