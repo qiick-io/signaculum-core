@@ -13,14 +13,14 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 | `/oauth/authorize`                  | `GET`, `POST` | Passport authorization + consent UI (`resources/js/pages/oauth/authorize.tsx`) |
 | `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                            |
 | `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                   |
-
-RP-initiated logout (`end_session_endpoint`) and back-channel logout are **not** implemented yet (see milestone S1).
+| `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing   |
+| `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                |
 
 ## Discovery fields
 
 Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
-- `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `jwks_uri`
+- `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `end_session_endpoint`, `jwks_uri`
 - `scopes_supported`: `openid`, `profile`, `email` (enum cases today; `qiick.orgs` is planned, S5)
 - `response_types_supported`: `code`
 - `response_modes_supported`: `query`
@@ -29,8 +29,11 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `id_token_signing_alg_values_supported`: `RS256`
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `none`
 - `code_challenge_methods_supported`: `S256`
-- `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, plus user claims below
+- `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, plus user claims below
 - `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false`
+- `backchannel_logout_supported`: `true`
+- `backchannel_logout_session_supported`: `true`
+- No front-channel logout fields
 
 ## PKCE and nonce
 
@@ -49,7 +52,7 @@ User claims come from `OidcClaimsService` (same values in `id_token` and userinf
 | `profile`  | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
 | `email`    | `email`, `email_verified`                                                                                                                                     |
 
-**Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, optional `auth_time`.
+**Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, optional `auth_time`, **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login).
 
 Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_name` / `last_name` columns use `given_name` / `family_name` when present (`PersonNameData` in `qiick/laravel-oidc`).
 
@@ -65,6 +68,39 @@ Authorization code exchange (Passport + `IdTokenResponse`):
 - Always: `token_type`, `expires_in`, `access_token`, `refresh_token` (when issued)
 - `id_token` when the grant included `openid` (JWT, `alg=RS256`, `typ=JWT`, `kid` of the active signing key)
 - Refresh-token grants do **not** mint a new `id_token`
+- Redeeming a code records a `client_sessions` row for `(user, client, sid)` used later by back-channel logout
+
+## Logout
+
+### Client registration fields
+
+On `oauth_clients` (beside Passport's columns):
+
+- `post_logout_redirect_uris` (JSON array, default `[]`): exact-match only
+- `backchannel_logout_uri` (nullable string)
+- `is_backchannel_logout_session_required` (boolean, default `true`): when true, the `logout_token` always carries `sid`
+
+### RP-initiated logout
+
+`GET|POST /oauth/end-session`:
+
+- `id_token_hint`: signature + `iss` + `aud` validated against published signing keys; **expiry is ignored**
+- `client_id`: optional when the hint has a single audience; required to validate `post_logout_redirect_uri`
+- `post_logout_redirect_uri`: must match a registered URI exactly; otherwise HTTP 400 (no open redirect)
+- `state`: echoed on the post-logout redirect when present
+- Confirmation page (`oauth/logout`) when the hint is missing, forged, or belongs to another user than the signed-in one
+- Ends the Signaculum web session and fans out back-channel logout
+
+### Back-channel logout
+
+Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-form-urlencoded` with `logout_token` to each client's URI.
+
+`logout_token` (OIDC Back-Channel Logout 1.0 §2.4):
+
+- Header: `alg=RS256`, `typ=logout+jwt`, `kid`
+- Claims: `iss`, `aud` = client_id, `iat`, `exp` (`OIDC_LOGOUT_TOKEN_TTL`, default 120s), unique `jti`, `events` = `{"http://schemas.openid.net/event/backchannel-logout": {}}`, `sid` and/or `sub`, **never** `nonce`
+- Triggers: Signaculum logout, end-session, sign out of other browsers, single-browser sign-out (that `sid` only), remove access for a client
+- One failing client never blocks the others (separate jobs)
 
 ## Signing keys / JWKS
 
@@ -81,5 +117,7 @@ Authorization code exchange (Passport + `IdTokenResponse`):
 | Bad token request (verifier, client secret, …)              | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …) |
 | Userinfo without / with invalid Bearer                      | 401 `invalid_token` + `WWW-Authenticate`                                   |
 | Userinfo without `openid` scope                             | 403 `insufficient_scope`                                                   |
+| Unregistered `post_logout_redirect_uri`                     | HTTP 400                                                                   |
+| Forged / foreign `id_token_hint` while signed in            | Confirmation page, then logout of the local session on confirm             |
 
-Redirect URIs match **exactly** (no prefix or wildcard matching).
+Redirect URIs and post-logout redirect URIs match **exactly** (no prefix or wildcard matching).

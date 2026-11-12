@@ -275,6 +275,11 @@
             "requestingAccess": "sta richiedendo l'accesso al tuo account.",
             "permissionsLabel": "Permessi richiesti",
             "approve": "Autorizza"
+        },
+        "logout": {
+            "title": "Esci",
+            "description": "Conferma di voler uscire da Signaculum.",
+            "confirm": "Esci"
         }
     },
     "errorBoundary": {

@@ -44,4 +44,19 @@ return [
      */
     'signing_key_bits' => 3072,
 
+    /*
+     * Lifetime of a back-channel `logout_token` in seconds (OIDC Back-Channel Logout §2.4).
+     */
+    'logout_token_ttl' => (int) env('OIDC_LOGOUT_TOKEN_TTL', 120),
+
+    /*
+     * HTTP timeout when POSTing a logout_token to a client's back-channel URI.
+     */
+    'backchannel_logout_timeout' => (int) env('OIDC_BACKCHANNEL_LOGOUT_TIMEOUT', 5),
+
+    /*
+     * Queue attempts for each back-channel logout delivery.
+     */
+    'backchannel_logout_tries' => (int) env('OIDC_BACKCHANNEL_LOGOUT_TRIES', 3),
+
 ];

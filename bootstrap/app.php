@@ -24,6 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'locale', 'accessibility_high_contrast', 'accessibility_reduce_motion']);
 
+        // RPs POST to end-session without a Signaculum CSRF cookie (OIDC RP-Initiated Logout §2).
+        $middleware->validateCsrfTokens(except: [
+            'oauth/end-session',
+        ]);
+
         $middleware->web(append: [
             SetLocaleMiddleware::class,
             HandleAppearance::class,

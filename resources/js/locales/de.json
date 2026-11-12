@@ -275,6 +275,11 @@
             "requestingAccess": "fordert Zugriff auf Ihr Konto an.",
             "permissionsLabel": "Angeforderte Berechtigungen",
             "approve": "Autorisieren"
+        },
+        "logout": {
+            "title": "Abmelden",
+            "description": "Bestätigen Sie, dass Sie sich von Signaculum abmelden möchten.",
+            "confirm": "Abmelden"
         }
     },
     "errorBoundary": {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Actions\RecordClientSessionAction;
 use App\Data\IdTokenRequestData;
 use DateTimeImmutable;
 use Lcobucci\JWT\Configuration;
@@ -16,14 +17,15 @@ use LogicException;
  * Mint RS256-signed id_tokens (OIDC Core §2, §3.1.3.6).
  *
  * The header carries the `kid` of the active signing key so clients pick the right JWK.
- * `aud` is the client id and `azp` repeats it; `nonce` and `auth_time` come from the
- * authorization request and are only present when known.
+ * `aud` is the client id and `azp` repeats it; `nonce`, `auth_time` and `sid` come from
+ * the authorization request / browser session and are only present when known.
  */
 final class IdTokenService
 {
     public function __construct(
         private readonly SigningKeyService $signingKeyService,
         private readonly OidcClaimsService $oidcClaimsService,
+        private readonly RecordClientSessionAction $recordClientSessionAction,
     ) {}
 
     public function issue(IdTokenRequestData $idTokenRequest): string
@@ -54,6 +56,15 @@ final class IdTokenService
 
         if ($idTokenRequest->context->nonce !== null) {
             $tokenBuilder = $tokenBuilder->withClaim('nonce', $idTokenRequest->context->nonce);
+        }
+
+        if ($idTokenRequest->context->oidcSessionId !== null) {
+            $tokenBuilder = $tokenBuilder->withClaim('sid', $this->nonEmpty($idTokenRequest->context->oidcSessionId));
+            $this->recordClientSessionAction->execute(
+                $idTokenRequest->user,
+                $idTokenRequest->clientId,
+                $idTokenRequest->context->oidcSessionId,
+            );
         }
 
         unset($userClaims['sub']);
