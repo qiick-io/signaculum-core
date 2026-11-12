@@ -105,20 +105,6 @@ export function initializeTheme(projectDefault: Appearance = 'system'): void {
 }
 
 /**
- * Removes the prefers-color-scheme listener bound by {@link initializeTheme}.
- *
- * @returns {void}
- */
-export function teardownTheme(): void {
-    if (!isSystemThemeListenerBound) {
-        return;
-    }
-
-    mediaQuery()?.removeEventListener('change', handleSystemThemeChange);
-    isSystemThemeListenerBound = false;
-}
-
-/**
  * Reads and updates the user's light/dark/system appearance preference.
  * Persists to `localStorage` and a cookie for SSR hydration.
  *
