@@ -1,3 +1,4 @@
+import i18n from 'i18next';
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,8 @@ type AppErrorBoundaryState = {
 
 /**
  * Catches JavaScript errors in the child tree during render (class boundary per React docs).
+ * Uses `i18n.t` instead of `useTranslation` because error boundaries must be class components.
+ *
  * @see https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
  */
 export class AppErrorBoundary extends Component<
@@ -40,11 +43,10 @@ export class AppErrorBoundary extends Component<
                 <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-6">
                     <div className="max-w-md space-y-2 text-center">
                         <h1 className="text-xl font-semibold tracking-tight">
-                            Something went wrong
+                            {i18n.t('errorBoundary.title')}
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            The interface hit an unexpected error. You can try
-                            reloading the page.
+                            {i18n.t('errorBoundary.description')}
                         </p>
                         {import.meta.env.DEV && (
                             <pre className="mt-4 max-h-40 overflow-auto rounded-lg bg-muted p-3 text-left text-xs">
@@ -59,7 +61,7 @@ export class AppErrorBoundary extends Component<
                                 this.setState({ hasError: false, error: null });
                             }}
                         >
-                            Try again
+                            {i18n.t('errorBoundary.tryAgain')}
                         </Button>
                         <Button
                             type="button"
@@ -68,7 +70,7 @@ export class AppErrorBoundary extends Component<
                                 window.location.reload();
                             }}
                         >
-                            Reload page
+                            {i18n.t('errorBoundary.reload')}
                         </Button>
                     </div>
                 </div>

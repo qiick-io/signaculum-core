@@ -261,5 +261,24 @@
         "logOut": "Abmelden",
         "reduceMotion": "Bewegung reduzieren",
         "settings": "Einstellungen"
+    },
+    "oauth": {
+        "authorize": {
+            "title": "Anwendung autorisieren",
+            "description": "Prüfen Sie, worauf diese Anwendung zugreifen kann.",
+            "requestingAccess": "fordert Zugriff auf Ihr Konto an.",
+            "permissionsLabel": "Angeforderte Berechtigungen",
+            "approve": "Autorisieren"
+        }
+    },
+    "errorBoundary": {
+        "title": "Etwas ist schiefgelaufen",
+        "description": "Die Oberfläche ist auf einen unerwarteten Fehler gestoßen. Sie können die Seite neu laden.",
+        "tryAgain": "Erneut versuchen",
+        "reload": "Seite neu laden"
+    },
+    "auth": {
+        "firstName": "Vorname",
+        "lastName": "Nachname"
     }
 }

@@ -1,0 +1,13 @@
+{
+    "resources/js/components/delete-user.tsx": 8,
+    "resources/js/components/manage-two-factor.tsx": 5,
+    "resources/js/components/two-factor-recovery-codes.tsx": 7,
+    "resources/js/components/two-factor-setup-modal.tsx": 3,
+    "resources/js/pages/auth/confirm-password.tsx": 2,
+    "resources/js/pages/auth/forgot-password.tsx": 4,
+    "resources/js/pages/auth/login.tsx": 7,
+    "resources/js/pages/auth/register.tsx": 6,
+    "resources/js/pages/auth/reset-password.tsx": 4,
+    "resources/js/pages/auth/two-factor-challenge.tsx": 2,
+    "resources/js/pages/auth/verify-email.tsx": 3
+}

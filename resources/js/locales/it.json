@@ -261,5 +261,24 @@
         "logOut": "Esci",
         "reduceMotion": "Riduci movimento",
         "settings": "Impostazioni"
+    },
+    "oauth": {
+        "authorize": {
+            "title": "Autorizza applicazione",
+            "description": "Rivedi a cosa può accedere questa applicazione.",
+            "requestingAccess": "sta richiedendo l'accesso al tuo account.",
+            "permissionsLabel": "Permessi richiesti",
+            "approve": "Autorizza"
+        }
+    },
+    "errorBoundary": {
+        "title": "Qualcosa è andato storto",
+        "description": "L'interfaccia ha incontrato un errore imprevisto. Puoi riprovare a ricaricare la pagina.",
+        "tryAgain": "Riprova",
+        "reload": "Ricarica la pagina"
+    },
+    "auth": {
+        "firstName": "Nome",
+        "lastName": "Cognome"
     }
 }

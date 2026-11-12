@@ -1,5 +1,7 @@
 import { Head } from '@inertiajs/react';
+import i18n from 'i18next';
 import { Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
 type ConsentScope = {
@@ -27,22 +29,24 @@ export default function Authorize({
     authToken,
     csrfToken,
 }: AuthorizeProps) {
+    const { t } = useTranslation();
+
     return (
         <>
-            <Head title="Authorize application" />
+            <Head title={t('oauth.authorize.title')} />
 
             <div className="space-y-6">
                 <p className="text-center text-sm text-muted-foreground">
                     <span className="font-medium text-foreground">
                         {clientName}
                     </span>{' '}
-                    is requesting access to your account.
+                    {t('oauth.authorize.requestingAccess')}
                 </p>
 
                 {scopes.length > 0 ? (
                     <ul
                         className="space-y-2 text-sm"
-                        aria-label="Requested permissions"
+                        aria-label={t('oauth.authorize.permissionsLabel')}
                     >
                         {scopes.map((scope) => (
                             <li key={scope.id} className="flex gap-2">
@@ -75,7 +79,7 @@ export default function Authorize({
                             className="w-full"
                             data-test="deny-authorization"
                         >
-                            Cancel
+                            {t('common.cancel')}
                         </Button>
                     </form>
 
@@ -95,7 +99,7 @@ export default function Authorize({
                             className="w-full"
                             data-test="approve-authorization"
                         >
-                            Authorize
+                            {t('oauth.authorize.approve')}
                         </Button>
                     </form>
                 </div>
@@ -105,6 +109,11 @@ export default function Authorize({
 }
 
 Authorize.layout = {
-    title: 'Authorize application',
-    description: 'Review what this application can access.',
+    // Read through i18n at render time (AuthLayout props), after `initI18n` in app.tsx.
+    get title(): string {
+        return i18n.t('oauth.authorize.title');
+    },
+    get description(): string {
+        return i18n.t('oauth.authorize.description');
+    },
 };
