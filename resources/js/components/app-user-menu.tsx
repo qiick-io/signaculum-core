@@ -12,7 +12,7 @@ import type { User } from '@/types';
  * appearance and logout. The registry components are generic; this wires them to
  * Signaculum's routes and hooks.
  */
-export function AppUserMenuContent({ user }: { user: User }) {
+function AppUserMenuContent({ user }: { user: User }) {
     const cleanup = useMobileNavigation();
     const { appearance, updateAppearance } = useAppearance();
 
