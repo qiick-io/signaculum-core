@@ -235,9 +235,11 @@ Signaculum is the optional, open-source (MIT), self-hosted **OpenID Connect iden
 - Authorization code flow only, **PKCE S256 required for every client** (also confidential). No implicit, hybrid or password grant. `state` is passed through; `nonce` is required for `openid` requests and echoed in the `id_token`.
 - `id_token` signed **RS256** (`kid` in the header), keys published at `/.well-known/jwks.json`, rotation with overlap.
 - Discovery at `/.well-known/openid-configuration`; issuer = `APP_URL` without a trailing slash.
-- Scopes `openid profile email qiick.orgs`; claims `sub`, `email`, `email_verified`, `name`, `preferred_username`, `picture`, `locale`, `amr`, `acr`, `orgs` (`[{ id, slug, roles }]`, roles `owner` / `admin` / `member` / `billing`).
+- Scopes `openid profile email qiick.orgs`; claims `sub`, `email`, `email_verified`, `name`, `given_name`, `family_name`, `preferred_username`, `picture`, `locale`, `amr`, `acr`, `orgs` (`[{ id, slug, roles }]`, roles `owner` / `admin` / `member` / `billing`).
+- Person names (OIDC Core 5.1, scope `profile`): emit `given_name` and `family_name` alongside `name` (approved 2026-11-06). The shared client rule lives in `qiick/laravel-oidc` as `PersonNameData`.
 - Logout: RP-initiated (`end_session_endpoint`) and back-channel. No front-channel logout.
 - Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social logins.
+- Living wire contract: `docs/oidc-profile.md` (what is implemented vs still planned).
 
 ## Stack (Zero-Snowflake, aligned with `qiick-io/excubia-app`)
 
@@ -246,6 +248,13 @@ Signaculum is the optional, open-source (MIT), self-hosted **OpenID Connect iden
 - Node 24 (`.nvmrc`), Vite+ (`vp`). SQLite by default for self-hosting; database driver via `.env`.
 - Dev: Pest 5 (+ pest-plugin-laravel), Pint (laravel preset), Larastan, `vp check` (lint and format).
 - Local site and dev processes run through Laravel Herd (`https://signaculum-core.test`).
+
+## Where the OIDC layer and instance admin live
+
+- `app/Oidc`: league/Passport extension points — `OidcAuthCodeGrant` (PKCE S256 and nonce), `OidcAuthCodeRepository` (stores `nonce` / `auth_time` with the code), `IdTokenResponse` (adds `id_token`). Wired in `AppServiceProvider::configureOpenIdConnect()`. Documented in `tests/Arch/naming-architecture.php`.
+- `app/Services`: discovery, JWKS / signing keys, claims shared by id_token and userinfo, pending authorization.
+- `routes/oidc.php`: discovery, JWKS, userinfo. Passport registers `/oauth/authorize` and `/oauth/token`.
+- Instance administration (settings UI): `users.is_instance_admin`, `signaculum:make-admin`, and `SettingPolicy` gate the instance settings surfaces (general, localization, authentication, appearance). Ordinary end users use the account area only.
 
 ## Quality gate
 
@@ -260,9 +269,10 @@ Run them before every push.
 
 ## Signaculum rules
 
-- OAuth 2.0 mechanics come from Passport (`league/oauth2-server`). The OIDC layer in `app/Oidc` adds only what OpenID Connect needs on top. Never reimplement what Passport already does. Passport files keep their upstream names (list them in `tests/Arch/naming-architecture.php`).
+- OAuth 2.0 mechanics come from Passport (`league/oauth2-server`). The OIDC layer in `app/Oidc` adds only what OpenID Connect needs on top. Never reimplement what Passport already does. Passport extension points keep their role nouns (`*Grant`, `*Repository`, `*Response`) and are listed in `tests/Arch/naming-architecture.php`.
 - PHPDoc cites the spec section (OIDC Core, RFC 7636, …) for every protocol rule.
 - Tests: every protocol rule (PKCE, `state`, `nonce`, redirect URI matching, token claims, signatures, logout) has a test that fails when the rule is removed.
+- Pre-release: do not edit, rename or delete a migration once it is on `develop`; add a new forward-only migration instead. The shared standards text says "released"; this repo is stricter until `v1.0.0-beta.1`.
 
 ## Security
 
@@ -272,16 +282,16 @@ Run them before every push.
 
 ## Git and PR workflow
 
-One change → one branch → one PR into `develop`. Never commit directly to `develop` or `main`.
+One issue → one branch → one PR into `develop`. Never commit directly to `develop` or `main`.
 
 1. `git checkout develop && git pull --ff-only`
-2. `git checkout -b <type>/<kebab-slug>` — types: feat, fix, refactor, chore, docs, test, perf, ci, build, security.
+2. `git checkout -b <type>/<issue>-<kebab-slug>` — types: feat, fix, refactor, chore, docs, test, perf, ci, build, security (example: `feat/42-discovery-document`).
 3. Conventional Commits in English (`feat(oidc): add discovery document`).
 4. Run the quality gates, then `git push -u origin HEAD`.
 5. `gh pr create --base develop --title "<conventional title>"`.
 6. Merge only with Luca's explicit OK (squash).
 
-The GitHub token has no `workflow` scope: changes under `.github/workflows/` go in their own commit, and Luca pushes them.
+The `gh` token has the `workflow` scope (since 2026-11-05): workflow changes go through normal PRs, still in their **own commit**. Luca sets required checks himself.
 
 ## Identity and security
 

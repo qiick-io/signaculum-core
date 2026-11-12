@@ -59,5 +59,14 @@
         "logOut": "Log out",
         "reduceMotion": "Reduce motion",
         "settings": "Settings"
+    },
+    "oauth": {
+        "authorize": {
+            "title": "Authorize application",
+            "description": "Review what this application can access.",
+            "requestingAccess": "is requesting access to your account.",
+            "permissionsLabel": "Requested permissions",
+            "approve": "Authorize"
+        }
     }
 }

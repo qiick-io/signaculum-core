@@ -17,8 +17,19 @@
         "resources/js/lib/list-per-page.ts"
     ],
     "ignoreDependencies": [
+        "@inertiajs/core",
+        "@radix-ui/react-alert-dialog",
+        "@radix-ui/react-collapsible",
+        "@radix-ui/react-context-menu",
+        "@radix-ui/react-navigation-menu",
+        "@radix-ui/react-radio-group",
+        "@radix-ui/react-select",
+        "@radix-ui/react-switch",
+        "@radix-ui/react-toggle",
+        "@radix-ui/react-toggle-group",
         "concurrently",
         "eslint-plugin-i18next",
-        "@inertiajs/core"
-    ]
+        "vaul"
+    ],
+    "ignoreBinaries": ["oxlint"]
 }
