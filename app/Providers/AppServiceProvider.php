@@ -11,6 +11,7 @@ use App\Services\PendingAuthorizationService;
 use Carbon\CarbonImmutable;
 use DateInterval;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -56,6 +57,10 @@ class AppServiceProvider extends ServiceProvider
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );
+
+        // Lazy loading, silently discarded and missing attributes throw outside
+        // production, so tests catch them (qiick standards, Automated checks).
+        Model::shouldBeStrict(! app()->isProduction());
 
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)

@@ -1,0 +1,35 @@
+{
+    "$schema": "https://unpkg.com/knip@6/schema.json",
+    "entry": ["resources/js/pages/**/*.tsx"],
+    "project": ["resources/js/**/*.{ts,tsx}"],
+    "ignore": [
+        "resources/js/components/ui/**",
+        "resources/js/components/admin/actions-overflow.tsx",
+        "resources/js/components/admin/data-table-toolbar.tsx",
+        "resources/js/components/admin/header-icon-button.tsx",
+        "resources/js/components/admin/page-empty-state.tsx",
+        "resources/js/components/admin/user-avatar.tsx",
+        "resources/js/components/confirm-destructive-dialog.tsx",
+        "resources/js/components/layout/page-header.tsx",
+        "resources/js/components/layout/page-layout.tsx",
+        "resources/js/components/settings-form-actions.tsx",
+        "resources/js/components/user-menu-content.tsx",
+        "resources/js/lib/list-per-page.ts"
+    ],
+    "ignoreDependencies": [
+        "@inertiajs/core",
+        "@radix-ui/react-alert-dialog",
+        "@radix-ui/react-collapsible",
+        "@radix-ui/react-context-menu",
+        "@radix-ui/react-navigation-menu",
+        "@radix-ui/react-radio-group",
+        "@radix-ui/react-select",
+        "@radix-ui/react-switch",
+        "@radix-ui/react-toggle",
+        "@radix-ui/react-toggle-group",
+        "concurrently",
+        "eslint-plugin-i18next",
+        "vaul"
+    ],
+    "ignoreBinaries": ["oxlint"]
+}

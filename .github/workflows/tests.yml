@@ -20,6 +20,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The Larastan ratchet compares the baseline with the base branch.
+          fetch-depth: 0
 
       - name: Setup PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
@@ -39,5 +41,16 @@ jobs:
       - name: Lint, types and tests
         run: composer ci:check
 
+      - name: Larastan baseline only shrinks
+        run: node scripts/qiick-ratchet.mjs phpstan
+
+      - name: Dead code (knip)
+        run: npm run knip
+
+      - name: Hard-coded UI strings (ratchet)
+        run: npm run lint:i18n
+
   app-ui-drift:
     uses: qiick-io/app-ui/.github/workflows/drift-check.yml@develop
+    with:
+      standards: true

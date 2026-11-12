@@ -29,6 +29,7 @@ export type Passkey = {
     last_used_at_diff: string | null;
 };
 
+
 /** QR code payload returned during two-factor enrollment. */
 export type TwoFactorSetupData = {
     svg: string;
