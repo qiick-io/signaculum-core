@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Services\SettingsRepositoryService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -11,8 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Set the request locale (UI, validation and mail) from the signed-in user, then the
- * `locale` cookie, then `config('app.locale')`. Copied from Excubia without the project
- * default, which Signaculum does not have.
+ * `locale` cookie, then the instance default (Settings → Localization). Copied from Excubia.
  */
 final class SetLocaleMiddleware
 {
@@ -38,6 +38,6 @@ final class SetLocaleMiddleware
             }
         }
 
-        return (string) config('app.locale');
+        return app(SettingsRepositoryService::class)->defaultLanguage();
     }
 }

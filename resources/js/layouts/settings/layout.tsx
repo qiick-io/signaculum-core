@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Bug } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,13 +13,17 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
+import { edit as editAppearance } from '@/routes/appearance';
 import { index as connectedApplications } from '@/routes/connected-applications';
+import { edit as editInstance } from '@/routes/instance';
+import { edit as editLocalization } from '@/routes/instance/localization';
+import { edit as editInstanceSecurity } from '@/routes/instance/security';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as sessions } from '@/routes/sessions';
 import type { NavItem } from '@/types';
 
-const REPORT_BUG_URL =
+const DEFAULT_REPORT_BUG_URL =
     'https://github.com/qiick-io/signaculum-core/issues/new?template=bug_report.yml';
 
 type SettingsLayoutProps = PropsWithChildren<{
@@ -29,8 +33,8 @@ type SettingsLayoutProps = PropsWithChildren<{
 
 /**
  * Settings section layout with the secondary nav, copied from Excubia / externa-core
- * (`layouts/settings/layout.tsx`). Signaculum has only the Account group for now; the
- * instance settings join as their own group with the admin screens.
+ * (`layouts/settings/layout.tsx`): the Account group for everyone, the Instance group
+ * (Excubia's Project group) for instance admins.
  */
 export default function SettingsLayout({
     children,
@@ -38,6 +42,7 @@ export default function SettingsLayout({
 }: SettingsLayoutProps) {
     const { t } = useTranslation();
     const { isCurrentUrl } = useCurrentUrl();
+    const { auth, instanceSettings } = usePage().props;
 
     const accountNavItems: NavItem[] = [
         {
@@ -61,6 +66,34 @@ export default function SettingsLayout({
             icon: null,
         },
     ];
+
+    const instanceNavItems: NavItem[] = auth.canManageSettings
+        ? [
+              {
+                  title: t('settings.layout.general'),
+                  href: editInstance(),
+                  icon: null,
+              },
+              {
+                  title: t('settings.layout.localization'),
+                  href: editLocalization(),
+                  icon: null,
+              },
+              {
+                  title: t('settings.layout.authSecurity'),
+                  href: editInstanceSecurity(),
+                  icon: null,
+              },
+              {
+                  title: t('settings.layout.appearance'),
+                  href: editAppearance(),
+                  icon: null,
+              },
+          ]
+        : [];
+
+    const reportBugUrl =
+        instanceSettings.reportBugUrl?.trim() || DEFAULT_REPORT_BUG_URL;
 
     if (typeof window === 'undefined') {
         return null;
@@ -107,12 +140,19 @@ export default function SettingsLayout({
                             accountNavItems,
                         )}
 
+                        {instanceNavItems.length > 0
+                            ? renderNavGroup(
+                                  t('settings.layout.sectionInstance'),
+                                  instanceNavItems,
+                              )
+                            : null}
+
                         <SidebarGroup className="p-0">
                             <SidebarMenu>
                                 <SidebarMenuItem>
                                     <SidebarMenuButton asChild size="sm">
                                         <a
-                                            href={REPORT_BUG_URL}
+                                            href={reportBugUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >

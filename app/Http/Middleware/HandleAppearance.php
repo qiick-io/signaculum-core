@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\SettingsRepositoryService;
+use App\Services\ThemePresetService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
@@ -17,9 +19,15 @@ class HandleAppearance
      */
     public function handle(Request $request, Closure $next): Response
     {
-        View::share('appearance', $request->cookie('appearance') ?? 'system');
+        $settings = app(SettingsRepositoryService::class);
+        $appearanceCookie = $request->cookie('appearance');
+
+        // The personal cookie wins; the instance default applies until someone chooses.
+        View::share('appearance', in_array($appearanceCookie, SettingsRepositoryService::APPEARANCES, true) ? $appearanceCookie : $settings->defaultAppearance());
         View::share('accessibilityHighContrast', $request->cookie('accessibility_high_contrast') === '1');
         View::share('accessibilityReduceMotion', $request->cookie('accessibility_reduce_motion') === '1');
+        View::share('projectThemeCss', app(ThemePresetService::class)->current());
+        View::share('projectFaviconUrl', $settings->brandingUrls()['faviconUrl']);
 
         return $next($request);
     }

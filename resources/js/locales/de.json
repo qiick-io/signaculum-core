@@ -87,9 +87,46 @@
     },
     "settings": {
         "appearance": {
+            "brandContrastWarning": "Diese Markenfarbe erfüllt nicht den WCAG-AA-Kontrast (4.5:1 Text / 3:1 UI). Bitte eine dunklere oder hellere Nuance wählen.",
+            "brandingDescription": "Markenfarbe für App-Oberfläche und Login",
+            "brandingTitle": "Branding",
+            "breadcrumb": "Darstellungseinstellungen",
+            "changeFile": "Datei ändern",
+            "chooseFile": "Datei wählen",
+            "clearCustomColor": "Eigene Farbe entfernen",
+            "clearFile": "Entfernen",
+            "customColorDescription": "Optionaler Override für Primary. Leer lassen, um den gewählten Preset zu nutzen.",
+            "customColorTitle": "Eigene Markenfarbe",
             "dark": "Dunkel",
+            "defaultAppearance": "Standard-Darstellung",
+            "defaultThemeDescription": "Wird verwendet, wenn der Benutzer keine persönliche Hell/Dunkel-Einstellung gewählt hat",
+            "defaultThemeTitle": "Standard-Theme",
+            "description": "Instanz-Branding und Standard-Theme aktualisieren",
+            "head": "Darstellungseinstellungen",
             "light": "Hell",
-            "system": "System"
+            "noFile": "Keine Datei ausgewählt",
+            "presetPreviewDark": "Dunkel",
+            "presetPreviewLight": "Hell",
+            "projectColor": "Markenfarbe",
+            "projectColorDark": "Markenfarbe (dunkel)",
+            "projectLogo": "Logo",
+            "projectLogoDark": "Logo (dunkel)",
+            "publicFavicon": "Favicon",
+            "sidebar": {
+                "breadcrumb": "Seitenleisten-Einstellungen",
+                "head": "Seitenleisten-Einstellungen"
+            },
+            "system": "System",
+            "themePresetBlue": "Blau",
+            "themePresetDescription": "Wähle eine integrierte Palette für das Admin. Eine eigene Markenfarbe überschreibt weiterhin Primary.",
+            "themePresetIndigo": "Indigo",
+            "themePresetRose": "Rose",
+            "themePresetSignaculum": "Signaculum (Standard)",
+            "themePresetSlate": "Schiefer",
+            "themePresetTeal": "Teal",
+            "themePresetTitle": "Theme-Preset",
+            "themePresetViolet": "Violett",
+            "title": "Darstellungseinstellungen"
         },
         "connectedApplications": {
             "breadcrumb": "Verbundene Apps",
@@ -109,13 +146,61 @@
             "removeAccess": "Zugriff entfernen",
             "title": "Verbundene Apps"
         },
+        "instance": {
+            "breadcrumb": "Instanzeinstellungen",
+            "defaultLanguage": "Standardsprache",
+            "description": "Beschreibung",
+            "generalDescription": "Instanzidentität und Support-Links",
+            "generalTitle": "Allgemein",
+            "head": "Instanzeinstellungen",
+            "localization": {
+                "breadcrumb": "Lokalisierungseinstellungen",
+                "description": "Standardsprache der Admin-Oberfläche",
+                "head": "Lokalisierungseinstellungen",
+                "title": "Admin-Sprache"
+            },
+            "loginMaxAttempts": "Max. Login-Versuche pro Minute",
+            "name": "Name",
+            "passwordPolicies": {
+                "medium": {
+                    "description": "Mindestens 8 Zeichen, mit Groß- und Kleinbuchstaben sowie mindestens einer Zahl.",
+                    "label": "Mittel"
+                },
+                "strong": {
+                    "description": "Mindestens 12 Zeichen, Groß-/Kleinbuchstaben, Buchstaben, Zahlen, Sonderzeichen und nicht in bekannten Datenlecks.",
+                    "label": "Stark"
+                },
+                "weak": {
+                    "description": "Mindestens 6 Zeichen. Keine Groß-/Kleinschreibung, Zahlen oder Sonderzeichen erforderlich.",
+                    "label": "Schwach"
+                }
+            },
+            "passwordPolicy": "Passwortsicherheit",
+            "reportBugUrl": "URL für Bug melden",
+            "reportBugUrlHint": "Leer lassen, um den Issue-Tracker von Signaculum zu verwenden.",
+            "reportingDescription": "Optionale Links für Problem-, Bug- und Fehlermeldungen",
+            "reportingTitle": "Melde-URLs",
+            "securityDescription": "Passwortstärke, Login-Limits und Zwei-Faktor-Richtlinie",
+            "securityNav": {
+                "breadcrumb": "Authentifizierung & Sicherheit",
+                "head": "Authentifizierung & Sicherheit"
+            },
+            "securityTitle": "Sicherheit",
+            "twoFactorRequired": "Zwei-Faktor-Authentifizierung für alle Benutzer verlangen",
+            "twoFactorRequiredHint": "Wenn aktiv, müssen Benutzer TOTP-2FA aktivieren oder einen Passkey auf der Sicherheitsseite registrieren, bevor sie die App nutzen."
+        },
         "layout": {
+            "appearance": "Darstellung",
+            "authSecurity": "Authentifizierung & Sicherheit",
             "connectedApplications": "Verbundene Apps",
             "description": "Profil und Kontoeinstellungen verwalten",
+            "general": "Allgemein",
+            "localization": "Lokalisierung",
             "navAria": "Einstellungen",
             "profile": "Profil",
             "reportBug": "Bug melden",
             "sectionAccount": "Konto",
+            "sectionInstance": "Instanz",
             "security": "Sicherheit",
             "sessions": "Sitzungen",
             "title": "Einstellungen"

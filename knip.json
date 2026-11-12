@@ -23,8 +23,11 @@
         "resources/js/lib/list-per-page.ts",
         "resources/js/lib/live-announcer.ts",
         "resources/js/lib/scroll-cue.ts",
+        "resources/js/lib/theme-css.ts",
+        "resources/js/lib/theme-presets.ts",
         "resources/js/lib/toast.ts",
         "resources/js/lib/utils.ts",
+        "resources/js/types/appearance.ts",
         "resources/js/types/auth.ts"
     ],
     "ignoreDependencies": [
