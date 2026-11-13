@@ -590,7 +590,14 @@
         "settings": {
             "head": "Settings — {{name}}",
             "title": "Settings",
-            "description": "Organisation name, slug and deletion."
+            "description": "Organisation name, slug, branding and deletion.",
+            "brandingTitle": "Branding",
+            "brandingDescription": "Logo and colours shown on login and consent when this organisation is in context.",
+            "brandColor": "Brand colour",
+            "brandColorDark": "Brand colour (dark)",
+            "logo": "Logo",
+            "logoDark": "Logo (dark)",
+            "saveBranding": "Save branding"
         },
         "accept": {
             "head": "Organisation invitation",

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CaptureOrganizationBrandingMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
 use App\Http\Middleware\EnsureUserIsActiveMiddleware;
 use App\Http\Middleware\ExpireImpersonationMiddleware;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
+            CaptureOrganizationBrandingMiddleware::class,
             // Before EnsureUserIsActive so an expired target restores the actor first.
             ExpireImpersonationMiddleware::class,
             EnsureUserIsActiveMiddleware::class,

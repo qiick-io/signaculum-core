@@ -6,11 +6,13 @@ use App\Http\Controllers\AcceptInvitationController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Oidc\EndSessionController;
+use App\Http\Controllers\OrganizationBrandingController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrganizationInvitationController;
 use App\Http\Controllers\OrganizationMemberController;
 use App\Http\Controllers\OrganizationSettingsController;
 use App\Http\Controllers\StopImpersonationController;
+use App\Services\OrganizationBrandingService;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +25,11 @@ Route::redirect('/', '/dashboard')->name('home');
 Route::get('branding/{asset}', [BrandingController::class, 'show'])
     ->whereIn('asset', array_keys(SettingsRepositoryService::BRANDING_ASSETS))
     ->name('branding.show');
+
+// Per-organisation logos for login/consent when an org context is known (#67).
+Route::get('organizations/{organization}/branding/{asset}', [OrganizationBrandingController::class, 'show'])
+    ->whereIn('asset', array_keys(OrganizationBrandingService::BRANDING_ASSETS))
+    ->name('organizations.branding.show');
 
 /*
  * RP-initiated logout (OIDC RP-Initiated Logout 1.0). Web middleware: needs the
@@ -66,6 +73,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('organizations/{organization}/settings', OrganizationSettingsController::class)
         ->name('organizations.settings');
+    Route::put('organizations/{organization}/branding', [OrganizationBrandingController::class, 'update'])
+        ->name('organizations.branding.update');
 
     Route::post('organizations/{organization}/members', [OrganizationMemberController::class, 'store'])
         ->name('organizations.members.store');

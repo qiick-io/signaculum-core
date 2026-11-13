@@ -590,7 +590,14 @@
         "settings": {
             "head": "Impostazioni — {{name}}",
             "title": "Impostazioni",
-            "description": "Nome, slug ed eliminazione dell'organizzazione."
+            "description": "Nome, slug, branding ed eliminazione dell'organizzazione.",
+            "brandingTitle": "Branding",
+            "brandingDescription": "Logo e colori mostrati al login e al consenso quando questa organizzazione è nel contesto.",
+            "brandColor": "Colore brand",
+            "brandColorDark": "Colore brand (scuro)",
+            "logo": "Logo",
+            "logoDark": "Logo (scuro)",
+            "saveBranding": "Salva branding"
         },
         "accept": {
             "head": "Invito all'organizzazione",
