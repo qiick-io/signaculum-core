@@ -20,7 +20,13 @@ test('discovery publishes the qiick protocol profile', function () {
             'id_token_signing_alg_values_supported' => ['RS256'],
             'code_challenge_methods_supported' => ['S256'],
             'scopes_supported' => ['openid', 'profile', 'email'],
+            'end_session_endpoint' => 'https://id.example.test/oauth/end-session',
+            'backchannel_logout_supported' => true,
+            'backchannel_logout_session_supported' => true,
         ]);
+
+    expect($this->get('/.well-known/openid-configuration')->json('claims_supported'))
+        ->toContain('sid');
 });
 
 test('discovery is public and cacheable', function () {

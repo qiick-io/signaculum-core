@@ -11,7 +11,7 @@ use League\OAuth2\Server\Entities\AuthCodeEntityInterface;
 
 /**
  * Passport's auth code repository, plus the OpenID Connect context (`nonce`,
- * `auth_time`) saved with each code so the token endpoint can put it in the id_token.
+ * `auth_time`, `sid`) saved with each code so the token endpoint can put it in the id_token.
  */
 final class OidcAuthCodeRepository extends AuthCodeRepository
 {
@@ -33,6 +33,7 @@ final class OidcAuthCodeRepository extends AuthCodeRepository
             'expires_at' => $authCodeEntity->getExpiryDateTime(),
             'nonce' => $authorizationContext->nonce,
             'auth_time' => $authorizationContext->authTime,
+            'oidc_session_id' => $authorizationContext->oidcSessionId,
         ])->save();
     }
 }
