@@ -23,7 +23,7 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
 - `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `introspection_endpoint`, `end_session_endpoint`, `jwks_uri`
 - `introspection_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post` (no `none`)
-- `scopes_supported`: `openid`, `profile`, `email` (enum cases today; `qiick.orgs` is planned, S5)
+- `scopes_supported`: `openid`, `profile`, `email`, `qiick.orgs`
 - `response_types_supported`: `code`
 - `response_modes_supported`: `query`
 - `grant_types_supported`: `authorization_code`, `refresh_token`
@@ -60,11 +60,12 @@ Every redirect back to the client's `redirect_uri` — success (`code`) and erro
 
 User claims come from `OidcClaimsService` (same values in `id_token` and userinfo). Empty optional claims are omitted, never sent as empty strings.
 
-| Scope      | Claims                                                                                                                                                        |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| _(always)_ | `sub` (opaque UUIDv7 on `users.subject`, not the DB id)                                                                                                       |
-| `profile`  | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
-| `email`    | `email`, `email_verified`                                                                                                                                     |
+| Scope        | Claims                                                                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _(always)_   | `sub` (opaque UUIDv7 on `users.subject`, not the DB id)                                                                                                       |
+| `profile`    | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
+| `email`      | `email`, `email_verified`                                                                                                                                     |
+| `qiick.orgs` | `orgs`: `[{ id, slug, roles }]` (roles `owner` / `admin` / `member` / `billing`; empty list when the user has no memberships; sorted by `slug`)               |
 
 **Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, `auth_time` when known (and **always** when the authorization request carried `max_age`), **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login), **`amr`** (always present; RFC 8176), optional **`acr`** (only when requested).
 
@@ -96,7 +97,6 @@ Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_nam
 ### Still planned (not on this branch)
 
 - `preferred_username`, `picture`
-- Scope `qiick.orgs` with `orgs`: `[{ id, slug, roles }]` and roles `owner` / `admin` / `member` / `billing` (S5)
 
 ## Token response
 
