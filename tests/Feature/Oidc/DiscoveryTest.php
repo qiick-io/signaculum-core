@@ -13,6 +13,7 @@ test('discovery publishes the qiick protocol profile', function () {
             'token_endpoint' => 'https://id.example.test/oauth/token',
             'userinfo_endpoint' => 'https://id.example.test/oauth/userinfo',
             'introspection_endpoint' => 'https://id.example.test/oauth/introspect',
+            'revocation_endpoint' => 'https://id.example.test/oauth/revoke',
             'jwks_uri' => 'https://id.example.test/.well-known/jwks.json',
             'response_types_supported' => ['code'],
             'response_modes_supported' => ['query'],
@@ -29,6 +30,11 @@ test('discovery publishes the qiick protocol profile', function () {
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,
             'authorization_response_iss_parameter_supported' => true,
+            'revocation_endpoint_auth_methods_supported' => [
+                'client_secret_basic',
+                'client_secret_post',
+                'none',
+            ],
         ]);
 
     expect($this->get('/.well-known/openid-configuration')->json('claims_supported'))
