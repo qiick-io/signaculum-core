@@ -90,6 +90,11 @@ class AppServiceProvider extends ServiceProvider
                 ->by((string) $request->ip());
         });
 
+        RateLimiter::for('oidc-introspect', function (Request $request) {
+            return Limit::perMinute((int) config('oidc.rate_limits.introspect_per_minute', 60))
+                ->by((string) $request->ip());
+        });
+
         // Reserved for organisation invitation POSTs (S5); registered now so routes can attach it.
         RateLimiter::for('organization-invitations', function (Request $request) {
             $identifier = $request->user()?->getAuthIdentifier() ?? $request->ip();

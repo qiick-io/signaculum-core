@@ -13,6 +13,7 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 | `/oauth/authorize`                  | `GET`, `POST` | Passport authorization + consent UI (`resources/js/pages/oauth/authorize.tsx`) |
 | `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                            |
 | `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                   |
+| `/oauth/introspect`                 | `POST`        | RFC 7662 introspection; confidential clients only (`client_secret_basic` / `_post`) |
 | `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing   |
 | `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                |
 
@@ -20,7 +21,8 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 
 Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
-- `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `end_session_endpoint`, `jwks_uri`
+- `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `introspection_endpoint`, `end_session_endpoint`, `jwks_uri`
+- `introspection_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post` (no `none`)
 - `scopes_supported`: `openid`, `profile`, `email` (enum cases today; `qiick.orgs` is planned, S5)
 - `response_types_supported`: `code`
 - `response_modes_supported`: `query`
@@ -105,6 +107,16 @@ Authorization code exchange (Passport + `IdTokenResponse`):
 - Refresh-token grants do **not** mint a new `id_token`
 - Redeeming a code records a `client_sessions` row for `(user, client, sid)` used later by back-channel logout
 
+## Token introspection (RFC 7662)
+
+`POST /oauth/introspect` with `application/x-www-form-urlencoded`:
+
+- **Caller:** confidential client only (`client_secret_basic` or `client_secret_post`). Public clients and bad secrets → HTTP 401 `invalid_client`
+- **Body:** `token` (required), optional `token_type_hint` (`access_token` / `refresh_token`)
+- **Active token:** JSON with `active: true` plus `scope`, `client_id`, `username` (email), `token_type` (`Bearer` or `refresh_token`), `exp`, `iat` (access tokens), `sub` (OIDC subject UUID), `aud` (access tokens), `iss`
+- **Inactive / unknown / revoked / expired:** `{ "active": false }` only (no reason leaked)
+- Out of scope for this endpoint: JWT access-token migration, DPoP
+
 ## Logout
 
 ### Client registration fields
@@ -153,6 +165,8 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 | Bad token request (verifier, client secret, …)                                                      | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …)                 |
 | Userinfo without / with invalid Bearer                                                              | 401 `invalid_token` + `WWW-Authenticate`                                                   |
 | Userinfo without `openid` scope                                                                     | 403 `insufficient_scope`                                                                   |
+| Introspection without / with bad client auth                                                        | 401 `invalid_client`                                                                       |
+| Introspection missing `token`                                                                       | 400 `invalid_request`                                                                      |
 | Unregistered `post_logout_redirect_uri`                                                             | HTTP 400                                                                                   |
 | Forged / foreign `id_token_hint` while signed in                                                    | Confirmation page, then logout of the local session on confirm                             |
 

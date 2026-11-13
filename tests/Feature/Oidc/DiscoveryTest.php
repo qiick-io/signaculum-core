@@ -12,6 +12,7 @@ test('discovery publishes the qiick protocol profile', function () {
             'authorization_endpoint' => 'https://id.example.test/oauth/authorize',
             'token_endpoint' => 'https://id.example.test/oauth/token',
             'userinfo_endpoint' => 'https://id.example.test/oauth/userinfo',
+            'introspection_endpoint' => 'https://id.example.test/oauth/introspect',
             'jwks_uri' => 'https://id.example.test/.well-known/jwks.json',
             'response_types_supported' => ['code'],
             'response_modes_supported' => ['query'],
@@ -21,6 +22,10 @@ test('discovery publishes the qiick protocol profile', function () {
             'code_challenge_methods_supported' => ['S256'],
             'scopes_supported' => ['openid', 'profile', 'email'],
             'end_session_endpoint' => 'https://id.example.test/oauth/end-session',
+            'introspection_endpoint_auth_methods_supported' => [
+                'client_secret_basic',
+                'client_secret_post',
+            ],
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,
             'authorization_response_iss_parameter_supported' => true,

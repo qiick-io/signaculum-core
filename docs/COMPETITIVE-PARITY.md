@@ -37,7 +37,7 @@ Written 2026-11-13 for scoping **`v1.0.0-beta.1`**. Sources: public docs of each
 | Userinfo                           | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
 | Refresh tokens                     | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
 | Token revocation (RFC 7009)        | partial → **in beta** | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
-| Token introspection (RFC 7662)     | ✗ → **in beta**       | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | partial |
+| Token introspection (RFC 7662)     | ✓ (beta)              | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | partial |
 | RP-initiated logout                | ✓                     | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | ✓       |
 | Back-channel logout                | ✓                     | ✓        | ✓       | ✓         | ✗        | partial | ✓       | ✓     | partial |
 | Front-channel logout               | ✗ **never**           | ✓        | partial | ✓         | ✗        | ✗       | partial | ✓     | ✗       |

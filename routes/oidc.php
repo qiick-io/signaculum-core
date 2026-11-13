@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Oidc\DiscoveryController;
+use App\Http\Controllers\Oidc\IntrospectionController;
 use App\Http\Controllers\Oidc\JwksController;
 use App\Http\Controllers\Oidc\UserinfoController;
 use Illuminate\Support\Facades\Route;
@@ -17,3 +18,7 @@ Route::get('.well-known/jwks.json', JwksController::class)->name('oidc.jwks');
 Route::match(['get', 'post'], 'oauth/userinfo', UserinfoController::class)
     ->middleware('auth:api')
     ->name('oidc.userinfo');
+
+Route::post('oauth/introspect', IntrospectionController::class)
+    ->middleware('throttle:oidc-introspect')
+    ->name('oidc.introspect');
