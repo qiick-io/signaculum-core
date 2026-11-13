@@ -21,5 +21,6 @@ export type InstanceSettingsForm = {
     default_appearance: DefaultAppearance;
     password_policy: PasswordPolicy;
     login_max_attempts: number;
+    registration_enabled: boolean;
     two_factor_required: boolean;
 };
