@@ -445,7 +445,9 @@
                 "confidential": "Confidential client",
                 "confidentialHint": "Uses a client secret at the token endpoint. Turn off for public SPAs.",
                 "firstParty": "First-party qiick app",
-                "firstPartyHint": "Skips the consent screen for signed-in users."
+                "firstPartyHint": "Skips the consent screen for signed-in users.",
+                "clientCredentials": "Allow client credentials",
+                "clientCredentialsHint": "Machine-to-machine access token without a user. Use for jobs, MCP agents and services — not for browser SSO."
             },
             "empty": {
                 "title": "No applications yet",

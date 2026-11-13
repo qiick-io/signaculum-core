@@ -445,7 +445,9 @@
                 "confidential": "Vertraulicher Client",
                 "confidentialHint": "Nutzt ein Client-Secret am Token-Endpunkt. Für öffentliche SPAs deaktivieren.",
                 "firstParty": "First-Party-qiick-App",
-                "firstPartyHint": "Überspringt den Zustimmungsbildschirm für angemeldete Benutzer."
+                "firstPartyHint": "Überspringt den Zustimmungsbildschirm für angemeldete Benutzer.",
+                "clientCredentials": "Client Credentials erlauben",
+                "clientCredentialsHint": "Maschinen-Access-Token ohne Benutzer. Für Jobs, MCP-Agenten und Dienste — nicht für Browser-SSO."
             },
             "empty": {
                 "title": "Noch keine Anwendungen",

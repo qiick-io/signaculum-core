@@ -23,6 +23,7 @@ test('creating a confidential application flashes the plain secret once', functi
             'redirect_uris' => 'https://app.example.test/callback',
             'is_confidential' => true,
             'is_first_party' => false,
+            'is_client_credentials_enabled' => false,
         ])
         ->assertRedirect(route('admin.applications.index'));
 
@@ -109,6 +110,7 @@ test('redirect uris must be https except localhost and must not contain fragment
             'redirect_uris' => "http://evil.example.test/callback\nhttps://ok.example.test/cb#fragment",
             'is_confidential' => true,
             'is_first_party' => false,
+            'is_client_credentials_enabled' => false,
         ])
         ->assertSessionHasErrors('redirect_uris');
 
@@ -118,6 +120,7 @@ test('redirect uris must be https except localhost and must not contain fragment
             'redirect_uris' => "http://localhost:3000/callback\nhttp://127.0.0.1/callback\nhttps://app.example.test/cb",
             'is_confidential' => true,
             'is_first_party' => false,
+            'is_client_credentials_enabled' => false,
         ])
         ->assertRedirect(route('admin.applications.index'));
 });

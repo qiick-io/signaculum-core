@@ -36,6 +36,7 @@ final class StoreApplicationRequest extends FormRequest
             'redirect_uris' => ['required', 'string'],
             'is_confidential' => ['required', 'boolean'],
             'is_first_party' => ['required', 'boolean'],
+            'is_client_credentials_enabled' => ['required', 'boolean'],
         ];
     }
 
@@ -46,6 +47,7 @@ final class StoreApplicationRequest extends FormRequest
             redirectUris: $this->parsedRedirectUris(),
             isConfidential: $this->boolean('is_confidential'),
             isFirstParty: $this->boolean('is_first_party'),
+            isClientCredentialsEnabled: $this->boolean('is_client_credentials_enabled'),
         );
     }
 
@@ -53,6 +55,13 @@ final class StoreApplicationRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             $this->validateParsedRedirectUris($validator);
+
+            if ($this->boolean('is_client_credentials_enabled') && ! $this->boolean('is_confidential')) {
+                $validator->errors()->add(
+                    'is_client_credentials_enabled',
+                    __('Client credentials require a confidential client.'),
+                );
+            }
         });
     }
 }
