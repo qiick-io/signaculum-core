@@ -23,6 +23,7 @@ test('discovery publishes the qiick protocol profile', function () {
             'end_session_endpoint' => 'https://id.example.test/oauth/end-session',
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,
+            'authorization_response_iss_parameter_supported' => true,
         ]);
 
     expect($this->get('/.well-known/openid-configuration')->json('claims_supported'))

@@ -33,7 +33,12 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false`
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
+- `authorization_response_iss_parameter_supported`: `true` (RFC 9207)
 - No front-channel logout fields
+
+## Authorization response `iss` (RFC 9207)
+
+Every redirect back to the client's `redirect_uri` — success (`code`) and error (`error`) — includes `iss` equal to discovery's `issuer` (no trailing slash). Internal redirects (for example guest → `/login`) and refusals that never leave Signaculum (unknown client, unregistered `redirect_uri` → HTTP 401) do not. Clients that read `authorization_response_iss_parameter_supported: true` must reject a callback without matching `iss` (mix-up defense).
 
 ## PKCE and nonce
 
@@ -130,15 +135,15 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 
 ## Errors
 
-| Situation                                                                                           | Behaviour                                                                  |
-| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| PKCE / nonce / consent deny / `prompt=none` without session / `max_age` exceeded with `prompt=none` | Redirect to the registered `redirect_uri` with `error` and echoed `state`  |
-| `max_age` exceeded (no `prompt=none`) or `prompt=login`                                             | Redirect to Signaculum `/login` (then back to authorize)                   |
-| Unknown client or unregistered `redirect_uri`                                                       | HTTP 401 (no redirect to an attacker URI)                                  |
-| Bad token request (verifier, client secret, …)                                                      | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …) |
-| Userinfo without / with invalid Bearer                                                              | 401 `invalid_token` + `WWW-Authenticate`                                   |
-| Userinfo without `openid` scope                                                                     | 403 `insufficient_scope`                                                   |
-| Unregistered `post_logout_redirect_uri`                                                             | HTTP 400                                                                   |
-| Forged / foreign `id_token_hint` while signed in                                                    | Confirmation page, then logout of the local session on confirm             |
+| Situation                                                                                           | Behaviour                                                                                  |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| PKCE / nonce / consent deny / `prompt=none` without session / `max_age` exceeded with `prompt=none` | Redirect to the registered `redirect_uri` with `error`, echoed `state`, and RFC 9207 `iss` |
+| `max_age` exceeded (no `prompt=none`) or `prompt=login`                                             | Redirect to Signaculum `/login` (then back to authorize)                                   |
+| Unknown client or unregistered `redirect_uri`                                                       | HTTP 401 (no redirect to an attacker URI)                                                  |
+| Bad token request (verifier, client secret, …)                                                      | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …)                 |
+| Userinfo without / with invalid Bearer                                                              | 401 `invalid_token` + `WWW-Authenticate`                                                   |
+| Userinfo without `openid` scope                                                                     | 403 `insufficient_scope`                                                                   |
+| Unregistered `post_logout_redirect_uri`                                                             | HTTP 400                                                                                   |
+| Forged / foreign `id_token_hint` while signed in                                                    | Confirmation page, then logout of the local session on confirm                             |
 
 Redirect URIs and post-logout redirect URIs match **exactly** (no prefix or wildcard matching).
