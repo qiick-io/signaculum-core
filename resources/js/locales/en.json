@@ -190,6 +190,10 @@
             "reportBugUrlHint": "Leave empty to use the Signaculum issue tracker.",
             "reportingDescription": "Where \"Report a bug\" in the settings nav points",
             "reportingTitle": "Bug reports",
+            "registrationDescription": "Public sign-up is off by default on a closed IdP; turn it on when this instance should accept new accounts (for example qiick Cloud).",
+            "registrationEnabled": "Allow self-registration",
+            "registrationEnabledHint": "When enabled, guests can create an account from the login page. When disabled, only instance admins can create users.",
+            "registrationTitle": "User registration",
             "securityDescription": "Password strength, login limits, and two-factor policy",
             "securityNav": {
                 "breadcrumb": "Authentication & security",

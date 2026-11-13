@@ -190,6 +190,10 @@
             "reportBugUrlHint": "Leer lassen, um den Issue-Tracker von Signaculum zu verwenden.",
             "reportingDescription": "Optionale Links für Problem-, Bug- und Fehlermeldungen",
             "reportingTitle": "Melde-URLs",
+            "registrationDescription": "Öffentliche Registrierung ist auf einem geschlossenen IdP standardmäßig aus; schalten Sie sie ein, wenn diese Instanz neue Konten annehmen soll (z. B. qiick Cloud).",
+            "registrationEnabled": "Selbstregistrierung erlauben",
+            "registrationEnabledHint": "Wenn aktiv, können Gäste über die Anmeldeseite ein Konto erstellen. Wenn deaktiviert, können nur Instanz-Admins Benutzer anlegen.",
+            "registrationTitle": "Benutzerregistrierung",
             "securityDescription": "Passwortstärke, Login-Limits und Zwei-Faktor-Richtlinie",
             "securityNav": {
                 "breadcrumb": "Authentifizierung & Sicherheit",

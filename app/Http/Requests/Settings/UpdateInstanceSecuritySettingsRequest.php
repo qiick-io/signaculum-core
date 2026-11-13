@@ -11,8 +11,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Validates Settings → Authentication & security: password policy, login attempts per minute
- * and required two-factor authentication.
+ * Validates Settings → Authentication & security: password policy, login attempts per minute,
+ * self-registration and required two-factor authentication.
  */
 final class UpdateInstanceSecuritySettingsRequest extends FormRequest
 {
@@ -26,18 +26,20 @@ final class UpdateInstanceSecuritySettingsRequest extends FormRequest
         return [
             'password_policy' => ['required', Rule::in(SettingsRepositoryService::PASSWORD_POLICIES)],
             'login_max_attempts' => ['required', 'integer', 'between:1,100'],
+            'registration_enabled' => ['required', 'boolean'],
             'two_factor_required' => ['required', 'boolean'],
         ];
     }
 
     /**
-     * @return array{password_policy: string, login_max_attempts: int, two_factor_required: bool}
+     * @return array{password_policy: string, login_max_attempts: int, registration_enabled: bool, two_factor_required: bool}
      */
     public function settings(): array
     {
         return [
             'password_policy' => $this->string('password_policy')->toString(),
             'login_max_attempts' => $this->integer('login_max_attempts'),
+            'registration_enabled' => $this->boolean('registration_enabled'),
             'two_factor_required' => $this->boolean('two_factor_required'),
         ];
     }

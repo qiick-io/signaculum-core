@@ -190,6 +190,10 @@
             "reportBugUrlHint": "Lascia vuoto per usare il tracker delle issue di Signaculum.",
             "reportingDescription": "Link opzionali per segnalare problemi, bug ed errori",
             "reportingTitle": "URL di segnalazione",
+            "registrationDescription": "La registrazione pubblica è disattivata di default su un IdP chiuso; attivala quando questa istanza deve accettare nuovi account (ad esempio qiick Cloud).",
+            "registrationEnabled": "Consenti auto-registrazione",
+            "registrationEnabledHint": "Se attiva, gli ospiti possono creare un account dalla pagina di login. Se disattiva, solo gli admin dell'istanza possono creare utenti.",
+            "registrationTitle": "Registrazione utenti",
             "securityDescription": "Sicurezza password, limite tentativi di login e policy 2FA",
             "securityNav": {
                 "breadcrumb": "Autenticazione e sicurezza",

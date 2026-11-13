@@ -15,6 +15,8 @@ Every qiick app keeps working standalone with its own local login. Signaculum is
 - Admin screens for OIDC clients and organisations
 - Tested against the OpenID Foundation conformance suite
 
+Self-registration is **off by default** (closed IdP). Instance admins turn it on under Settings → Authentication & security (`registration_enabled`); qiick Cloud can enable it for its hosted instance. Until then, only instance admins create users.
+
 Not planned for v1: SAML, SCIM, IdP-initiated login, dynamic client registration and social logins.
 
 ## Install

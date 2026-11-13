@@ -12,9 +12,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Settings → Authentication & security: password policy, login attempts per minute and
- * required two-factor authentication. Excubia's SSO section is left out: Signaculum is the
- * identity provider and has no upstream IdP in v1. Instance admins only (SettingPolicy).
+ * Settings → Authentication & security: password policy, login attempts per minute,
+ * self-registration and required two-factor authentication. Excubia's SSO section is left out:
+ * Signaculum is the identity provider and has no upstream IdP in v1. Instance admins only
+ * (SettingPolicy).
  */
 final class InstanceSecuritySettingsController extends Controller
 {
@@ -23,7 +24,12 @@ final class InstanceSecuritySettingsController extends Controller
     public function edit(): Response
     {
         return Inertia::render('settings/instance/security', [
-            'instance' => $this->settings->forEditOnly(['password_policy', 'login_max_attempts', 'two_factor_required']),
+            'instance' => $this->settings->forEditOnly([
+                'password_policy',
+                'login_max_attempts',
+                'registration_enabled',
+                'two_factor_required',
+            ]),
             'passwordPolicies' => SettingsRepositoryService::PASSWORD_POLICIES,
         ]);
     }
