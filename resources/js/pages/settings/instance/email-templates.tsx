@@ -48,11 +48,7 @@ type Props = {
     availableLocales: Record<string, string>;
 };
 
-const TEMPLATE_TYPES: TemplateType[] = [
-    'verification',
-    'reset',
-    'invitation',
-];
+const TEMPLATE_TYPES: TemplateType[] = ['verification', 'reset', 'invitation'];
 
 const PREVIEW_SAMPLES: Record<string, string> = {
     app_name: 'Signaculum',
@@ -64,8 +60,7 @@ const PREVIEW_SAMPLES: Record<string, string> = {
 
 function replacePlaceholders(text: string, samples: Record<string, string>) {
     return Object.entries(samples).reduce(
-        (result, [name, value]) =>
-            result.replaceAll(`{{${name}}}`, value),
+        (result, [name, value]) => result.replaceAll(`{{${name}}}`, value),
         text,
     );
 }
@@ -90,9 +85,7 @@ export default function InstanceEmailTemplatesPage({
         cloneTemplates(initialTemplates),
     );
     const [activeType, setActiveType] = useState<TemplateType>('verification');
-    const [activeLocale, setActiveLocale] = useState(
-        localeCodes[0] ?? 'en',
-    );
+    const [activeLocale, setActiveLocale] = useState(localeCodes[0] ?? 'en');
 
     const current = templates[activeType][activeLocale];
     const currentDefaults = defaults[activeType][activeLocale];
@@ -171,7 +164,10 @@ export default function InstanceEmailTemplatesPage({
                                     const fields = templates[type][locale];
 
                                     return (
-                                        <div key={`${type}-${locale}`} className="hidden">
+                                        <div
+                                            key={`${type}-${locale}`}
+                                            className="hidden"
+                                        >
                                             <input
                                                 type="hidden"
                                                 name={`templates[${type}][${locale}][subject]`}
@@ -420,7 +416,7 @@ export default function InstanceEmailTemplatesPage({
                                 />
 
                                 <div
-                                    className="bg-muted/40 space-y-4 rounded-lg border p-4"
+                                    className="space-y-4 rounded-lg border bg-muted/40 p-4"
                                     aria-live="polite"
                                 >
                                     <p className="text-sm font-medium">
@@ -430,7 +426,7 @@ export default function InstanceEmailTemplatesPage({
                                         (paragraph, index) => (
                                             <p
                                                 key={`${index}-${paragraph.slice(0, 24)}`}
-                                                className="text-muted-foreground text-sm whitespace-pre-wrap"
+                                                className="text-sm whitespace-pre-wrap text-muted-foreground"
                                             >
                                                 {paragraph}
                                             </p>
@@ -438,12 +434,12 @@ export default function InstanceEmailTemplatesPage({
                                     )}
                                     {previewAction ? (
                                         <p>
-                                            <span className="bg-primary text-primary-foreground inline-flex h-control items-center rounded-md px-4 text-sm font-medium">
+                                            <span className="inline-flex h-control items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
                                                 {previewAction}
                                             </span>
                                         </p>
                                     ) : null}
-                                    <p className="text-muted-foreground text-xs break-all">
+                                    <p className="text-xs break-all text-muted-foreground">
                                         {PREVIEW_SAMPLES.url}
                                     </p>
                                 </div>
