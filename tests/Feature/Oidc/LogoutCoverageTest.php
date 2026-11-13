@@ -13,18 +13,15 @@ use App\Models\User;
 use App\Services\IdTokenHintValidatorService;
 use App\Services\LogoutTokenService;
 use App\Services\SigningKeyService;
-use DateTimeImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
-use InvalidArgumentException;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Encoding\ChainedFormatter;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
-use LogicException;
 
 beforeEach(function () {
     config(['oidc.issuer' => 'https://id.example.test']);
