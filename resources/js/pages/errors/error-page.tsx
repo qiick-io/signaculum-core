@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { FileQuestion, Lock, ServerCrash, TriangleAlert } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { FileQuestion, Lock, ServerCrash, Wrench } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@/components/layout/page-layout';
 import { Button } from '@/components/ui/button';
@@ -16,95 +16,41 @@ import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import type { BreadcrumbItem } from '@/types';
 
-type Props = {
+type ErrorPageProps = {
     status: 403 | 404 | 500 | 503;
     homeUrl: string;
 };
 
-const statusIcons: Record<Props['status'], ReactNode> = {
-    403: <Lock />,
-    404: <FileQuestion />,
-    500: <ServerCrash />,
-    503: <TriangleAlert />,
+type ErrorCopy = {
+    icon: LucideIcon;
+    key: 'forbidden' | 'notFound' | 'serverError' | 'serviceUnavailable';
 };
 
 /**
- * Shared Inertia error page for 403 / 404 / 500 / 503 (app-ui error-pages.md).
- * App shell when signed in; auth layout for guests (404 guests redirect to login first).
+ * Shared 403 / 404 / 500 / 503 page (app-ui `error-pages.md`).
+ * App shell when signed in; auth layout when not.
  */
-export default function ErrorPage({ status, homeUrl }: Props) {
+export default function ErrorPage({ status, homeUrl }: ErrorPageProps) {
     const { t } = useTranslation();
-    const { auth } = usePage().props;
-    const isSignedIn = auth.user !== null;
-    const keyPrefix = `errors.${status}` as const;
-
-    const title = t(`${keyPrefix}.title`);
-    const description = t(`${keyPrefix}.description`);
-
-    const actions = (
-        <div className="flex flex-wrap justify-center gap-2">
-            {status === 500 || status === 503 ? (
-                <Button
-                    type="button"
-                    variant="default"
-                    onClick={() => window.location.reload()}
-                >
-                    {t(`${keyPrefix}.tryAgain`)}
-                </Button>
-            ) : (
-                <Button asChild variant="default">
-                    <Link href={homeUrl}>
-                        {isSignedIn
-                            ? t(`${keyPrefix}.goHome`)
-                            : t(`${keyPrefix}.signIn`)}
-                    </Link>
-                </Button>
-            )}
-            {isSignedIn && status !== 500 && status !== 503 ? (
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => window.history.back()}
-                >
-                    {t('common.back')}
-                </Button>
-            ) : null}
-        </div>
+    const page = usePage();
+    const isSignedIn = Boolean(
+        (page.props.auth as { user?: unknown } | undefined)?.user,
     );
 
-    if (!isSignedIn) {
-        return (
-            <AuthLayout title={title} description={description}>
-                <Head title={t(`${keyPrefix}.head`)} />
-                <Empty data-test={`error-${status}`}>
-                    <EmptyHeader>
-                        <p className="text-sm font-medium text-muted-foreground">
-                            {status}
-                        </p>
-                        <EmptyMedia
-                            variant="icon"
-                            className="bg-primary/10 text-primary"
-                        >
-                            {statusIcons[status]}
-                        </EmptyMedia>
-                    </EmptyHeader>
-                    <EmptyContent>{actions}</EmptyContent>
-                </Empty>
-            </AuthLayout>
-        );
-    }
+    const copy = copyForStatus(status);
+    const Icon = copy.icon;
+    const translationRoot = `errors.${copy.key}`;
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
-            title,
+            title: t(`${translationRoot}.title`),
             href: homeUrl,
         },
     ];
 
-    return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={t(`${keyPrefix}.head`)} />
-
+    const body = (
+        <>
+            <Head title={t(`${translationRoot}.head`)} />
             <PageLayout>
                 <Empty data-test={`error-${status}`}>
                     <EmptyHeader>
@@ -115,16 +61,65 @@ export default function ErrorPage({ status, homeUrl }: Props) {
                             variant="icon"
                             className="bg-primary/10 text-primary"
                         >
-                            {statusIcons[status]}
+                            <Icon />
                         </EmptyMedia>
                         <EmptyTitle>
-                            <h1>{title}</h1>
+                            <h1>{t(`${translationRoot}.title`)}</h1>
                         </EmptyTitle>
-                        <EmptyDescription>{description}</EmptyDescription>
+                        <EmptyDescription>
+                            {t(`${translationRoot}.description`)}
+                        </EmptyDescription>
                     </EmptyHeader>
-                    <EmptyContent>{actions}</EmptyContent>
+                    <EmptyContent>
+                        <div className="flex flex-wrap justify-center gap-2">
+                            <Button asChild variant="default">
+                                <Link href={homeUrl}>
+                                    {t(
+                                        isSignedIn
+                                            ? `${translationRoot}.goHome`
+                                            : `${translationRoot}.signIn`,
+                                    )}
+                                </Link>
+                            </Button>
+                            {isSignedIn ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => window.history.back()}
+                                >
+                                    {t('common.back')}
+                                </Button>
+                            ) : null}
+                        </div>
+                    </EmptyContent>
                 </Empty>
             </PageLayout>
-        </AppLayout>
+        </>
     );
+
+    if (isSignedIn) {
+        return <AppLayout breadcrumbs={breadcrumbs}>{body}</AppLayout>;
+    }
+
+    return (
+        <AuthLayout
+            title={t(`${translationRoot}.title`)}
+            description={t(`${translationRoot}.description`)}
+        >
+            {body}
+        </AuthLayout>
+    );
+}
+
+function copyForStatus(status: ErrorPageProps['status']): ErrorCopy {
+    switch (status) {
+        case 403:
+            return { icon: Lock, key: 'forbidden' };
+        case 500:
+            return { icon: ServerCrash, key: 'serverError' };
+        case 503:
+            return { icon: Wrench, key: 'serviceUnavailable' };
+        default:
+            return { icon: FileQuestion, key: 'notFound' };
+    }
 }

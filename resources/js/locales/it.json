@@ -21,7 +21,6 @@
     },
     "common": {
         "actions": "Azioni",
-        "back": "Indietro",
         "cancel": "Annulla",
         "confirmPassword": "Conferma password",
         "delete": "Elimina",
@@ -43,7 +42,8 @@
         "copy": "Copia",
         "clearFilters": "Cancella filtri",
         "sortAscending": "Ordine crescente",
-        "sortDescending": "Ordine decrescente"
+        "sortDescending": "Ordine decrescente",
+        "back": "Indietro"
     },
     "confirmDestructive": {
         "typeToConfirm": "Digita \"{{name}}\" per confermare"
@@ -191,6 +191,10 @@
             "reportBugUrlHint": "Lascia vuoto per usare il tracker delle issue di Signaculum.",
             "reportingDescription": "Link opzionali per segnalare problemi, bug ed errori",
             "reportingTitle": "URL di segnalazione",
+            "registrationDescription": "La registrazione pubblica è disattivata di default su un IdP chiuso; attivala quando questa istanza deve accettare nuovi account (ad esempio qiick Cloud).",
+            "registrationEnabled": "Consenti auto-registrazione",
+            "registrationEnabledHint": "Se attiva, gli ospiti possono creare un account dalla pagina di login. Se disattiva, solo gli admin dell'istanza possono creare utenti.",
+            "registrationTitle": "Registrazione utenti",
             "securityDescription": "Sicurezza password, limite tentativi di login e policy 2FA",
             "securityNav": {
                 "breadcrumb": "Autenticazione e sicurezza",
@@ -400,35 +404,33 @@
         }
     },
     "errors": {
-        "403": {
-            "head": "Accesso negato",
+        "forbidden": {
+            "head": "Non autorizzato",
             "title": "Non hai il permesso",
-            "description": "Hai effettuato l'accesso, ma questa pagina o azione non è disponibile per il tuo account.",
+            "description": "Questa pagina richiede un ruolo o un permesso diverso. Chiedi a un admin di istanza se ti serve l'accesso.",
             "goHome": "Torna alla dashboard",
             "signIn": "Accedi"
         },
-        "404": {
-            "head": "Pagina non trovata",
+        "notFound": {
+            "head": "Non trovato",
             "title": "Pagina non trovata",
-            "description": "La pagina richiesta non esiste o non è più disponibile.",
+            "description": "Questo indirizzo non corrisponde a nulla. Controlla l'URL o torna indietro.",
             "goHome": "Torna alla dashboard",
             "signIn": "Accedi"
         },
-        "500": {
+        "serverError": {
             "head": "Qualcosa è andato storto",
             "title": "Qualcosa è andato storto",
-            "description": "Si è verificato un errore imprevisto. Riprova tra poco.",
+            "description": "Si è verificato un errore imprevisto. Riprova tra un momento.",
             "goHome": "Torna alla dashboard",
-            "signIn": "Accedi",
-            "tryAgain": "Riprova"
+            "signIn": "Accedi"
         },
-        "503": {
-            "head": "Temporaneamente non disponibile",
+        "serviceUnavailable": {
+            "head": "Non disponibile",
             "title": "Temporaneamente non disponibile",
-            "description": "Il servizio non è temporaneamente disponibile. Riprova a breve.",
+            "description": "Signaculum non è disponibile per un momento. Riprova tra poco.",
             "goHome": "Torna alla dashboard",
-            "signIn": "Accedi",
-            "tryAgain": "Riprova"
+            "signIn": "Accedi"
         }
     }
 }

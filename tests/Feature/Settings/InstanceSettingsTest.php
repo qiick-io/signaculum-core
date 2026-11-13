@@ -35,6 +35,7 @@ function securitySettingsPayload(array $overrides = []): array
     return [
         'password_policy' => 'medium',
         'login_max_attempts' => 3,
+        'registration_enabled' => '0',
         'two_factor_required' => '0',
         ...$overrides,
     ];
@@ -90,6 +91,7 @@ it('shows the defaults until a value is saved', function () {
     $this->actingAs($admin)->get(route('instance.security.edit'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('instance.login_max_attempts', 5)
+            ->where('instance.registration_enabled', false)
             ->where('instance.two_factor_required', false)
             ->where('passwordPolicies', SettingsRepositoryService::PASSWORD_POLICIES));
 });
@@ -139,10 +141,25 @@ it('saves the authentication and security settings and the app uses them', funct
 
     expect($settings->passwordPolicy())->toBe('medium')
         ->and($settings->loginMaxAttempts())->toBe(3)
+        ->and($settings->isRegistrationEnabled())->toBeFalse()
         ->and($settings->isTwoFactorRequired())->toBeFalse();
 
     expect(validator(['password' => 'alllowercase'], ['password' => Password::default()])->fails())->toBeTrue()
         ->and(validator(['password' => 'Mixed1Case'], ['password' => Password::default()])->passes())->toBeTrue();
+});
+
+it('turns self-registration on from authentication and security settings', function () {
+    $this->actingAs(instanceAdmin())
+        ->put(route('instance.security.update'), securitySettingsPayload([
+            'registration_enabled' => '1',
+        ]))
+        ->assertRedirect(route('instance.security.edit'));
+
+    expect(app(SettingsRepositoryService::class)->isRegistrationEnabled())->toBeTrue();
+
+    $this->post(route('logout'));
+
+    $this->get(route('register'))->assertOk();
 });
 
 it('validates the authentication and security settings', function () {
@@ -150,9 +167,10 @@ it('validates the authentication and security settings', function () {
         ->put(route('instance.security.update'), securitySettingsPayload([
             'password_policy' => 'none',
             'login_max_attempts' => 0,
+            'registration_enabled' => 'maybe',
             'two_factor_required' => 'maybe',
         ]))
-        ->assertSessionHasErrors(['password_policy', 'login_max_attempts', 'two_factor_required']);
+        ->assertSessionHasErrors(['password_policy', 'login_max_attempts', 'registration_enabled', 'two_factor_required']);
 });
 
 it('uses the saved login attempts for the login rate limit', function () {

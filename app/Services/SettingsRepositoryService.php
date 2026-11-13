@@ -11,8 +11,8 @@ use Illuminate\Validation\Rules\Password;
 
 /**
  * Instance settings stored in the `settings` table, merged over defaults, with typed getters
- * for the code that uses them (login throttle, password rule, required 2FA, UI language,
- * appearance and branding).
+ * for the code that uses them (login throttle, password rule, self-registration, required 2FA,
+ * UI language, appearance and branding).
  *
  * Copied from qiick-io/excubia-app and trimmed to what Signaculum has. Setting keys keep the
  * externa-core / Excubia names (`project_color`, `project_logo`, …) so the three apps read the
@@ -60,6 +60,9 @@ final class SettingsRepositoryService
             'public_favicon' => null,
             'password_policy' => app()->isProduction() ? 'strong' : 'weak',
             'login_max_attempts' => 5,
+            // Closed IdP default: self-hosting stays invite-only until an admin turns this on
+            // (qiick Cloud can enable it). Decision of 2026-11-13 on #23.
+            'registration_enabled' => false,
             'two_factor_required' => false,
         ];
     }
@@ -204,6 +207,16 @@ final class SettingsRepositoryService
     public function loginMaxAttempts(): int
     {
         return $this->integer('login_max_attempts', 1, 100);
+    }
+
+    /**
+     * Whether guests may open `/register` and create an account. Off by default so a fresh
+     * Signaculum install is a closed IdP; instance admins turn it on in Settings → Authentication
+     * & security (for example on qiick Cloud).
+     */
+    public function isRegistrationEnabled(): bool
+    {
+        return (bool) $this->all()['registration_enabled'];
     }
 
     public function isTwoFactorRequired(): bool

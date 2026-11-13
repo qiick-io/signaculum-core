@@ -21,7 +21,6 @@
     },
     "common": {
         "actions": "Aktionen",
-        "back": "Zurück",
         "cancel": "Abbrechen",
         "confirmPassword": "Passwort bestätigen",
         "delete": "Löschen",
@@ -43,7 +42,8 @@
         "copy": "Kopieren",
         "clearFilters": "Filter zurücksetzen",
         "sortAscending": "Aufsteigend sortieren",
-        "sortDescending": "Absteigend sortieren"
+        "sortDescending": "Absteigend sortieren",
+        "back": "Zurück"
     },
     "confirmDestructive": {
         "typeToConfirm": "Tippe „{{name}}“ zur Bestätigung"
@@ -191,6 +191,10 @@
             "reportBugUrlHint": "Leer lassen, um den Issue-Tracker von Signaculum zu verwenden.",
             "reportingDescription": "Optionale Links für Problem-, Bug- und Fehlermeldungen",
             "reportingTitle": "Melde-URLs",
+            "registrationDescription": "Öffentliche Registrierung ist auf einem geschlossenen IdP standardmäßig aus; schalten Sie sie ein, wenn diese Instanz neue Konten annehmen soll (z. B. qiick Cloud).",
+            "registrationEnabled": "Selbstregistrierung erlauben",
+            "registrationEnabledHint": "Wenn aktiv, können Gäste über die Anmeldeseite ein Konto erstellen. Wenn deaktiviert, können nur Instanz-Admins Benutzer anlegen.",
+            "registrationTitle": "Benutzerregistrierung",
             "securityDescription": "Passwortstärke, Login-Limits und Zwei-Faktor-Richtlinie",
             "securityNav": {
                 "breadcrumb": "Authentifizierung & Sicherheit",
@@ -400,35 +404,33 @@
         }
     },
     "errors": {
-        "403": {
-            "head": "Zugriff verweigert",
+        "forbidden": {
+            "head": "Nicht erlaubt",
             "title": "Keine Berechtigung",
-            "description": "Sie sind angemeldet, aber diese Seite oder Aktion ist für Ihr Konto nicht verfügbar.",
-            "goHome": "Zurück zum Dashboard",
+            "description": "Für diese Seite ist eine andere Rolle oder Berechtigung nötig. Bitten Sie einen Instanz-Admin um Zugang.",
+            "goHome": "Zur Übersicht",
             "signIn": "Anmelden"
         },
-        "404": {
-            "head": "Seite nicht gefunden",
+        "notFound": {
+            "head": "Nicht gefunden",
             "title": "Seite nicht gefunden",
-            "description": "Die angeforderte Seite existiert nicht oder ist nicht mehr verfügbar.",
-            "goHome": "Zurück zum Dashboard",
+            "description": "Diese Adresse gehört zu keiner Seite. Prüfen Sie die URL oder gehen Sie zurück.",
+            "goHome": "Zur Übersicht",
             "signIn": "Anmelden"
         },
-        "500": {
+        "serverError": {
             "head": "Etwas ist schiefgelaufen",
             "title": "Etwas ist schiefgelaufen",
-            "description": "Es ist ein unerwarteter Fehler aufgetreten. Versuchen Sie es in einem Moment erneut.",
-            "goHome": "Zurück zum Dashboard",
-            "signIn": "Anmelden",
-            "tryAgain": "Erneut versuchen"
+            "description": "Es ist ein unerwarteter Fehler aufgetreten. Versuchen Sie es gleich erneut.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
         },
-        "503": {
-            "head": "Vorübergehend nicht verfügbar",
+        "serviceUnavailable": {
+            "head": "Nicht verfügbar",
             "title": "Vorübergehend nicht verfügbar",
-            "description": "Der Dienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es bald erneut.",
-            "goHome": "Zurück zum Dashboard",
-            "signIn": "Anmelden",
-            "tryAgain": "Erneut versuchen"
+            "description": "Signaculum ist kurz nicht erreichbar. Bitte versuchen Sie es bald erneut.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
         }
     }
 }

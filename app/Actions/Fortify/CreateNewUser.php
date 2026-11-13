@@ -1,13 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
+use App\Services\SettingsRepositoryService;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Laravel\Fortify\Features;
 
+/**
+ * Fortify action that registers a new user when self-registration is enabled.
+ */
 class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules, ProfileValidationRules;
@@ -19,6 +27,13 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
+        if (! Features::enabled(Features::registration())
+            || ! app(SettingsRepositoryService::class)->isRegistrationEnabled()) {
+            throw ValidationException::withMessages([
+                'email' => __('Registration is currently disabled.'),
+            ]);
+        }
+
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),

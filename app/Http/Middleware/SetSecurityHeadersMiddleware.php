@@ -10,12 +10,14 @@ use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Defense headers for Inertia/web HTML. Skips API/OIDC JSON and responses that
- * already set Content-Security-Policy (e.g. branding asset sandbox).
+ * Defense headers for Inertia/web HTML. Skips OIDC discovery/API JSON and
+ * responses that already set Content-Security-Policy.
  *
- * Defaults follow app-ui docs/security-headers.md. HSTS is the reverse proxy's job.
+ * Copied from externa-core's SetSecurityHeadersMiddleware (app-ui
+ * `security-headers.md`); branding assets are same-origin so no files-disk
+ * origin is required. HSTS stays on the reverse proxy.
  */
-class SetSecurityHeadersMiddleware
+final class SetSecurityHeadersMiddleware
 {
     /**
      * @param  Closure(Request): Response  $next
@@ -28,8 +30,7 @@ class SetSecurityHeadersMiddleware
             return $response;
         }
 
-        // OIDC / API clients must not inherit the admin CSP.
-        if ($request->is('api/*') || $request->is('oauth/userinfo') || $request->is('.well-known/*') || $request->is('health/*')) {
+        if ($request->is('api/*') || $request->is('.well-known/*') || $request->is('oauth/userinfo')) {
             return $response;
         }
 
@@ -47,7 +48,6 @@ class SetSecurityHeadersMiddleware
             (string) config('security.permissions_policy'),
         );
 
-        // Do not clobber branding / user-content CSP sandbox.
         if (! $response->headers->has('Content-Security-Policy')) {
             $response->headers->set('Content-Security-Policy', $this->contentSecurityPolicy());
         }
@@ -57,9 +57,6 @@ class SetSecurityHeadersMiddleware
 
     /**
      * Build the default CSP, or return the SECURITY_CSP override verbatim.
-     *
-     * Adds the running Vite dev server to script/style/font/img sources.
-     * Branding images are same-origin (`/branding/{asset}`), so no remote files origin.
      */
     private function contentSecurityPolicy(): string
     {
@@ -69,16 +66,12 @@ class SetSecurityHeadersMiddleware
             return trim($override);
         }
 
-        // Vite dev server from public/hot (http://127.0.0.1:5173, or https://{HERD_SITE}:5173).
         $developmentServerOrigins = $this->originsOf([Vite::devServerUrl()]);
 
-        // connect-src stays open for Reverb/Echo websockets and Vite HMR.
-        $connectSources = ["'self'", 'ws:', 'wss:', 'http:', 'https:'];
         $scriptSources = array_merge(["'self'", "'unsafe-inline'", "'unsafe-eval'"], $developmentServerOrigins);
         $styleSources = array_merge(["'self'", "'unsafe-inline'"], $developmentServerOrigins);
         $fontSources = array_merge(["'self'", 'data:'], $developmentServerOrigins);
         $imageSources = array_merge(["'self'", 'data:', 'blob:', 'https:'], $developmentServerOrigins);
-        $mediaSources = ["'self'", 'blob:'];
 
         return implode('; ', [
             "default-src 'self'",
@@ -86,8 +79,8 @@ class SetSecurityHeadersMiddleware
             'style-src '.implode(' ', $styleSources),
             'img-src '.implode(' ', array_unique($imageSources)),
             'font-src '.implode(' ', $fontSources),
-            'connect-src '.implode(' ', $connectSources),
-            'media-src '.implode(' ', $mediaSources),
+            "connect-src 'self' ws: wss: http: https:",
+            "media-src 'self' blob:",
             "worker-src 'self' blob:",
             "frame-ancestors 'none'",
             "base-uri 'self'",

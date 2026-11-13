@@ -21,7 +21,6 @@
     },
     "common": {
         "actions": "Actions",
-        "back": "Back",
         "cancel": "Cancel",
         "confirmPassword": "Confirm password",
         "delete": "Delete",
@@ -43,7 +42,8 @@
         "copy": "Copy",
         "clearFilters": "Clear filters",
         "sortAscending": "Sort ascending",
-        "sortDescending": "Sort descending"
+        "sortDescending": "Sort descending",
+        "back": "Back"
     },
     "confirmDestructive": {
         "typeToConfirm": "Type \"{{name}}\" to confirm"
@@ -191,6 +191,10 @@
             "reportBugUrlHint": "Leave empty to use the Signaculum issue tracker.",
             "reportingDescription": "Where \"Report a bug\" in the settings nav points",
             "reportingTitle": "Bug reports",
+            "registrationDescription": "Public sign-up is off by default on a closed IdP; turn it on when this instance should accept new accounts (for example qiick Cloud).",
+            "registrationEnabled": "Allow self-registration",
+            "registrationEnabledHint": "When enabled, guests can create an account from the login page. When disabled, only instance admins can create users.",
+            "registrationTitle": "User registration",
             "securityDescription": "Password strength, login limits, and two-factor policy",
             "securityNav": {
                 "breadcrumb": "Authentication & security",
@@ -400,35 +404,33 @@
         }
     },
     "errors": {
-        "403": {
+        "forbidden": {
             "head": "Forbidden",
             "title": "You do not have permission",
-            "description": "You are signed in, but this page or action is not available for your account.",
+            "description": "This page needs a different role or permission. Ask an instance admin if you need access.",
             "goHome": "Back to dashboard",
             "signIn": "Sign in"
         },
-        "404": {
-            "head": "Page not found",
+        "notFound": {
+            "head": "Not found",
             "title": "Page not found",
-            "description": "The page you requested does not exist or is no longer available.",
+            "description": "That address does not match anything here. Check the URL or go back.",
             "goHome": "Back to dashboard",
             "signIn": "Sign in"
         },
-        "500": {
+        "serverError": {
             "head": "Something went wrong",
             "title": "Something went wrong",
             "description": "An unexpected error occurred. Try again in a moment.",
             "goHome": "Back to dashboard",
-            "signIn": "Sign in",
-            "tryAgain": "Try again"
+            "signIn": "Sign in"
         },
-        "503": {
-            "head": "Temporarily unavailable",
+        "serviceUnavailable": {
+            "head": "Unavailable",
             "title": "Temporarily unavailable",
-            "description": "The service is temporarily unavailable. Please try again soon.",
+            "description": "Signaculum is briefly unavailable. Please try again soon.",
             "goHome": "Back to dashboard",
-            "signIn": "Sign in",
-            "tryAgain": "Try again"
+            "signIn": "Sign in"
         }
     }
 }

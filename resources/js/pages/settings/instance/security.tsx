@@ -31,7 +31,10 @@ import type {
 
 type SecurityInstanceSettings = Pick<
     InstanceSettingsForm,
-    'password_policy' | 'login_max_attempts' | 'two_factor_required'
+    | 'password_policy'
+    | 'login_max_attempts'
+    | 'registration_enabled'
+    | 'two_factor_required'
 >;
 
 type Props = {
@@ -43,13 +46,15 @@ function buildFormState(instance: SecurityInstanceSettings) {
     return {
         password_policy: instance.password_policy,
         login_max_attempts: instance.login_max_attempts,
+        registration_enabled: instance.registration_enabled,
         two_factor_required: instance.two_factor_required,
     };
 }
 
 /**
- * Settings → Authentication & security: password policy, login attempts per minute and
- * required two-factor authentication. Copied from Excubia without its SSO section.
+ * Settings → Authentication & security: password policy, login attempts per minute,
+ * self-registration and required two-factor authentication. Copied from Excubia / externa
+ * without Excubia's SSO section.
  */
 export default function InstanceSecuritySettingsPage({
     instance,
@@ -82,6 +87,11 @@ export default function InstanceSecuritySettingsPage({
                 >
                     {({ processing, recentlySuccessful, errors }) => (
                         <>
+                            <input
+                                type="hidden"
+                                name="registration_enabled"
+                                value={form.registration_enabled ? '1' : '0'}
+                            />
                             <input
                                 type="hidden"
                                 name="two_factor_required"
@@ -288,6 +298,70 @@ export default function InstanceSecuritySettingsPage({
                                         </FieldDescription>
                                         <FieldError id="two-factor-required-error">
                                             {errors.two_factor_required}
+                                        </FieldError>
+                                    </Field>
+                                </FieldGroup>
+                            </div>
+
+                            <div className="space-y-6">
+                                <Heading
+                                    variant="small"
+                                    title={t(
+                                        'settings.instance.registrationTitle',
+                                    )}
+                                    description={t(
+                                        'settings.instance.registrationDescription',
+                                    )}
+                                />
+
+                                <FieldGroup className="gap-6">
+                                    <Field
+                                        data-invalid={
+                                            errors.registration_enabled
+                                                ? true
+                                                : undefined
+                                        }
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Checkbox
+                                                id="registration_enabled"
+                                                checked={
+                                                    form.registration_enabled
+                                                }
+                                                onCheckedChange={(checked) =>
+                                                    setForm((current) => ({
+                                                        ...current,
+                                                        registration_enabled:
+                                                            checked === true,
+                                                    }))
+                                                }
+                                                aria-invalid={
+                                                    errors.registration_enabled
+                                                        ? true
+                                                        : undefined
+                                                }
+                                                aria-describedby={
+                                                    errors.registration_enabled
+                                                        ? 'registration-enabled-error'
+                                                        : 'registration-enabled-hint'
+                                                }
+                                            />
+                                            <FieldLabel htmlFor="registration_enabled">
+                                                {t(
+                                                    'settings.instance.registrationEnabled',
+                                                )}
+                                            </FieldLabel>
+                                        </div>
+                                        <FieldDescription
+                                            id="registration-enabled-hint"
+                                            className="pl-8"
+                                        >
+                                            {t(
+                                                'settings.instance.registrationEnabledHint',
+                                            )}
+                                        </FieldDescription>
+                                        <FieldError id="registration-enabled-error">
+                                            {errors.registration_enabled}
                                         </FieldError>
                                     </Field>
                                 </FieldGroup>
