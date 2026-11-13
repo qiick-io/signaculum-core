@@ -77,6 +77,8 @@ Always emitted on the `id_token` from methods recorded at login (`Authentication
 | `swk` | Passkey without a hardware transport (platform / hybrid)                                              |
 | `mfa` | Two or more of the concrete factors above were used in the same authentication                        |
 
+A remember-me **recaller** login (session restored from the cookie, `Auth::viaRemember()`) does **not** record a fresh `pwd`: the user did not type a password on that request. Interactive password login with the "remember me" checkbox still records `pwd` as usual. When the recaller leaves the session without recorded methods, `amr` falls back to `pwd` as for any other unsigned method list.
+
 `acr` is out of scope for this slice (emit only when requested; see #69).
 
 Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_name` / `last_name` columns use `given_name` / `family_name` when present (`PersonNameData` in `qiick/laravel-oidc`).
