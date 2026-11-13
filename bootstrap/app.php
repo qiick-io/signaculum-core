@@ -48,7 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*', 'oauth/userinfo', '.well-known/*') || $request->expectsJson(),
+            fn (Request $request) => $request->is('api/*', 'oauth/userinfo', 'oauth/introspect', 'oauth/revoke', '.well-known/*') || $request->expectsJson(),
         );
 
         // RFC 6750 §3: a protected resource answers a missing or bad token with a challenge.
