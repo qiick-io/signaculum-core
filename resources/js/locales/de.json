@@ -237,7 +237,10 @@
             "linkSent": "Ein neuer Bestätigungslink wurde an Ihre E-Mail-Adresse gesendet.",
             "resend": "Hier klicken, um die Bestätigungs-E-Mail erneut zu senden.",
             "title": "Profilinformationen",
-            "unverified": "Ihre E-Mail-Adresse ist nicht bestätigt."
+            "unverified": "Ihre E-Mail-Adresse ist nicht bestätigt.",
+            "exportTitle": "Ihre Daten herunterladen",
+            "exportDescription": "Eine JSON-Datei mit Profil, Organisationen, Sitzungen und verbundenen Apps. Passwörter und 2FA-Geheimnisse sind nie enthalten.",
+            "exportDownload": "JSON herunterladen"
         },
         "security": {
             "addPasskey": "Passkey hinzufügen",
