@@ -89,7 +89,8 @@
         "admin": "Amministrazione",
         "users": "Utenti",
         "applications": "Applicazioni",
-        "activityLog": "Registro attività"
+        "activityLog": "Registro attività",
+        "organizations": "Organizzazioni"
     },
     "realtime": {
         "connected": "Realtime connesso",
@@ -497,6 +498,37 @@
             "description": "Signaculum non è disponibile per un momento. Riprova tra poco.",
             "goHome": "Torna alla dashboard",
             "signIn": "Accedi"
+        }
+    },
+    "organizations": {
+        "breadcrumb": "Organizzazioni",
+        "head": "Organizzazioni",
+        "title": "Organizzazioni",
+        "description": "Organizzazioni di cui fai parte. Creane una per gestire membri e ruoli.",
+        "slug": "Slug",
+        "create": "Crea organizzazione",
+        "emptyTitle": "Nessuna organizzazione",
+        "emptyDescription": "Crea un’organizzazione per raggruppare membri e ruoli per il claim qiick.orgs.",
+        "showDescription": "Impostazioni e membri dell’organizzazione.",
+        "members": {
+            "title": "Membri",
+            "description": "Ogni membro può avere uno o più ruoli. Un’organizzazione mantiene sempre almeno un owner.",
+            "rolesLabel": "Ruoli",
+            "userId": "ID utente",
+            "add": "Aggiungi membro",
+            "remove": "Rimuovi",
+            "roles": {
+                "owner": "Owner",
+                "admin": "Admin",
+                "member": "Member",
+                "billing": "Billing"
+            }
+        },
+        "danger": {
+            "title": "Elimina organizzazione",
+            "description": "Elimina l’organizzazione e tutte le membership. L’azione non è reversibile.",
+            "confirmTitle": "Eliminare questa organizzazione?",
+            "confirmDescription": "Digita il nome dell’organizzazione per confermare l’eliminazione permanente."
         }
     }
 }
