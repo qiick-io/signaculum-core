@@ -212,7 +212,27 @@
             "loginLockoutThreshold": "Fehlversuche vor Sperre",
             "loginLockoutThresholdDescription": "Falsche Passwörter für ein Konto, bevor es gesperrt wird.",
             "loginLockoutMinutes": "Sperrdauer (Minuten)",
-            "loginLockoutMinutesDescription": "Wie lange ein gesperrtes Konto warten muss, bevor es erneut versuchen darf."
+            "loginLockoutMinutesDescription": "Wie lange ein gesperrtes Konto warten muss, bevor es erneut versuchen darf.",
+            "emailTemplates": {
+                "breadcrumb": "E-Mail-Vorlagen",
+                "head": "E-Mail-Vorlagen",
+                "title": "Transaktionale E-Mails",
+                "description": "Verifizierung, Passwortzurücksetzung und Organisations-Einladungen. Leere Felder behalten die Signaculum-Standards für diese Sprache.",
+                "typeLabel": "E-Mail-Typ",
+                "locale": "Sprache",
+                "subject": "Betreff",
+                "body": "Text",
+                "actionLabel": "Schaltflächenbeschriftung",
+                "placeholdersHint": "Verfügbare Platzhalter: {{placeholders}}",
+                "restoreDefaults": "Standards wiederherstellen",
+                "previewTitle": "Vorschau",
+                "previewDescription": "Nur Beispielwerte; echte E-Mails verwenden die Empfängerdaten.",
+                "types": {
+                    "verification": "Verifizierung",
+                    "reset": "Passwortzurücksetzung",
+                    "invitation": "Einladung"
+                }
+            }
         },
         "layout": {
             "appearance": "Darstellung",
@@ -228,7 +248,8 @@
             "sectionInstance": "Instanz",
             "security": "Sicherheit",
             "sessions": "Sitzungen",
-            "title": "Einstellungen"
+            "title": "Einstellungen",
+            "emailTemplates": "E-Mail-Vorlagen"
         },
         "profile": {
             "breadcrumb": "Profileinstellungen",

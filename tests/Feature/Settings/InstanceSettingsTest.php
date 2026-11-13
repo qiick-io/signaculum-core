@@ -48,6 +48,7 @@ dataset('instance settings pages', [
     'general' => ['instance.edit', 'settings/instance'],
     'localization' => ['instance.localization.edit', 'settings/instance/localization'],
     'authentication & security' => ['instance.security.edit', 'settings/instance/security'],
+    'email templates' => ['instance.email-templates.edit', 'settings/instance/email-templates'],
     'appearance' => ['appearance.edit', 'settings/appearance'],
 ]);
 
@@ -55,6 +56,7 @@ dataset('instance settings writes', [
     'general' => ['put', 'instance.update'],
     'localization' => ['put', 'instance.localization.update'],
     'authentication & security' => ['put', 'instance.security.update'],
+    'email templates' => ['put', 'instance.email-templates.update'],
     'appearance' => ['put', 'appearance.update'],
 ]);
 

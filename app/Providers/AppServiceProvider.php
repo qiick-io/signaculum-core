@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\EmailTemplateTypeEnum;
 use App\Enums\OidcScopeEnum;
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
@@ -12,6 +13,7 @@ use App\Oidc\OidcAuthCodeGrant;
 use App\Oidc\OidcAuthCodeRepository;
 use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
+use App\Services\EmailTemplateService;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
 use Carbon\CarbonImmutable;
@@ -19,9 +21,12 @@ use DateInterval;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -60,6 +65,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureTransactionalEmailTemplates();
         $this->configureRateLimiting();
         $this->configureOpenIdConnect();
         $this->configureActivityLogging();
@@ -67,6 +73,76 @@ class AppServiceProvider extends ServiceProvider
         $this->attachOidcRateLimitMiddleware();
         $this->attachAuthorizationResponseIssuerMiddleware();
         $this->attachMaximumAuthenticationAgeMiddleware();
+    }
+
+    /**
+     * Verification and password-reset mail use instance-admin templates (#53), with
+     * Signaculum-branded locale defaults when no override is saved.
+     */
+    protected function configureTransactionalEmailTemplates(): void
+    {
+        VerifyEmail::toMailUsing(function (object $notifiable, string $url): MailMessage {
+            return $this->transactionalMail(
+                EmailTemplateTypeEnum::Verification,
+                $notifiable,
+                [
+                    'url' => $url,
+                ],
+            );
+        });
+
+        ResetPassword::toMailUsing(function (object $notifiable, string $token): MailMessage {
+            $email = method_exists($notifiable, 'getEmailForPasswordReset')
+                ? $notifiable->getEmailForPasswordReset()
+                : (string) data_get($notifiable, 'email', '');
+
+            $url = url(route('password.reset', [
+                'token' => $token,
+                'email' => $email,
+            ], false));
+
+            $expireMinutes = (int) config(
+                'auth.passwords.'.config('auth.defaults.passwords').'.expire',
+                60,
+            );
+
+            return $this->transactionalMail(
+                EmailTemplateTypeEnum::Reset,
+                $notifiable,
+                [
+                    'url' => $url,
+                    'expire_minutes' => $expireMinutes,
+                ],
+            );
+        });
+    }
+
+    /**
+     * @param  array<string, string|int>  $extraPlaceholders
+     */
+    private function transactionalMail(
+        EmailTemplateTypeEnum $type,
+        object $notifiable,
+        array $extraPlaceholders,
+    ): MailMessage {
+        $settings = app(SettingsRepositoryService::class);
+        $locale = $notifiable instanceof User && is_string($notifiable->locale) && $notifiable->locale !== ''
+            ? $notifiable->locale
+            : $settings->defaultLanguage();
+
+        $userName = $notifiable instanceof User
+            ? $notifiable->name
+            : (string) data_get($notifiable, 'name', '');
+
+        return app(EmailTemplateService::class)->mailMessage(
+            $type,
+            $locale,
+            [
+                'app_name' => $settings->appName(),
+                'user_name' => $userName,
+                ...$extraPlaceholders,
+            ],
+        );
     }
 
     /**

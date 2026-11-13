@@ -4,6 +4,7 @@ use App\Http\Controllers\Settings\AccountExportController;
 use App\Http\Controllers\Settings\AppearanceSettingsController;
 use App\Http\Controllers\Settings\BrowserSessionController;
 use App\Http\Controllers\Settings\ConnectedApplicationController;
+use App\Http\Controllers\Settings\InstanceEmailTemplatesController;
 use App\Http\Controllers\Settings\InstanceLocalizationSettingsController;
 use App\Http\Controllers\Settings\InstanceSecuritySettingsController;
 use App\Http\Controllers\Settings\InstanceSettingsController;
@@ -60,6 +61,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('settings/instance/security', [InstanceSecuritySettingsController::class, 'edit'])->name('instance.security.edit');
         Route::put('settings/instance/security', [InstanceSecuritySettingsController::class, 'update'])->name('instance.security.update');
+
+        Route::get('settings/instance/email-templates', [InstanceEmailTemplatesController::class, 'edit'])->name('instance.email-templates.edit');
+        Route::put('settings/instance/email-templates', [InstanceEmailTemplatesController::class, 'update'])->name('instance.email-templates.update');
 
         Route::get('settings/appearance', [AppearanceSettingsController::class, 'edit'])->name('appearance.edit');
         Route::put('settings/appearance', [AppearanceSettingsController::class, 'update'])->name('appearance.update');

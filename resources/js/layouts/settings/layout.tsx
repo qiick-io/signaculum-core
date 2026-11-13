@@ -16,6 +16,7 @@ import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { index as connectedApplications } from '@/routes/connected-applications';
 import { edit as editInstance } from '@/routes/instance';
+import { edit as editEmailTemplates } from '@/routes/instance/email-templates';
 import { edit as editLocalization } from '@/routes/instance/localization';
 import { edit as editInstanceSecurity } from '@/routes/instance/security';
 import { edit } from '@/routes/profile';
@@ -82,6 +83,11 @@ export default function SettingsLayout({
               {
                   title: t('settings.layout.authSecurity'),
                   href: editInstanceSecurity(),
+                  icon: null,
+              },
+              {
+                  title: t('settings.layout.emailTemplates'),
+                  href: editEmailTemplates(),
                   icon: null,
               },
               {

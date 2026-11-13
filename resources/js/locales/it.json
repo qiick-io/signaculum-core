@@ -212,7 +212,27 @@
             "loginLockoutThreshold": "Tentativi falliti prima del blocco",
             "loginLockoutThresholdDescription": "Password errate per un account prima che venga bloccato.",
             "loginLockoutMinutes": "Durata del blocco (minuti)",
-            "loginLockoutMinutesDescription": "Per quanto tempo un account bloccato deve attendere prima di riprovare."
+            "loginLockoutMinutesDescription": "Per quanto tempo un account bloccato deve attendere prima di riprovare.",
+            "emailTemplates": {
+                "breadcrumb": "Modelli email",
+                "head": "Modelli email",
+                "title": "Email transazionali",
+                "description": "Email di verifica, reimpostazione password e invito all'organizzazione. I campi vuoti mantengono i valori predefiniti di Signaculum per quella lingua.",
+                "typeLabel": "Tipo di email",
+                "locale": "Lingua",
+                "subject": "Oggetto",
+                "body": "Corpo",
+                "actionLabel": "Etichetta del pulsante",
+                "placeholdersHint": "Segnaposto disponibili: {{placeholders}}",
+                "restoreDefaults": "Ripristina predefiniti",
+                "previewTitle": "Anteprima",
+                "previewDescription": "Solo valori di esempio; le email reali usano i dati del destinatario.",
+                "types": {
+                    "verification": "Verifica",
+                    "reset": "Reimpostazione password",
+                    "invitation": "Invito"
+                }
+            }
         },
         "layout": {
             "appearance": "Aspetto",
@@ -228,7 +248,8 @@
             "sectionInstance": "Istanza",
             "security": "Sicurezza",
             "sessions": "Sessioni",
-            "title": "Impostazioni"
+            "title": "Impostazioni",
+            "emailTemplates": "Modelli email"
         },
         "profile": {
             "breadcrumb": "Impostazioni profilo",

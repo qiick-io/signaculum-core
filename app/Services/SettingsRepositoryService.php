@@ -67,7 +67,21 @@ final class SettingsRepositoryService
             'registration_enabled' => false,
             'two_factor_required' => false,
             'activity_retention_days' => (int) config('activitylog.clean_after_days', 365),
+            // Nested overrides for verification / reset / invitation × en/it/de; empty = lang defaults.
+            'email_templates' => [],
         ];
+    }
+
+    /**
+     * Instance-admin overrides for transactional email templates (see EmailTemplateService).
+     *
+     * @return array<string, mixed>
+     */
+    public function emailTemplates(): array
+    {
+        $templates = $this->all()['email_templates'] ?? [];
+
+        return is_array($templates) ? $templates : [];
     }
 
     /**
