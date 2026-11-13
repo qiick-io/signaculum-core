@@ -35,7 +35,13 @@
         "rowsPerPage": "Zeilen pro Seite",
         "save": "Speichern",
         "saved": "Gespeichert",
-        "selectedCount": "{{count}} ausgewählt"
+        "selectedCount": "{{count}} ausgewählt",
+        "email": "E-Mail",
+        "password": "Passwort",
+        "create": "Erstellen",
+        "clearFilters": "Filter zurücksetzen",
+        "sortAscending": "Aufsteigend sortieren",
+        "sortDescending": "Absteigend sortieren"
     },
     "confirmDestructive": {
         "typeToConfirm": "Tippe „{{name}}“ zur Bestätigung"
@@ -77,7 +83,9 @@
         "home": "Startseite",
         "platform": "Plattform",
         "repository": "Repository",
-        "settings": "Einstellungen"
+        "settings": "Einstellungen",
+        "admin": "Administration",
+        "users": "Benutzer"
     },
     "realtime": {
         "connected": "Realtime verbunden",
@@ -291,5 +299,47 @@
     "auth": {
         "firstName": "Vorname",
         "lastName": "Nachname"
+    },
+    "admin": {
+        "users": {
+            "head": "Benutzer",
+            "title": "Benutzer",
+            "newUser": "Neuer Benutzer",
+            "searchPlaceholder": "Benutzer suchen…",
+            "sortBy": "Sortieren nach",
+            "columns": {
+                "created": "Erstellt",
+                "updated": "Aktualisiert",
+                "name": "Name",
+                "email": "E-Mail",
+                "status": "Status",
+                "actions": "Aktionen"
+            },
+            "actions": {
+                "edit": "Benutzer bearbeiten"
+            },
+            "status": {
+                "active": "Aktiv",
+                "inactive": "Deaktiviert"
+            },
+            "form": {
+                "editTitle": "Benutzer bearbeiten",
+                "editDescription": "Aktualisieren Sie Name und E-Mail. Lassen Sie das Passwort leer, um es beizubehalten.",
+                "createDescription": "Erstellen Sie einen Signaculum-Benutzer. Die E-Mail gilt als verifiziert.",
+                "requiredHint": "Mit * markierte Felder sind erforderlich.",
+                "firstNameRequired": "Vorname *",
+                "emailRequired": "E-Mail *",
+                "emailHint": "Verwenden Sie eine gültige E-Mail-Adresse, zum Beispiel",
+                "newPasswordOptional": "Neues Passwort (optional)",
+                "passwordRequired": "Passwort *"
+            },
+            "empty": {
+                "title": "Noch keine Benutzer",
+                "description": "Erstellen Sie das erste Konto für diese Signaculum-Instanz.",
+                "filteredTitle": "Keine Benutzer gefunden",
+                "filteredDescription": "Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.",
+                "cta": "Neuer Benutzer"
+            }
+        }
     }
 }

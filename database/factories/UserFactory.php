@@ -31,6 +31,7 @@ class UserFactory extends Factory
             // Keep nullable / default flags in the attribute bag for Model::shouldBeStrict().
             'locale' => null,
             'is_instance_admin' => false,
+            'is_active' => true,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
@@ -59,6 +60,26 @@ class UserFactory extends Factory
             'two_factor_secret' => encrypt('secret'),
             'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
             'two_factor_confirmed_at' => now(),
+        ]);
+    }
+
+    /**
+     * Instance admin: may open Admin and Instance settings.
+     */
+    public function instanceAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_instance_admin' => true,
+        ]);
+    }
+
+    /**
+     * Deactivated account (list filter; login refusal lands with activation middleware).
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
         ]);
     }
 }
