@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset=".github/assets/header-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset=".github/assets/header-light.svg">
-    <img alt="Signaculum: self-hosted OpenID Connect identity provider" src=".github/assets/header-light.svg" width="100%">
+    <img alt="Signaculum: Self-hosted OIDC identity provider built on Laravel" src=".github/assets/header-light.svg" width="100%">
   </picture>
 </p>
 
@@ -14,7 +14,7 @@
 
 **Version:** `1.0.0-beta.1` (from `composer.json`; mirrored in `package.json`). See [CHANGELOG.md](./CHANGELOG.md).
 
-> **Status:** `v1.0.0-beta.1` — first public beta. Fine for evaluation and wiring qiick apps; not a hardened production IdP. An external security review is planned before **1.0.0**. Header images are **placeholders** until swapped from the knowledge brand kit (see [.github/assets/README.md](./.github/assets/README.md)).
+> **Status:** `v1.0.0-beta.1` — first public beta. Fine for evaluation and wiring qiick apps; not a hardened production IdP. An external security review is planned before **1.0.0**.
 
 **Signaculum** is the optional, open-source, self-hosted **OpenID Connect identity provider** of the [qiick](https://qiick.io) suite. It gives qiick apps such as Externa and Excubia App single sign-on with organisations and roles, and it is the identity layer of qiick Cloud.
 
