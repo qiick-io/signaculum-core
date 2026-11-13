@@ -27,6 +27,7 @@ final class DiscoveryDocumentService
             'authorization_endpoint' => $issuer.'/oauth/authorize',
             'token_endpoint' => $issuer.'/oauth/token',
             'userinfo_endpoint' => $issuer.'/oauth/userinfo',
+            'end_session_endpoint' => $issuer.'/oauth/end-session',
             'jwks_uri' => $issuer.'/.well-known/jwks.json',
             'scopes_supported' => array_map(fn (OidcScopeEnum $scope): string => $scope->value, OidcScopeEnum::cases()),
             'response_types_supported' => ['code'],
@@ -37,12 +38,14 @@ final class DiscoveryDocumentService
             'token_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post', 'none'],
             'code_challenge_methods_supported' => ['S256'],
             'claims_supported' => [
-                'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce', 'azp',
+                'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce', 'azp', 'sid',
                 ...OidcClaimsService::SUPPORTED_USER_CLAIMS,
             ],
             'claims_parameter_supported' => false,
             'request_parameter_supported' => false,
             'request_uri_parameter_supported' => false,
+            'backchannel_logout_supported' => true,
+            'backchannel_logout_session_supported' => true,
         ];
     }
 }

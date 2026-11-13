@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Data\AuthorizationContextData;
+use App\Models\User;
 use Illuminate\Support\Facades\Date;
 
 /**
@@ -21,6 +22,10 @@ final class PendingAuthorizationService
     private const string PENDING_SESSION_KEY = 'oidc.pending_authorization';
 
     private const string AUTH_TIME_SESSION_KEY = 'oidc.auth_time';
+
+    public function __construct(
+        private readonly OidcSessionService $oidcSessionService,
+    ) {}
 
     public function remember(string $clientId, ?string $nonce): void
     {
@@ -41,7 +46,7 @@ final class PendingAuthorizationService
     public function pull(string $clientId): AuthorizationContextData
     {
         if (! request()->hasSession()) {
-            return new AuthorizationContextData(nonce: null, authTime: null);
+            return new AuthorizationContextData(nonce: null, authTime: null, oidcSessionId: null);
         }
 
         /** @var array{client_id?: string, nonce?: string|null}|null $pendingAuthorization */
@@ -50,9 +55,15 @@ final class PendingAuthorizationService
 
         $authTime = request()->session()->get(self::AUTH_TIME_SESSION_KEY);
 
+        $user = request()->user();
+        $oidcSessionId = $user instanceof User
+            ? $this->oidcSessionService->currentOidcSessionId($user)
+            : null;
+
         return new AuthorizationContextData(
             nonce: $isSameClient ? ($pendingAuthorization['nonce'] ?? null) : null,
             authTime: is_int($authTime) ? $authTime : null,
+            oidcSessionId: $oidcSessionId,
         );
     }
 
