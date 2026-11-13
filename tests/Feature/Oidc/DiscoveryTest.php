@@ -20,7 +20,7 @@ test('discovery publishes the qiick protocol profile', function () {
             'subject_types_supported' => ['public'],
             'id_token_signing_alg_values_supported' => ['RS256'],
             'code_challenge_methods_supported' => ['S256'],
-            'scopes_supported' => ['openid', 'profile', 'email'],
+            'scopes_supported' => ['openid', 'profile', 'email', 'qiick.orgs'],
             'end_session_endpoint' => 'https://id.example.test/oauth/end-session',
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,

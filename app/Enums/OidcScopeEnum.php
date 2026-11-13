@@ -12,6 +12,7 @@ enum OidcScopeEnum: string
     case OpenId = 'openid';
     case Profile = 'profile';
     case Email = 'email';
+    case QiickOrgs = 'qiick.orgs';
 
     /**
      * Text shown on the consent screen.
@@ -22,6 +23,7 @@ enum OidcScopeEnum: string
             self::OpenId => 'Sign you in with your Signaculum account',
             self::Profile => 'See your name',
             self::Email => 'See your email address',
+            self::QiickOrgs => 'See your organisations and roles',
         };
     }
 
