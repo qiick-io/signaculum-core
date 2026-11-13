@@ -3,6 +3,12 @@
 namespace App\Providers;
 
 use App\Enums\OidcScopeEnum;
+use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
+use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
+use App\Listeners\EndOidcSessionOnLogoutListener;
+use App\Listeners\RecordAuthenticationMethodListener;
+use App\Listeners\RecordAuthenticationTimeListener;
+use App\Listeners\RegenerateOidcSessionOnLoginListener;
 use App\Models\Client;
 use App\Models\User;
 use App\Oidc\IdTokenResponse;
@@ -29,6 +35,8 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
+use Laravel\Passkeys\Events\PasskeyVerified;
 use Laravel\Passport\Bridge\AuthCodeRepository;
 use Laravel\Passport\Bridge\RefreshTokenRepository;
 use Laravel\Passport\Passport;
@@ -63,6 +71,8 @@ class AppServiceProvider extends ServiceProvider
         $this->configureActivityLogging();
         $this->registerAuthActivityListeners();
         $this->attachOidcRateLimitMiddleware();
+        $this->attachAuthorizationResponseIssuerMiddleware();
+        $this->attachMaximumAuthenticationAgeMiddleware();
     }
 
     /**
@@ -121,6 +131,49 @@ class AppServiceProvider extends ServiceProvider
 
                 if ($routeName === 'password.email') {
                     $route->middleware('throttle:password-reset');
+                }
+            }
+        });
+    }
+
+    /**
+     * RFC 9207 `iss` only on Passport authorization responses (authorize / approve / deny).
+     *
+     * Must not run on the whole `web` group: an unrelated redirect whose query already
+     * has `code` or `error` must stay untouched.
+     */
+    protected function attachAuthorizationResponseIssuerMiddleware(): void
+    {
+        $this->app->booted(function (): void {
+            $authorizeRouteNames = [
+                'passport.authorizations.authorize',
+                'passport.authorizations.approve',
+                'passport.authorizations.deny',
+            ];
+
+            foreach (Route::getRoutes()->getRoutes() as $route) {
+                $routeName = $route->getName();
+
+                if (is_string($routeName) && in_array($routeName, $authorizeRouteNames, true)) {
+                    $route->middleware(AddIssuerToAuthorizationResponseMiddleware::class);
+                }
+            }
+        });
+    }
+
+
+    /**
+     * OIDC Core §3.1.2.1 `max_age` / `prompt=login` only on the authorize endpoint.
+     *
+     * Must run before Passport's AuthorizationController so re-authentication does not
+     * rely on Passport's own logout (which would fan out back-channel logout).
+     */
+    protected function attachMaximumAuthenticationAgeMiddleware(): void
+    {
+        $this->app->booted(function (): void {
+            foreach (Route::getRoutes()->getRoutes() as $route) {
+                if ($route->getName() === 'passport.authorizations.authorize') {
+                    $route->middleware(EnforceMaximumAuthenticationAgeMiddleware::class);
                 }
             }
         });
@@ -187,8 +240,12 @@ class AppServiceProvider extends ServiceProvider
             ])->toResponse(request());
         });
 
-        // OIDC Login/Logout listeners are auto-discovered from app/Listeners
-        // (manual Event::listen would register them twice).
+        Event::listen(Login::class, RecordAuthenticationTimeListener::class);
+        Event::listen(Login::class, RegenerateOidcSessionOnLoginListener::class);
+        Event::listen(Login::class, RecordAuthenticationMethodListener::class);
+        Event::listen(ValidTwoFactorAuthenticationCodeProvided::class, RecordAuthenticationMethodListener::class);
+        Event::listen(PasskeyVerified::class, RecordAuthenticationMethodListener::class);
+        Event::listen(Logout::class, EndOidcSessionOnLogoutListener::class);
     }
 
     /**

@@ -16,6 +16,9 @@ use Symfony\Component\HttpFoundation\Response;
  * the client reject a response that did not come from the AS it started with
  * (RFC 9207 §2). Discovery advertises the same value via
  * `authorization_response_iss_parameter_supported` (RFC 9207 §3).
+ *
+ * Registered only on `passport.authorizations.authorize|approve|deny` so other
+ * `web` redirects that happen to carry `code` or `error` are left alone.
  */
 final class AddIssuerToAuthorizationResponseMiddleware
 {

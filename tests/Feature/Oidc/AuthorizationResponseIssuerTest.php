@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Support\Facades\Route;
 
 /**
  * RFC 9207: every authorization response to the client (success and error)
@@ -82,4 +83,15 @@ test('an unregistered redirect uri still returns 401 without an iss redirect', f
     expect($response->getStatusCode())->toBe(401)
         ->and((string) $response->headers->get('Location'))->not->toContain('iss=')
         ->and((string) $response->headers->get('Location'))->not->toContain('attacker');
+});
+
+test('an unrelated web redirect with an error query is left without iss', function (): void {
+    Route::middleware('web')->get('/__test/unrelated-error-redirect', function () {
+        return redirect('https://other.example.test/callback?error=access_denied&state=keep-me');
+    });
+
+    $location = $this->get('/__test/unrelated-error-redirect')->headers->get('Location');
+
+    expect($location)->toBe('https://other.example.test/callback?error=access_denied&state=keep-me')
+        ->and((string) parse_url((string) $location, PHP_URL_QUERY))->not->toContain('iss=');
 });
