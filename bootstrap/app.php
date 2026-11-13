@@ -35,6 +35,19 @@ return Application::configure(basePath: dirname(__DIR__))
             'oauth/end-session',
         ]);
 
+        $trustedProxies = config('app.trusted_proxies');
+
+        if (is_string($trustedProxies) && $trustedProxies !== '') {
+            $middleware->trustProxies(
+                at: $trustedProxies === '*'
+                    ? '*'
+                    : array_values(array_filter(array_map(
+                        static fn (string $proxy): string => trim($proxy),
+                        explode(',', $trustedProxies),
+                    ))),
+            );
+        }
+
         $middleware->web(append: [
             EnsureUserIsActiveMiddleware::class,
             SetLocaleMiddleware::class,

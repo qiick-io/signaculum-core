@@ -8,6 +8,7 @@
 
 ### Added
 
+- OpenID Foundation conformance suite in CI (Basic OP, RP-Initiated Logout, Back-Channel Logout): `conformance/` helpers and `.github/workflows/oidc-conformance.yml`; relaxes `OIDC_REQUIRE_PKCE` / `OIDC_REQUIRE_NONCE` only in that job.
 - Instance-admin editable email templates (verification, password reset, organisation invitation) with en/it/de defaults, preview and fallback to packaged copy.
 - RFC 7662 token introspection at `POST /oauth/introspect` (confidential clients), advertised as `introspection_endpoint` in discovery; inactive / revoked / expired tokens return `{ "active": false }`.
 - OAuth 2.0 `client_credentials` for confidential applications that opt in (Admin → Applications): machine access tokens without `id_token`; discovery `grant_types_supported` includes `client_credentials`.
