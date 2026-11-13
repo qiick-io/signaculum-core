@@ -23,3 +23,18 @@ export type AdminUserRow = {
     updated_at: string | null;
     can_update: boolean;
 };
+
+/** One row of `App\Http\Resources\ApplicationResource`. */
+export type AdminApplicationRow = {
+    id: string;
+    name: string;
+    redirect_uris: string[];
+    is_confidential: boolean;
+    is_first_party: boolean;
+    discovery_url: string;
+    configure_command: string;
+    created_at: string | null;
+    updated_at: string | null;
+    can_update: boolean;
+    can_delete: boolean;
+};
