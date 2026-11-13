@@ -212,7 +212,27 @@
             "loginLockoutThreshold": "Failed attempts before lockout",
             "loginLockoutThresholdDescription": "Wrong passwords for one account before it is locked.",
             "loginLockoutMinutes": "Lockout duration (minutes)",
-            "loginLockoutMinutesDescription": "How long a locked account must wait before trying again."
+            "loginLockoutMinutesDescription": "How long a locked account must wait before trying again.",
+            "emailTemplates": {
+                "breadcrumb": "Email templates",
+                "head": "Email templates",
+                "title": "Transactional emails",
+                "description": "Verification, password reset and organisation invitation emails. Empty fields keep the Signaculum defaults for that language.",
+                "typeLabel": "Email type",
+                "locale": "Language",
+                "subject": "Subject",
+                "body": "Body",
+                "actionLabel": "Button label",
+                "placeholdersHint": "Available placeholders: {{placeholders}}",
+                "restoreDefaults": "Restore defaults",
+                "previewTitle": "Preview",
+                "previewDescription": "Sample values only; real emails use the recipient’s details.",
+                "types": {
+                    "verification": "Verification",
+                    "reset": "Password reset",
+                    "invitation": "Invitation"
+                }
+            }
         },
         "layout": {
             "appearance": "Appearance",
@@ -228,7 +248,8 @@
             "sectionInstance": "Instance",
             "security": "Security",
             "sessions": "Sessions",
-            "title": "Settings"
+            "title": "Settings",
+            "emailTemplates": "Email templates"
         },
         "profile": {
             "breadcrumb": "Profile settings",

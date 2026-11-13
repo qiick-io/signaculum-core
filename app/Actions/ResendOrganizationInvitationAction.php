@@ -49,7 +49,11 @@ final class ResendOrganizationInvitationAction
         $acceptUrl = route('invitations.accept', ['token' => $plainToken]);
 
         Notification::route('mail', $invitation->email)
-            ->notify(new OrganizationInvitationNotification($organization, $acceptUrl));
+            ->notify(new OrganizationInvitationNotification(
+                $organization,
+                $acceptUrl,
+                $invitedBy->locale,
+            ));
 
         return $invitation;
     }

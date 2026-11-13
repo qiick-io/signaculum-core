@@ -82,7 +82,7 @@ Written 2026-11-13 for scoping **`v1.0.0-beta.1`**. Sources: public docs of each
 | Audit / activity log        | ✓                 | ✓          | ✓       | ✓         | ✓        | ✓     | partial | ✓     | ✓     |
 | Branding (instance)         | ✓                 | ✓          | ✓       | ✓         | partial  | ✓     | BYO UI  | ✓     | ✓     |
 | Branding per tenant/org     | ✗ **later**       | ✓          | ✓       | partial   | ✗        | ✓     | BYO UI  | ✓     | ✓     |
-| Editable email templates    | ✗ → **in beta**   | ✓          | ✓       | ✓         | partial  | ✓     | ✓       | ✓     | ✓     |
+| Editable email templates    | ✓                 | ✓          | ✓       | ✓         | partial  | ✓     | ✓       | ✓     | ✓     |
 | i18n (en / it / de+)        | ✓                 | ✓          | ✓       | ✓         | partial  | ✓     | BYO UI  | ✓     | ✓     |
 
 ---
@@ -131,7 +131,7 @@ Already in the design or checklist: OIDC core (code+PKCE, discovery, JWKS rotati
 | Token introspection RFC 7662                    | #50   | Resource servers and API gateways validate opaque access tokens this way; every serious IdP ships it.                            |
 | Client credentials grant                        | #51   | **Shipped** — opt-in on confidential apps; discovery advertises the grant; no `id_token` on this flow.                           |
 | Brute-force lockout                             | #52   | Instance settings already track login attempts; a real lockout matches Keycloak/Logto/Authelia regulation.                       |
-| Editable email templates                        | #53   | Invitations, verification and resets are expected to match brand; competitors expose templates in admin.                         |
+| Editable email templates                        | #53   | **Shipped:** Settings → Email templates (verification / reset / invitation), en/it/de defaults, preview, fallback.               |
 | Account data export                             | #54   | GDPR portability; Auth0/Clerk treat export as table stakes for account self-service.                                             |
 
 ### Later (milestone `Later`, not beta without Luca’s OK)
