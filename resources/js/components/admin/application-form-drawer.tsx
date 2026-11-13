@@ -1,6 +1,7 @@
-import { useForm } from '@inertiajs/react';
-import { useEffect } from 'react';
+import { router, useForm } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ConfirmDestructiveDialog } from '@/components/confirm-destructive-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -20,11 +21,14 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useClipboard } from '@/hooks/use-clipboard';
 import { STRING_LIMITS } from '@/lib/string-limits';
 import {
+    destroy as destroyApplication,
     store as storeApplication,
     update as updateApplication,
 } from '@/routes/admin/applications';
+import { update as updateApplicationSecret } from '@/routes/admin/applications/secret';
 import type { AdminApplicationRow } from '@/types/admin';
 
 const EMPTY_APPLICATION_FORM = {
@@ -44,7 +48,8 @@ export type ApplicationFormDrawerProps = {
 
 /**
  * Drawer form for creating and editing OIDC applications (app-ui `forms.md`).
- * Secret regenerate/delete and strict URI rules are sibling issues.
+ * Shows client id / discovery / oidc:configure when editing; secret regenerate
+ * and typed delete use confirm dialogs (app-ui `destructive-actions.md`).
  */
 export function ApplicationFormDrawer({
     editing,
@@ -56,6 +61,10 @@ export function ApplicationFormDrawer({
     const { t } = useTranslation();
     const form = useForm({ ...EMPTY_APPLICATION_FORM });
     const isCreate = editing === null;
+    const [, copy] = useClipboard();
+    const [isRegenerateOpen, setIsRegenerateOpen] = useState(false);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isBusy, setIsBusy] = useState(false);
 
     useEffect(() => {
         if (!open) {
@@ -96,6 +105,47 @@ export function ApplicationFormDrawer({
         }
     };
 
+    const regenerateSecret = (): void => {
+        if (!editing) {
+            return;
+        }
+
+        setIsBusy(true);
+        router.put(
+            updateApplicationSecret.url(editing.id),
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsBusy(false);
+                    setIsRegenerateOpen(false);
+                },
+                onSuccess: () => {
+                    onSuccess?.();
+                },
+            },
+        );
+    };
+
+    const deleteApplication = (): void => {
+        if (!editing) {
+            return;
+        }
+
+        setIsBusy(true);
+        router.delete(destroyApplication.url(editing.id), {
+            data: { confirmation: editing.name },
+            preserveScroll: true,
+            onFinish: () => {
+                setIsBusy(false);
+                setIsDeleteOpen(false);
+            },
+            onSuccess: () => {
+                onSuccess?.();
+            },
+        });
+    };
+
     const title = editing
         ? t('admin.applications.form.editTitle')
         : t('admin.applications.newApplication');
@@ -127,6 +177,76 @@ export function ApplicationFormDrawer({
                         <p className="text-sm text-muted-foreground">
                             {t('admin.applications.form.requiredHint')}
                         </p>
+
+                        {editing ? (
+                            <>
+                                <Field>
+                                    <FieldLabel htmlFor="application-client-id">
+                                        {t('admin.applications.form.clientId')}
+                                    </FieldLabel>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="application-client-id"
+                                            value={editing.id}
+                                            readOnly
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => copy(editing.id)}
+                                        >
+                                            {t('common.copy')}
+                                        </Button>
+                                    </div>
+                                </Field>
+                                <Field>
+                                    <FieldLabel htmlFor="application-discovery">
+                                        {t(
+                                            'admin.applications.form.discoveryUrl',
+                                        )}
+                                    </FieldLabel>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="application-discovery"
+                                            value={editing.discovery_url}
+                                            readOnly
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() =>
+                                                copy(editing.discovery_url)
+                                            }
+                                        >
+                                            {t('common.copy')}
+                                        </Button>
+                                    </div>
+                                </Field>
+                                <Field>
+                                    <FieldLabel htmlFor="application-configure">
+                                        {t(
+                                            'admin.applications.form.configureCommand',
+                                        )}
+                                    </FieldLabel>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="application-configure"
+                                            value={editing.configure_command}
+                                            readOnly
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() =>
+                                                copy(editing.configure_command)
+                                            }
+                                        >
+                                            {t('common.copy')}
+                                        </Button>
+                                    </div>
+                                </Field>
+                            </>
+                        ) : null}
 
                         <Field data-invalid={!!form.errors.name || undefined}>
                             <FieldLabel htmlFor="application-name">
@@ -173,9 +293,7 @@ export function ApplicationFormDrawer({
                                 }
                             />
                             <FieldDescription>
-                                {t(
-                                    'admin.applications.form.redirectUrisHint',
-                                )}
+                                {t('admin.applications.form.redirectUrisHint')}
                             </FieldDescription>
                             <FieldError>
                                 {form.errors.redirect_uris}
@@ -243,6 +361,37 @@ export function ApplicationFormDrawer({
                                 {form.errors.is_first_party}
                             </FieldError>
                         </Field>
+
+                        {editing && !readOnly ? (
+                            <div className="flex flex-wrap gap-2 pt-2">
+                                {editing.is_confidential ? (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={isBusy}
+                                        onClick={() =>
+                                            setIsRegenerateOpen(true)
+                                        }
+                                    >
+                                        {t(
+                                            'admin.applications.actions.regenerateSecret',
+                                        )}
+                                    </Button>
+                                ) : null}
+                                {editing.can_delete ? (
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        disabled={isBusy}
+                                        onClick={() => setIsDeleteOpen(true)}
+                                    >
+                                        {t(
+                                            'admin.applications.actions.delete',
+                                        )}
+                                    </Button>
+                                ) : null}
+                            </div>
+                        ) : null}
                     </FieldGroup>
                 </DrawerBody>
 
@@ -250,18 +399,46 @@ export function ApplicationFormDrawer({
                     <Button
                         type="button"
                         variant="outline"
-                        disabled={form.processing}
+                        disabled={form.processing || isBusy}
                         onClick={onCancel}
                     >
                         {t('common.cancel')}
                     </Button>
                     {!readOnly && (
-                        <Button type="submit" disabled={form.processing}>
+                        <Button
+                            type="submit"
+                            disabled={form.processing || isBusy}
+                        >
                             {isCreate ? t('common.create') : t('common.save')}
                         </Button>
                     )}
                 </DrawerFooter>
             </form>
+
+            <ConfirmDestructiveDialog
+                open={isRegenerateOpen}
+                onOpenChange={setIsRegenerateOpen}
+                title={t('admin.applications.confirm.regenerateTitle')}
+                description={t(
+                    'admin.applications.confirm.regenerateDescription',
+                )}
+                confirmLabel={t(
+                    'admin.applications.actions.regenerateSecret',
+                )}
+                confirming={isBusy}
+                onConfirm={regenerateSecret}
+            />
+
+            <ConfirmDestructiveDialog
+                open={isDeleteOpen}
+                onOpenChange={setIsDeleteOpen}
+                title={t('admin.applications.confirm.deleteTitle')}
+                description={t('admin.applications.confirm.deleteDescription')}
+                confirmLabel={t('admin.applications.actions.delete')}
+                confirming={isBusy}
+                typedConfirmation={editing?.name}
+                onConfirm={deleteApplication}
+            />
         </DrawerContent>
     );
 }

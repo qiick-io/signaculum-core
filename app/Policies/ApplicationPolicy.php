@@ -26,4 +26,9 @@ final class ApplicationPolicy
     {
         return (bool) $actor->is_instance_admin;
     }
+
+    public function delete(User $actor, Client $application): bool
+    {
+        return (bool) $actor->is_instance_admin;
+    }
 }

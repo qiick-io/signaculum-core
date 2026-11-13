@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Concerns;
 
-use Illuminate\Support\Str;
+use App\Rules\RedirectUriRule;
 use Illuminate\Validation\Validator;
 
 /**
@@ -55,8 +55,10 @@ trait ParsesApplicationRedirectUrisTrait
         }
 
         foreach ($uris as $uri) {
-            if (Str::length($uri) > 2048 || filter_var($uri, FILTER_VALIDATE_URL) === false) {
-                $validator->errors()->add('redirect_uris', __('Each redirect URI must be a valid URL.'));
+            $message = RedirectUriRule::failureMessageFor($uri);
+
+            if ($message !== null) {
+                $validator->errors()->add('redirect_uris', $message);
 
                 return;
             }

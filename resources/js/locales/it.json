@@ -39,6 +39,7 @@
         "email": "Email",
         "password": "Password",
         "create": "Crea",
+        "copy": "Copia",
         "clearFilters": "Cancella filtri",
         "sortAscending": "Ordine crescente",
         "sortDescending": "Ordine decrescente"
@@ -353,12 +354,24 @@
                 "actions": "Azioni"
             },
             "actions": {
-                "edit": "Modifica applicazione"
+                "edit": "Modifica applicazione",
+                "regenerateSecret": "Rigenera secret",
+                "delete": "Elimina applicazione"
             },
             "type": {
                 "confidential": "Confidenziale",
                 "public": "Pubblica",
                 "firstParty": "First-party"
+            },
+            "secretBanner": {
+                "title": "Copia subito il client secret",
+                "description": "Signaculum mostra il secret solo questa volta. Salvalo nella configurazione della relying party."
+            },
+            "confirm": {
+                "regenerateTitle": "Rigenerare il client secret?",
+                "regenerateDescription": "Il secret attuale smette di funzionare subito. Copia il nuovo secret dal banner dopo la conferma.",
+                "deleteTitle": "Eliminare questa applicazione?",
+                "deleteDescription": "Il client viene revocato e i suoi token smettono di funzionare. Digita il nome dell'applicazione per confermare."
             },
             "form": {
                 "editTitle": "Modifica applicazione",
@@ -367,7 +380,10 @@
                 "requiredHint": "I campi contrassegnati con * sono obbligatori.",
                 "nameRequired": "Nome *",
                 "redirectUrisRequired": "URI di redirect *",
-                "redirectUrisHint": "Un URL assoluto per riga. Corrispondenza esatta a runtime.",
+                "redirectUrisHint": "Un URL assoluto per riga. https obbligatorio tranne http://localhost o http://127.0.0.1. Niente frammenti. Corrispondenza esatta a runtime.",
+                "clientId": "Client ID",
+                "discoveryUrl": "URL di discovery",
+                "configureCommand": "oidc:configure",
                 "confidential": "Client confidenziale",
                 "confidentialHint": "Usa un client secret sull'endpoint token. Disattiva per le SPA pubbliche.",
                 "firstParty": "App qiick first-party",

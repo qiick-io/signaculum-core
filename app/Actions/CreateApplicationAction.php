@@ -28,10 +28,16 @@ final class CreateApplicationAction
             $applicationData->isConfidential,
         );
 
+        // Passport hashes `secret` and keeps the plain value on `$client->plainSecret` only
+        // until the model is refreshed; capture it before we touch the row again.
+        $plainSecret = $client->plainSecret;
+
         $client->forceFill([
             'is_first_party' => $applicationData->isFirstParty,
         ])->save();
 
-        return $client->refresh();
+        $client->plainSecret = $plainSecret;
+
+        return $client;
     }
 }

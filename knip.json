@@ -6,7 +6,6 @@
         "resources/js/components/admin/actions-overflow.tsx",
         "resources/js/components/admin/data-table-faceted-filter.tsx",
         "resources/js/components/admin/data-table.tsx",
-        "resources/js/components/confirm-destructive-dialog.tsx",
         "resources/js/components/layout/page-header.tsx",
         "resources/js/components/layout/page-layout.tsx",
         "resources/js/components/settings-form-actions.tsx",

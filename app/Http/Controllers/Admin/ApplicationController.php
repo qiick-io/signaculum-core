@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\CreateApplicationAction;
+use App\Actions\DeleteApplicationAction;
 use App\Actions\UpdateApplicationAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\DeleteApplicationRequest;
 use App\Http\Requests\Admin\ListApplicationsRequest;
 use App\Http\Requests\Admin\StoreApplicationRequest;
 use App\Http\Requests\Admin\UpdateApplicationRequest;
@@ -19,7 +21,7 @@ use Inertia\Response;
 
 /**
  * Admin applications list with create/edit drawer for OIDC clients.
- * Secret regenerate and delete are separate controllers.
+ * Secret regenerate lives on {@see ApplicationSecretController}.
  */
 final class ApplicationController extends Controller
 {
@@ -38,6 +40,7 @@ final class ApplicationController extends Controller
                 'sort' => $filters->sort,
                 'direction' => $filters->direction,
             ],
+            'plainTextSecret' => $request->session()->pull('plain_text_client_secret'),
         ]);
     }
 
@@ -46,7 +49,11 @@ final class ApplicationController extends Controller
      */
     public function store(StoreApplicationRequest $request, CreateApplicationAction $createApplicationAction): RedirectResponse
     {
-        $createApplicationAction->execute($request->toData());
+        $application = $createApplicationAction->execute($request->toData());
+
+        if (is_string($application->plainSecret)) {
+            $request->session()->flash('plain_text_client_secret', $application->plainSecret);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Application created.')]);
 
@@ -64,6 +71,21 @@ final class ApplicationController extends Controller
         $updateApplicationAction->execute($application, $request->toData());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Application updated.')]);
+
+        return to_route('admin.applications.index');
+    }
+
+    /**
+     * Revokes the application after typed name confirmation.
+     */
+    public function destroy(
+        DeleteApplicationRequest $request,
+        Client $application,
+        DeleteApplicationAction $deleteApplicationAction,
+    ): RedirectResponse {
+        $deleteApplicationAction->execute($application);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Application deleted.')]);
 
         return to_route('admin.applications.index');
     }
