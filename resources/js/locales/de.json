@@ -88,7 +88,8 @@
         "settings": "Einstellungen",
         "admin": "Administration",
         "users": "Benutzer",
-        "applications": "Anwendungen"
+        "applications": "Anwendungen",
+        "activityLog": "Aktivitätsprotokoll"
     },
     "realtime": {
         "connected": "Realtime verbunden",
@@ -202,7 +203,11 @@
             },
             "securityTitle": "Sicherheit",
             "twoFactorRequired": "Zwei-Faktor-Authentifizierung für alle Benutzer verlangen",
-            "twoFactorRequiredHint": "Wenn aktiv, müssen Benutzer TOTP-2FA aktivieren oder einen Passkey auf der Sicherheitsseite registrieren, bevor sie die App nutzen."
+            "twoFactorRequiredHint": "Wenn aktiv, müssen Benutzer TOTP-2FA aktivieren oder einen Passkey auf der Sicherheitsseite registrieren, bevor sie die App nutzen.",
+            "retentionTitle": "Datenaufbewahrung",
+            "retentionDescription": "Wie lange Signaculum das Aktivitätsprotokoll behält. Ältere Einträge werden täglich gelöscht.",
+            "activityRetentionDays": "Aktivitätsprotokoll (Tage)",
+            "activityRetentionDaysHint": "Aktivitätsprotokolleinträge älter als dieser Wert werden gelöscht."
         },
         "layout": {
             "appearance": "Darstellung",
@@ -323,7 +328,20 @@
                 "actions": "Aktionen"
             },
             "actions": {
-                "edit": "Benutzer bearbeiten"
+                "edit": "Benutzer bearbeiten",
+                "deactivate": "Deaktivieren",
+                "reactivate": "Reaktivieren",
+                "resetTwoFactor": "Zwei-Faktor zurücksetzen",
+                "grantInstanceAdmin": "Zum Instanz-Admin machen",
+                "revokeInstanceAdmin": "Instanz-Admin entziehen"
+            },
+            "confirm": {
+                "deactivateTitle": "{{name}} deaktivieren?",
+                "deactivateDescription": "Anmeldung ist nicht mehr möglich. Tokens werden widerrufen und verbundene Apps erhalten einen Back-Channel-Logout.",
+                "resetTwoFactorTitle": "Zwei-Faktor für {{name}} zurücksetzen?",
+                "resetTwoFactorDescription": "Authenticator und Wiederherstellungscodes funktionieren nicht mehr. Die Person muss sie erneut einrichten.",
+                "revokeInstanceAdminTitle": "Instanz-Admin von {{name}} entfernen?",
+                "revokeInstanceAdminDescription": "Der Zugang zu Admin und Instanz-Einstellungen entfällt. Mindestens ein Instanz-Admin muss bleiben."
             },
             "status": {
                 "active": "Aktiv",
@@ -407,6 +425,49 @@
                 "cta": "Neue Anwendung"
             }
         }
+    },
+    "activityLog": {
+        "title": "Aktivitätsprotokoll",
+        "description": "Schreibgeschützter Audit-Trail von Modelländerungen und Authentifizierungsereignissen.",
+        "searchPlaceholder": "Beschreibung oder Betreff suchen…",
+        "allUsers": "Alle Benutzer",
+        "allActions": "Alle Aktionen",
+        "allLogs": "Alle Protokolle",
+        "filterByAction": "Nach Aktion filtern",
+        "filterByLog": "Nach Protokollname filtern",
+        "dateFrom": "Von Datum",
+        "dateTo": "Bis Datum",
+        "empty": "Keine Aktivität für die gewählten Filter gefunden.",
+        "system": "System",
+        "noChanges": "Keine Feldänderungen erfasst.",
+        "expand": "Änderungen aufklappen",
+        "collapse": "Änderungen zuklappen",
+        "logName": "Protokollname",
+        "columns": {
+            "date": "Datum",
+            "user": "Benutzer",
+            "action": "Aktion",
+            "description": "Beschreibung",
+            "subject": "Betreff"
+        },
+        "events": {
+            "created": "Erstellt",
+            "updated": "Aktualisiert",
+            "deleted": "Gelöscht",
+            "login": "Anmeldung",
+            "logout": "Abmeldung",
+            "failed": "Fehlgeschlagene Anmeldung",
+            "settings_updated": "Einstellungen aktualisiert",
+            "consent_granted": "Zustimmung erteilt",
+            "token_revoked": "Zugriff widerrufen",
+            "secret_rotated": "Geheimnis rotiert"
+        },
+        "logs": {
+            "default": "Anwendung",
+            "auth": "Authentifizierung",
+            "settings": "Einstellungen"
+        },
+        "ipAddress": "IP"
     },
     "errors": {
         "forbidden": {

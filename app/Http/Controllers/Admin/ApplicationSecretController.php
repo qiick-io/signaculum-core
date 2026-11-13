@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\RegenerateApplicationSecretAction;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -32,7 +33,9 @@ final class ApplicationSecretController extends Controller
             throw new AccessDeniedHttpException('Public clients have no client secret.');
         }
 
-        $application = $regenerateApplicationSecretAction->execute($application);
+        /** @var User $actor */
+        $actor = $request->user();
+        $application = $regenerateApplicationSecretAction->execute($application, $actor);
 
         if (is_string($application->plainSecret)) {
             $request->session()->flash('plain_text_client_secret', $application->plainSecret);

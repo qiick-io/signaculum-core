@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Actions\SaveBrandingFilesAction;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Settings\Concerns\LogsInstanceSettingsUpdateTrait;
 use App\Http\Requests\Settings\UpdateAppearanceSettingsRequest;
 use App\Services\SettingsRepositoryService;
 use App\Services\ThemePresetService;
@@ -20,6 +21,8 @@ use Inertia\Response;
  */
 final class AppearanceSettingsController extends Controller
 {
+    use LogsInstanceSettingsUpdateTrait;
+
     public function __construct(
         private readonly SettingsRepositoryService $settings,
         private readonly ThemePresetService $themePresets,
@@ -45,6 +48,7 @@ final class AppearanceSettingsController extends Controller
         $values = $request->settings();
         $this->settings->save($values);
         $saveBranding->execute($request->brandingUploads(), $request->brandingRemovals());
+        $this->logInstanceSettingsUpdate($request, 'appearance', $values);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Settings saved.')]);
 

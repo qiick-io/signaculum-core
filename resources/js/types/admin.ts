@@ -18,10 +18,35 @@ export type AdminUserRow = {
     email: string;
     is_active: boolean;
     is_instance_admin: boolean;
+    has_two_factor: boolean;
     email_verified_at: string | null;
     created_at: string | null;
     updated_at: string | null;
     can_update: boolean;
+};
+
+/** One row of `App\Http\Resources\ActivityLogResource`. */
+export type AdminActivityLogRow = {
+    id: number;
+    event: string | null;
+    description: string;
+    log_name: string | null;
+    created_at: string;
+    causer: { id: number; name: string; email: string } | null;
+    subject: { type: string; id: number | string; label: string } | null;
+    changes: Record<string, unknown>;
+    properties: {
+        ip: string | null;
+        user_agent: string | null;
+        meta: Record<string, unknown>;
+    };
+};
+
+/** Compact user option for activity-log filters. */
+export type AdminUserRef = {
+    id: number;
+    name: string;
+    email: string;
 };
 
 /** One row of `App\Http\Resources\ApplicationResource`. */

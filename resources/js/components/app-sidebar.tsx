@@ -4,6 +4,7 @@ import {
     BookOpen,
     FolderGit2,
     House,
+    ScrollText,
     Settings,
     Users,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as adminActivityLogsIndex } from '@/routes/admin/activity-logs';
 import { index as adminApplicationsIndex } from '@/routes/admin/applications';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { edit as editProfile } from '@/routes/profile';
@@ -34,7 +36,8 @@ import type { NavItem } from '@/types';
  */
 export function AppSidebar() {
     const { t } = useTranslation();
-    const { canManageUsers, canManageApplications } = usePage().props.auth;
+    const { canManageUsers, canManageApplications, canShowActivityLogs } =
+        usePage().props.auth;
 
     const platformNavItems: MainNavItem[] = [
         {
@@ -68,6 +71,16 @@ export function AppSidebar() {
                       href: adminApplicationsIndex(),
                       icon: AppWindow,
                       activePrefix: '/admin/applications',
+                  } satisfies MainNavItem,
+              ]
+            : []),
+        ...(canShowActivityLogs
+            ? [
+                  {
+                      title: t('nav.activityLog'),
+                      href: adminActivityLogsIndex(),
+                      icon: ScrollText,
+                      activePrefix: '/admin/activity-logs',
                   } satisfies MainNavItem,
               ]
             : []),
