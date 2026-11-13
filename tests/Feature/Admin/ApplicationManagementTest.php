@@ -25,6 +25,7 @@ function applicationFormPayload(array $overrides = []): array
         'redirect_uris' => "https://externa.test/auth/oidc/callback\nhttps://externa.test/auth/oidc/silent",
         'is_confidential' => true,
         'is_first_party' => true,
+        'is_client_credentials_enabled' => false,
         ...$overrides,
     ];
 }
@@ -112,7 +113,36 @@ test('an instance admin creates a confidential first-party application', functio
         ->and($client->confidential())->toBeTrue()
         ->and($client->is_first_party)->toBeTrue()
         ->and($client->skipsAuthorization($admin, []))->toBeTrue()
+        ->and($client->hasGrantType('authorization_code'))->toBeTrue()
+        ->and($client->hasGrantType('client_credentials'))->toBeFalse();
+});
+
+test('an instance admin opts a confidential application into client credentials', function () {
+    $admin = instanceAdminForApplications();
+
+    $this->actingAs($admin)
+        ->post(route('admin.applications.store'), applicationFormPayload([
+            'name' => 'Job runner',
+            'is_client_credentials_enabled' => true,
+        ]))
+        ->assertRedirect(route('admin.applications.index'));
+
+    $client = Client::query()->where('name', 'Job runner')->sole();
+
+    expect($client->hasGrantType('client_credentials'))->toBeTrue()
         ->and($client->hasGrantType('authorization_code'))->toBeTrue();
+});
+
+test('client credentials cannot be enabled on a public application', function () {
+    $admin = instanceAdminForApplications();
+
+    $this->actingAs($admin)
+        ->post(route('admin.applications.store'), applicationFormPayload([
+            'is_confidential' => false,
+            'is_first_party' => false,
+            'is_client_credentials_enabled' => true,
+        ]))
+        ->assertSessionHasErrors(['is_client_credentials_enabled']);
 });
 
 test('an instance admin creates a public application that does not skip consent', function () {

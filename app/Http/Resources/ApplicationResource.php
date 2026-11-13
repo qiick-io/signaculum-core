@@ -25,6 +25,7 @@ final class ApplicationResource extends JsonResource
      *     redirect_uris: list<string>,
      *     is_confidential: bool,
      *     is_first_party: bool,
+     *     is_client_credentials_enabled: bool,
      *     discovery_url: string,
      *     configure_command: string,
      *     created_at: string|null,
@@ -47,6 +48,7 @@ final class ApplicationResource extends JsonResource
             'redirect_uris' => $application->redirect_uris ?? [],
             'is_confidential' => $application->confidential(),
             'is_first_party' => (bool) $application->is_first_party,
+            'is_client_credentials_enabled' => $application->hasGrantType('client_credentials'),
             'discovery_url' => $discoveryUrl,
             'configure_command' => sprintf(
                 'php artisan oidc:configure %s --client-id=%s',

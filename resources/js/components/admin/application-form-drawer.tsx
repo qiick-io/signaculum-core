@@ -36,6 +36,7 @@ const EMPTY_APPLICATION_FORM = {
     redirect_uris: '',
     is_confidential: true,
     is_first_party: false,
+    is_client_credentials_enabled: false,
 };
 
 export type ApplicationFormDrawerProps = {
@@ -77,6 +78,8 @@ export function ApplicationFormDrawer({
                 redirect_uris: editing.redirect_uris.join('\n'),
                 is_confidential: editing.is_confidential,
                 is_first_party: editing.is_first_party,
+                is_client_credentials_enabled:
+                    editing.is_client_credentials_enabled,
             };
             form.setData(payload);
             form.setDefaults({ ...payload });
@@ -306,12 +309,21 @@ export function ApplicationFormDrawer({
                                     id="application-confidential"
                                     checked={form.data.is_confidential}
                                     disabled={readOnly || form.processing}
-                                    onCheckedChange={(checked) =>
+                                    onCheckedChange={(checked) => {
+                                        const isConfidential = checked === true;
+
                                         form.setData(
                                             'is_confidential',
-                                            checked === true,
-                                        )
-                                    }
+                                            isConfidential,
+                                        );
+
+                                        if (!isConfidential) {
+                                            form.setData(
+                                                'is_client_credentials_enabled',
+                                                false,
+                                            );
+                                        }
+                                    }}
                                 />
                                 <div className="grid gap-1.5 leading-none">
                                     <FieldLabel htmlFor="application-confidential">
@@ -359,6 +371,43 @@ export function ApplicationFormDrawer({
                             </div>
                             <FieldError>
                                 {form.errors.is_first_party}
+                            </FieldError>
+                        </Field>
+
+                        <Field>
+                            <div className="flex items-start gap-3">
+                                <Checkbox
+                                    id="application-client-credentials"
+                                    checked={
+                                        form.data.is_client_credentials_enabled
+                                    }
+                                    disabled={
+                                        readOnly ||
+                                        form.processing ||
+                                        !form.data.is_confidential
+                                    }
+                                    onCheckedChange={(checked) =>
+                                        form.setData(
+                                            'is_client_credentials_enabled',
+                                            checked === true,
+                                        )
+                                    }
+                                />
+                                <div className="grid gap-1.5 leading-none">
+                                    <FieldLabel htmlFor="application-client-credentials">
+                                        {t(
+                                            'admin.applications.form.clientCredentials',
+                                        )}
+                                    </FieldLabel>
+                                    <FieldDescription>
+                                        {t(
+                                            'admin.applications.form.clientCredentialsHint',
+                                        )}
+                                    </FieldDescription>
+                                </div>
+                            </div>
+                            <FieldError>
+                                {form.errors.is_client_credentials_enabled}
                             </FieldError>
                         </Field>
 
