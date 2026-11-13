@@ -1,8 +1,8 @@
 {
-    "$schema": "https://getcomposer.org/schema.json",
     "name": "qiick/signaculum-core",
     "type": "project",
     "description": "Signaculum: self-hosted OpenID Connect identity provider for qiick apps.",
+    "version": "1.0.0-beta.1",
     "keywords": [
         "signaculum",
         "qiick",
@@ -12,6 +12,12 @@
         "sso"
     ],
     "license": "MIT",
+    "homepage": "https://github.com/qiick-io/signaculum-core",
+    "support": {
+        "issues": "https://github.com/qiick-io/signaculum-core/issues",
+        "source": "https://github.com/qiick-io/signaculum-core",
+        "docs": "https://github.com/qiick-io/signaculum-core/tree/develop/docs"
+    },
     "require": {
         "php": "^8.4",
         "inertiajs/inertia-laravel": "^3.0",
@@ -118,5 +124,6 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "$schema": "https://getcomposer.org/schema.json"
 }
