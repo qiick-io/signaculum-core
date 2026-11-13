@@ -58,13 +58,13 @@ User claims come from `OidcClaimsService` (same values in `id_token` and userinf
 
 Always emitted on the `id_token` from methods recorded at login (`AuthenticationContextService`, session key `oidc.authentication_methods`, copied onto the auth code):
 
-| Value | When |
-| ----- | ---- |
-| `pwd` | Password authentication (also the fallback when a signed-in session has no recorded method) |
-| `otp` | Fortify TOTP / recovery-code challenge |
+| Value | When                                                                                                  |
+| ----- | ----------------------------------------------------------------------------------------------------- |
+| `pwd` | Password authentication (also the fallback when a signed-in session has no recorded method)           |
+| `otp` | Fortify TOTP / recovery-code challenge                                                                |
 | `hwk` | Passkey whose credential transports include a hardware channel (`usb` / `nfc` / `ble` / `smart-card`) |
-| `swk` | Passkey without a hardware transport (platform / hybrid) |
-| `mfa` | Two or more of the concrete factors above were used in the same authentication |
+| `swk` | Passkey without a hardware transport (platform / hybrid)                                              |
+| `mfa` | Two or more of the concrete factors above were used in the same authentication                        |
 
 `acr` is out of scope for this slice (emit only when requested; see #69).
 
