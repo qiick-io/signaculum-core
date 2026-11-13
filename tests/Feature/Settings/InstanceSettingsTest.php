@@ -36,6 +36,8 @@ function securitySettingsPayload(array $overrides = []): array
     return [
         'password_policy' => 'medium',
         'login_max_attempts' => 3,
+        'login_lockout_threshold' => 5,
+        'login_lockout_minutes' => 15,
         'registration_enabled' => '0',
         'two_factor_required' => '0',
         ...$overrides,
@@ -92,6 +94,8 @@ it('shows the defaults until a value is saved', function () {
     $this->actingAs($admin)->get(route('instance.security.edit'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('instance.login_max_attempts', 5)
+            ->where('instance.login_lockout_threshold', 5)
+            ->where('instance.login_lockout_minutes', 15)
             ->where('instance.registration_enabled', false)
             ->where('instance.two_factor_required', false)
             ->where('passwordPolicies', SettingsRepositoryService::PASSWORD_POLICIES));
@@ -168,10 +172,19 @@ it('validates the authentication and security settings', function () {
         ->put(route('instance.security.update'), securitySettingsPayload([
             'password_policy' => 'none',
             'login_max_attempts' => 0,
+            'login_lockout_threshold' => 0,
+            'login_lockout_minutes' => 0,
             'registration_enabled' => 'maybe',
             'two_factor_required' => 'maybe',
         ]))
-        ->assertSessionHasErrors(['password_policy', 'login_max_attempts', 'registration_enabled', 'two_factor_required']);
+        ->assertSessionHasErrors([
+            'password_policy',
+            'login_max_attempts',
+            'login_lockout_threshold',
+            'login_lockout_minutes',
+            'registration_enabled',
+            'two_factor_required',
+        ]);
 });
 
 it('uses the saved login attempts for the login rate limit', function () {

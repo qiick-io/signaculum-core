@@ -33,6 +33,8 @@ type SecurityInstanceSettings = Pick<
     InstanceSettingsForm,
     | 'password_policy'
     | 'login_max_attempts'
+    | 'login_lockout_threshold'
+    | 'login_lockout_minutes'
     | 'registration_enabled'
     | 'two_factor_required'
 >;
@@ -46,6 +48,8 @@ function buildFormState(instance: SecurityInstanceSettings) {
     return {
         password_policy: instance.password_policy,
         login_max_attempts: instance.login_max_attempts,
+        login_lockout_threshold: instance.login_lockout_threshold,
+        login_lockout_minutes: instance.login_lockout_minutes,
         registration_enabled: instance.registration_enabled,
         two_factor_required: instance.two_factor_required,
     };
@@ -248,6 +252,94 @@ export default function InstanceSecuritySettingsPage({
                                         />
                                         <FieldError id="login-max-attempts-error">
                                             {errors.login_max_attempts}
+                                        </FieldError>
+                                    </Field>
+
+                                    <Field
+                                        data-invalid={
+                                            errors.login_lockout_threshold
+                                                ? true
+                                                : undefined
+                                        }
+                                    >
+                                        <FieldLabel htmlFor="login_lockout_threshold">
+                                            {t(
+                                                'settings.instance.loginLockoutThreshold',
+                                            )}
+                                        </FieldLabel>
+                                        <FieldDescription>
+                                            {t(
+                                                'settings.instance.loginLockoutThresholdDescription',
+                                            )}
+                                        </FieldDescription>
+                                        <Input
+                                            id="login_lockout_threshold"
+                                            name="login_lockout_threshold"
+                                            type="number"
+                                            min={1}
+                                            max={100}
+                                            value={form.login_lockout_threshold}
+                                            onChange={(event) =>
+                                                setForm((current) => ({
+                                                    ...current,
+                                                    login_lockout_threshold:
+                                                        Number(
+                                                            event.target.value,
+                                                        ),
+                                                }))
+                                            }
+                                            aria-invalid={
+                                                errors.login_lockout_threshold
+                                                    ? true
+                                                    : undefined
+                                            }
+                                        />
+                                        <FieldError>
+                                            {errors.login_lockout_threshold}
+                                        </FieldError>
+                                    </Field>
+
+                                    <Field
+                                        data-invalid={
+                                            errors.login_lockout_minutes
+                                                ? true
+                                                : undefined
+                                        }
+                                    >
+                                        <FieldLabel htmlFor="login_lockout_minutes">
+                                            {t(
+                                                'settings.instance.loginLockoutMinutes',
+                                            )}
+                                        </FieldLabel>
+                                        <FieldDescription>
+                                            {t(
+                                                'settings.instance.loginLockoutMinutesDescription',
+                                            )}
+                                        </FieldDescription>
+                                        <Input
+                                            id="login_lockout_minutes"
+                                            name="login_lockout_minutes"
+                                            type="number"
+                                            min={1}
+                                            max={1440}
+                                            value={form.login_lockout_minutes}
+                                            onChange={(event) =>
+                                                setForm((current) => ({
+                                                    ...current,
+                                                    login_lockout_minutes:
+                                                        Number(
+                                                            event.target.value,
+                                                        ),
+                                                }))
+                                            }
+                                            aria-invalid={
+                                                errors.login_lockout_minutes
+                                                    ? true
+                                                    : undefined
+                                            }
+                                        />
+                                        <FieldError>
+                                            {errors.login_lockout_minutes}
                                         </FieldError>
                                     </Field>
 
