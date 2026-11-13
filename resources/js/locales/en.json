@@ -323,7 +323,20 @@
                 "actions": "Actions"
             },
             "actions": {
-                "edit": "Edit user"
+                "edit": "Edit user",
+                "deactivate": "Deactivate",
+                "reactivate": "Reactivate",
+                "resetTwoFactor": "Reset two-factor",
+                "grantInstanceAdmin": "Make instance admin",
+                "revokeInstanceAdmin": "Remove instance admin"
+            },
+            "confirm": {
+                "deactivateTitle": "Deactivate {{name}}?",
+                "deactivateDescription": "They cannot sign in. Their tokens are revoked and connected apps receive a back-channel logout.",
+                "resetTwoFactorTitle": "Reset two-factor for {{name}}?",
+                "resetTwoFactorDescription": "Their authenticator and recovery codes stop working. They must enrol again.",
+                "revokeInstanceAdminTitle": "Remove instance admin from {{name}}?",
+                "revokeInstanceAdminDescription": "They lose access to Admin and instance settings. At least one instance admin must remain."
             },
             "status": {
                 "active": "Active",

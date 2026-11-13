@@ -323,7 +323,20 @@
                 "actions": "Aktionen"
             },
             "actions": {
-                "edit": "Benutzer bearbeiten"
+                "edit": "Benutzer bearbeiten",
+                "deactivate": "Deaktivieren",
+                "reactivate": "Reaktivieren",
+                "resetTwoFactor": "Zwei-Faktor zurücksetzen",
+                "grantInstanceAdmin": "Zum Instanz-Admin machen",
+                "revokeInstanceAdmin": "Instanz-Admin entziehen"
+            },
+            "confirm": {
+                "deactivateTitle": "{{name}} deaktivieren?",
+                "deactivateDescription": "Anmeldung ist nicht mehr möglich. Tokens werden widerrufen und verbundene Apps erhalten einen Back-Channel-Logout.",
+                "resetTwoFactorTitle": "Zwei-Faktor für {{name}} zurücksetzen?",
+                "resetTwoFactorDescription": "Authenticator und Wiederherstellungscodes funktionieren nicht mehr. Die Person muss sie erneut einrichten.",
+                "revokeInstanceAdminTitle": "Instanz-Admin von {{name}} entfernen?",
+                "revokeInstanceAdminDescription": "Der Zugang zu Admin und Instanz-Einstellungen entfällt. Mindestens ein Instanz-Admin muss bleiben."
             },
             "status": {
                 "active": "Aktiv",

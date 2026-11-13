@@ -323,7 +323,20 @@
                 "actions": "Azioni"
             },
             "actions": {
-                "edit": "Modifica utente"
+                "edit": "Modifica utente",
+                "deactivate": "Disattiva",
+                "reactivate": "Riattiva",
+                "resetTwoFactor": "Reimposta il 2FA",
+                "grantInstanceAdmin": "Rendi admin dell'istanza",
+                "revokeInstanceAdmin": "Togli admin dell'istanza"
+            },
+            "confirm": {
+                "deactivateTitle": "Disattivare {{name}}?",
+                "deactivateDescription": "Non potrà accedere. I token vengono revocati e le app collegate ricevono un back-channel logout.",
+                "resetTwoFactorTitle": "Reimpostare il 2FA di {{name}}?",
+                "resetTwoFactorDescription": "L'autenticatore e i codici di recupero smettono di funzionare. Dovrà registrarli di nuovo.",
+                "revokeInstanceAdminTitle": "Togliere admin dell'istanza a {{name}}?",
+                "revokeInstanceAdminDescription": "Perde l'accesso ad Admin e alle impostazioni dell'istanza. Deve restare almeno un admin."
             },
             "status": {
                 "active": "Attivo",

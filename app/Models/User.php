@@ -27,7 +27,7 @@ use Laravel\Passport\HasApiTokens;
  * @property string|null $locale UI language, also the OIDC `locale` claim
  * @property Carbon|null $email_verified_at
  * @property bool $is_instance_admin may edit instance settings (SettingPolicy)
- * @property bool $is_active false refuses login once activation middleware lands
+ * @property bool $is_active false refuses login (Fortify + EnsureUserIsActiveMiddleware)
  * @property string $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
