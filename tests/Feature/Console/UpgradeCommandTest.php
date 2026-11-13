@@ -208,6 +208,78 @@ test('upgrade refuses --sync-upstream without a tag value', function () {
         ->assertFailed();
 });
 
+test('upgrade reports when git remotes cannot be listed', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(''),
+        'remote' => Process::result(errorOutput: 'denied', exitCode: 1),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v1.0.0',
+        '--dry-run' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('Could not list git remotes')
+        ->assertFailed();
+});
+
+test('upgrade reports when adding the upstream remote fails', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(''),
+        'remote' => Process::result("origin\n"),
+        'remote add upstream https://github.com/qiick-io/signaculum-core.git' => Process::result(errorOutput: 'fail', exitCode: 1),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v1.0.0',
+        '--dry-run' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('Failed to add the upstream remote')
+        ->assertFailed();
+});
+
+test('upgrade reports when diff against the tag fails', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(''),
+        'remote' => Process::result("origin\nupstream\n"),
+        'fetch --tags upstream' => Process::result(''),
+        'rev-parse --verify refs/tags/v1.0.0' => Process::result("abc123\n"),
+        'diff --name-status HEAD v1.0.0' => Process::result(errorOutput: 'bad object', exitCode: 1),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v1.0.0',
+        '--dry-run' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('Could not diff HEAD')
+        ->assertFailed();
+});
+
+test('upgrade aborts the merge when the confirmation is declined', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(''),
+        'remote' => Process::result("origin\nupstream\n"),
+        'fetch --tags upstream' => Process::result(''),
+        'rev-parse --verify refs/tags/v1.0.0' => Process::result("abc123\n"),
+        'diff --name-status HEAD v1.0.0' => Process::result("M\tREADME.md\n"),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v1.0.0',
+        '--force' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsConfirmation('1 files will change. Continue?', 'no')
+        ->expectsOutputToContain('Aborted')
+        ->assertFailed();
+});
+
 /**
  * @param  array<string, ProcessResult>  $map
  */

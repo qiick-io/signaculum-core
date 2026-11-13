@@ -223,3 +223,36 @@ function restoreInstallEnv(string $envPath, ?string $backup): void
 
     File::put($envPath, $backup);
 }
+
+test('install env helpers escape values and apply mysql credentials', function () {
+    $command = app(InstallCommand::class);
+    $setEnv = new ReflectionMethod(InstallCommand::class, 'setEnv');
+    $apply = new ReflectionMethod(InstallCommand::class, 'applyDatabaseCredentials');
+    $unwrap = new ReflectionMethod(InstallCommand::class, 'unwrapEnvValue');
+    $isValid = new ReflectionMethod(InstallCommand::class, 'isValidAppKey');
+
+    $setEnv->setAccessible(true);
+    $apply->setAccessible(true);
+    $unwrap->setAccessible(true);
+    $isValid->setAccessible(true);
+
+    $env = "APP_NAME=Old\nDB_CONNECTION=sqlite\n";
+    $env = $setEnv->invoke($command, $env, 'APP_NAME', 'Signaculum Core');
+    $env = $apply->invoke($command, $env, 'mysql', [
+        'host' => '127.0.0.1',
+        'port' => '3306',
+        'database' => 'signaculum',
+        'username' => 'root',
+        'password' => 's3cret "quote"',
+    ]);
+
+    expect($env)->toContain('APP_NAME="Signaculum Core"')
+        ->and($env)->toContain('DB_HOST=127.0.0.1')
+        ->and($env)->toContain('DB_DATABASE=signaculum')
+        ->and($unwrap->invoke($command, '"hello\\"world"'))->toBe('hello"world')
+        ->and($unwrap->invoke($command, "'plain'"))->toBe('plain')
+        ->and($unwrap->invoke($command, 'bare'))->toBe('bare')
+        ->and($isValid->invoke($command, 'base64:abc'))->toBeTrue()
+        ->and($isValid->invoke($command, ''))->toBeFalse()
+        ->and($apply->invoke($command, $env, 'sqlite', []))->toBe($env);
+});
