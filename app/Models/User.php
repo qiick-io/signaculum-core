@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\LogsApplicationActivityTrait;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +17,7 @@ use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -41,7 +43,7 @@ use Laravel\Passport\HasApiTokens;
 class User extends Authenticatable implements MustVerifyEmail, OAuthenticatable, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasUuids, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasUuids, LogsApplicationActivityTrait, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
      * The full name travels with the user to the pages (avatar, menus).
@@ -56,6 +58,15 @@ class User extends Authenticatable implements MustVerifyEmail, OAuthenticatable,
     public function getNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    /**
+     * Never log secrets or session tokens on the user row.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return $this->applicationActivityLogOptions()
+            ->logExcept(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token']);
     }
 
     /**

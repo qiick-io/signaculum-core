@@ -9,6 +9,7 @@ use App\Services\SettingsRepositoryService;
 use App\Services\ThemePresetService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Spatie\Activitylog\Models\Activity;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -64,6 +65,7 @@ class HandleInertiaRequests extends Middleware
                 'canManageSettings' => (bool) $request->user()?->can('update', Setting::class),
                 'canManageUsers' => (bool) $request->user()?->can('viewAny', User::class),
                 'canManageApplications' => (bool) $request->user()?->can('viewAny', Client::class),
+                'canShowActivityLogs' => (bool) $request->user()?->can('viewAny', Activity::class),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
