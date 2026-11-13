@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\OidcScopeEnum;
 use App\Listeners\EndOidcSessionOnLogoutListener;
+use App\Listeners\RecordAuthenticationMethodListener;
 use App\Listeners\RecordAuthenticationTimeListener;
 use App\Listeners\RegenerateOidcSessionOnLoginListener;
 use App\Models\Client;
@@ -25,6 +26,9 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
+use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
+use Laravel\Passkeys\Events\PasskeyVerified;
 use Laravel\Passport\Bridge\AuthCodeRepository;
 use Laravel\Passport\Bridge\RefreshTokenRepository;
 use Laravel\Passport\Passport;
@@ -118,6 +122,10 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(Login::class, RecordAuthenticationTimeListener::class);
         Event::listen(Login::class, RegenerateOidcSessionOnLoginListener::class);
+        Event::listen(Login::class, [RecordAuthenticationMethodListener::class, 'handleLogin']);
+        Event::listen(TwoFactorAuthenticationChallenged::class, [RecordAuthenticationMethodListener::class, 'handleTwoFactorChallenged']);
+        Event::listen(ValidTwoFactorAuthenticationCodeProvided::class, [RecordAuthenticationMethodListener::class, 'handleValidTwoFactor']);
+        Event::listen(PasskeyVerified::class, [RecordAuthenticationMethodListener::class, 'handlePasskeyVerified']);
         Event::listen(Logout::class, EndOidcSessionOnLogoutListener::class);
     }
 }

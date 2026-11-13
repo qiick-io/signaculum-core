@@ -26,7 +26,8 @@ test('discovery publishes the qiick protocol profile', function () {
         ]);
 
     expect($this->get('/.well-known/openid-configuration')->json('claims_supported'))
-        ->toContain('sid');
+        ->toContain('sid')
+        ->toContain('amr');
 });
 
 test('discovery is public and cacheable', function () {

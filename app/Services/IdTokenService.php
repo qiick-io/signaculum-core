@@ -17,8 +17,8 @@ use LogicException;
  * Mint RS256-signed id_tokens (OIDC Core §2, §3.1.3.6).
  *
  * The header carries the `kid` of the active signing key so clients pick the right JWK.
- * `aud` is the client id and `azp` repeats it; `nonce`, `auth_time` and `sid` come from
- * the authorization request / browser session and are only present when known.
+ * `aud` is the client id and `azp` repeats it; `nonce`, `auth_time`, `sid` and `amr`
+ * come from the authorization request / browser session and are only present when known.
  */
 final class IdTokenService
 {
@@ -65,6 +65,10 @@ final class IdTokenService
                 $idTokenRequest->clientId,
                 $idTokenRequest->context->oidcSessionId,
             );
+        }
+
+        if ($idTokenRequest->context->authenticationMethods !== []) {
+            $tokenBuilder = $tokenBuilder->withClaim('amr', $idTokenRequest->context->authenticationMethods);
         }
 
         unset($userClaims['sub']);

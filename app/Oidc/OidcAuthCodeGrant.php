@@ -92,12 +92,27 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
 
     private function storedContext(string $authCodeId): AuthorizationContextData
     {
-        $authCode = Passport::authCode()->newQuery()->whereKey($authCodeId)->first(['nonce', 'auth_time', 'oidc_session_id']);
+        $authCode = Passport::authCode()->newQuery()->whereKey($authCodeId)->first([
+            'nonce',
+            'auth_time',
+            'oidc_session_id',
+            'authentication_methods',
+        ]);
+
+        $authenticationMethods = $authCode?->getAttribute('authentication_methods');
+
+        if (is_string($authenticationMethods)) {
+            $decodedMethods = json_decode($authenticationMethods, true);
+            $authenticationMethods = is_array($decodedMethods) ? $decodedMethods : [];
+        }
 
         return new AuthorizationContextData(
             nonce: $authCode?->getAttribute('nonce'),
             authTime: $authCode?->getAttribute('auth_time') === null ? null : (int) $authCode->getAttribute('auth_time'),
             oidcSessionId: $authCode?->getAttribute('oidc_session_id'),
+            authenticationMethods: is_array($authenticationMethods)
+                ? array_values(array_filter($authenticationMethods, static fn (mixed $value): bool => is_string($value)))
+                : [],
         );
     }
 
