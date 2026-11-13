@@ -4,33 +4,37 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Client;
+use App\Services\OidcReauthenticationService;
 use App\Services\PendingAuthorizationService;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Honour OIDC Core §3.1.2.1 `max_age` on the authorization endpoint.
+ * Honour OIDC Core §3.1.2.1 `max_age` on the authorization endpoint, and make
+ * Passport's `prompt=login` re-authenticate without ending SSO sessions.
  *
- * When the elapsed time since `auth_time` exceeds `max_age` (or `auth_time` is
- * unknown), the end-user must re-authenticate. With `prompt=none` Passport then
- * returns `login_required` to the client; otherwise the user is sent to login.
- * Passport already covers `prompt=none|login|consent` — this middleware only
- * adds what it lacks for `max_age`.
+ * Re-authentication clears the local web login only (flag
+ * {@see OidcReauthenticationService}): no back-channel fan-out, same `sid`.
+ * With `prompt=none` and a too-old `auth_time`, the client gets `login_required`
+ * while the Signaculum session stays intact.
  */
 final class EnforceMaximumAuthenticationAgeMiddleware
 {
     public function __construct(
         private readonly PendingAuthorizationService $pendingAuthorizationService,
+        private readonly OidcReauthenticationService $oidcReauthenticationService,
     ) {}
 
     /**
      * @param  Closure(Request): Response  $next
      *
-     * @throws AuthenticationException when re-authentication is required without `prompt=none`
+     * @throws AuthenticationException when interactive re-authentication is required
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -38,13 +42,26 @@ final class EnforceMaximumAuthenticationAgeMiddleware
             return $next($request);
         }
 
+        $promptValues = $this->promptValues($request);
+        $isPromptNone = in_array('none', $promptValues, true);
+        $webGuard = Auth::guard('web');
+
+        if (
+            ! $isPromptNone
+            && in_array('login', $promptValues, true)
+            && ! $webGuard->guest()
+            && ! $request->session()->get('promptedForLogin', false)
+        ) {
+            $this->startInteractiveReauthentication($request);
+
+            throw new AuthenticationException(guards: ['web']);
+        }
+
         $maxAgeParameter = $request->query('max_age');
 
         if (! is_string($maxAgeParameter) || $maxAgeParameter === '' || ! ctype_digit($maxAgeParameter)) {
             return $next($request);
         }
-
-        $webGuard = Auth::guard('web');
 
         if ($webGuard->guest()) {
             return $next($request);
@@ -62,22 +79,77 @@ final class EnforceMaximumAuthenticationAgeMiddleware
             return $next($request);
         }
 
-        $webGuard->logout();
+        if ($isPromptNone) {
+            return $this->loginRequiredRedirect($request);
+        }
 
-        $promptValues = array_values(array_filter(array_map(
+        $this->startInteractiveReauthentication($request);
+
+        throw new AuthenticationException(guards: ['web']);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function promptValues(Request $request): array
+    {
+        return array_values(array_filter(array_map(
             trim(...),
             explode(' ', (string) $request->query('prompt', '')),
         )));
+    }
 
-        if (in_array('none', $promptValues, true)) {
-            return $next($request);
-        }
+    /**
+     * Clear the local web login for a fresh credential check without ending SSO.
+     */
+    private function startInteractiveReauthentication(Request $request): void
+    {
+        $this->oidcReauthenticationService->begin();
+        $preservedSid = $this->oidcReauthenticationService->preservedOidcSessionId();
+
+        Auth::guard('web')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        $request->session()->put('url.intended', $request->fullUrl());
+        $this->oidcReauthenticationService->restoreAfterSessionRotation($preservedSid);
 
-        throw new AuthenticationException(guards: ['web']);
+        // So Passport does not run its own logout again after the user returns.
+        $request->session()->put('promptedForLogin', true);
+        $request->session()->put('url.intended', $request->fullUrl());
+    }
+
+    /**
+     * Silent failure for `prompt=none` when re-authentication would be required
+     * (OIDC Core §3.1.2.1 / §3.1.2.6): keep the browser session, redirect with
+     * `login_required`, `state`, and `iss` (RFC 9207).
+     */
+    private function loginRequiredRedirect(Request $request): RedirectResponse|Response
+    {
+        $clientId = $request->query('client_id');
+        $redirectUri = $request->query('redirect_uri');
+
+        if (! is_string($clientId) || $clientId === '' || ! is_string($redirectUri) || $redirectUri === '') {
+            abort(401);
+        }
+
+        $client = Client::query()->find($clientId);
+
+        if ($client === null || ! in_array($redirectUri, $client->redirect_uris, true)) {
+            abort(401);
+        }
+
+        $query = [
+            'error' => 'login_required',
+            'iss' => (string) config('oidc.issuer'),
+        ];
+
+        $state = $request->query('state');
+
+        if (is_string($state) && $state !== '') {
+            $query['state'] = $state;
+        }
+
+        return redirect()->away($redirectUri.'?'.http_build_query($query));
     }
 }

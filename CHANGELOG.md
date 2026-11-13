@@ -4,7 +4,7 @@
 
 ### Added
 
-- OIDC `max_age` on `/oauth/authorize`: re-authenticate when session `auth_time` is too old; always emit `auth_time` in the `id_token` when `max_age` was sent. Passport already covers `prompt=none|login|consent` (locked in by tests).
+- OIDC `max_age` / `prompt=login` on `/oauth/authorize`: re-authenticate when session `auth_time` is too old (or `prompt=login`), without back-channel fan-out and keeping the same `sid`; `prompt=none` + stale `max_age` returns `login_required` with `iss` and leaves the session intact; always emit `auth_time` in the `id_token` when `max_age` was sent.
 - Named rate limiters for `/oauth/token`, `/oauth/authorize`, end-session, password-reset email, and (reserved) organisation invitations.
 - Admin → Users: deactivate/reactivate (login refused, tokens revoked, back-channel logout), reset two-factor, grant/revoke instance admin (never the last one).
 - Activity log (`spatie/laravel-activitylog`): admin page, auth/consent/revoke/settings events, and `activity_retention_days` with a daily prune.

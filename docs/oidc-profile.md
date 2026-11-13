@@ -44,8 +44,9 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
 ## `prompt` and `max_age`
 
-- **`prompt`** (Passport): `none` returns `login_required` / `consent_required` without interaction; `login` forces a fresh Signaculum login; `consent` always shows the consent screen. Space-separated values are accepted; `none` wins over the others.
-- **`max_age`** (OIDC Core §3.1.2.1, `EnforceMaximumAuthenticationAgeMiddleware`): when the elapsed seconds since session `auth_time` exceed `max_age` (or `auth_time` is unknown), the user must re-authenticate. With `prompt=none` the client receives `login_required`; otherwise the browser is sent to login with the authorize URL as `url.intended`. When `max_age` was sent, the `id_token` always includes `auth_time`.
+- **`prompt`**: `none` returns `login_required` / `consent_required` without interaction; `login` forces a fresh Signaculum credential check; `consent` always shows the consent screen. Space-separated values are accepted; `none` wins over the others.
+- **`max_age`** (OIDC Core §3.1.2.1, `EnforceMaximumAuthenticationAgeMiddleware`): when the elapsed seconds since session `auth_time` exceed `max_age` (or `auth_time` is unknown), the user must re-authenticate. With `prompt=none` the client receives `login_required` (with `state` and `iss`) **without** ending the Signaculum session. Otherwise the browser is sent to login with the authorize URL as `url.intended`. When `max_age` was sent, the `id_token` always includes `auth_time`.
+- **Re-authentication ≠ SSO logout.** `max_age` and `prompt=login` clear only the local web login (`oidc.reauthenticating`): no back-channel fan-out, same `sid`. A real Signaculum logout still ends SSO sessions.
 
 ## Claims per scope
 

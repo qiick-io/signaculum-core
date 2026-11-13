@@ -3,9 +3,6 @@
 namespace App\Providers;
 
 use App\Enums\OidcScopeEnum;
-use App\Listeners\EndOidcSessionOnLogoutListener;
-use App\Listeners\RecordAuthenticationTimeListener;
-use App\Listeners\RegenerateOidcSessionOnLoginListener;
 use App\Models\Client;
 use App\Models\User;
 use App\Oidc\IdTokenResponse;
@@ -190,9 +187,6 @@ class AppServiceProvider extends ServiceProvider
             ])->toResponse(request());
         });
 
-        Event::listen(Login::class, RecordAuthenticationTimeListener::class);
-        Event::listen(Login::class, RegenerateOidcSessionOnLoginListener::class);
-        Event::listen(Logout::class, EndOidcSessionOnLogoutListener::class);
     }
 
     /**

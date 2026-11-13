@@ -2,14 +2,21 @@
 
 declare(strict_types=1);
 
+use App\Jobs\SendBackChannelLogoutJob;
 use App\Models\User;
+use App\Services\OidcSessionService;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     config(['oidc.issuer' => 'https://id.example.test']);
 
     $this->user = User::factory()->create(['email' => 'ada@example.test']);
     $this->client = createOidcClient();
+    $this->client->forceFill([
+        'backchannel_logout_uri' => 'https://client.example.test/auth/oidc/backchannel-logout',
+        'is_backchannel_logout_session_required' => true,
+    ])->save();
     $this->pkce = pkcePair();
 });
 
@@ -26,6 +33,26 @@ test('prompt=login with a signed-in user forces a fresh login', function () {
 
     $response->assertRedirect('/login');
     expect(auth()->check())->toBeFalse();
+});
+
+test('prompt=login re-authentication does not fan out back-channel logout', function () {
+    Queue::fake();
+
+    Date::setTestNow('2026-11-05 10:00:00');
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+    $sid = session(OidcSessionService::SESSION_KEY);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    redeemCode($this->client, $code, $this->pkce['verifier'])->assertOk();
+
+    $freshPkce = pkcePair();
+    $this->get(authorizeUrl($this->client, $freshPkce['challenge'], ['prompt' => 'login']))->assertRedirect('/login');
+
+    Queue::assertNotPushed(SendBackChannelLogoutJob::class);
+
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+
+    expect(session(OidcSessionService::SESSION_KEY))->toBe($sid);
+    Queue::assertNotPushed(SendBackChannelLogoutJob::class);
 });
 
 test('prompt=consent shows the consent screen even when scopes were already granted', function () {
@@ -63,6 +90,27 @@ test('max_age older than auth_time forces re-authentication', function () {
     expect(auth()->check())->toBeFalse();
 });
 
+test('max_age re-authentication does not fan out back-channel logout', function () {
+    Queue::fake();
+
+    Date::setTestNow('2026-11-05 10:00:00');
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+    $sid = session(OidcSessionService::SESSION_KEY);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    redeemCode($this->client, $code, $this->pkce['verifier'])->assertOk();
+
+    Date::setTestNow('2026-11-05 10:10:00');
+    $freshPkce = pkcePair();
+    $this->get(authorizeUrl($this->client, $freshPkce['challenge'], ['max_age' => '60']))->assertRedirect('/login');
+
+    Queue::assertNotPushed(SendBackChannelLogoutJob::class);
+
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+
+    expect(session(OidcSessionService::SESSION_KEY))->toBe($sid);
+    Queue::assertNotPushed(SendBackChannelLogoutJob::class);
+});
+
 test('max_age older than auth_time with prompt=none returns login_required', function () {
     Date::setTestNow('2026-11-05 10:00:00');
     $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
@@ -77,7 +125,34 @@ test('max_age older than auth_time with prompt=none returns login_required', fun
     $query = redirectQuery($response->headers->get('Location'));
 
     expect($query['error'])->toBe('login_required')
-        ->and($query['state'])->toBe('state-123');
+        ->and($query['state'])->toBe('state-123')
+        ->and($query['iss'])->toBe('https://id.example.test');
+});
+
+test('max_age with prompt=none keeps the Signaculum session and does not fan out logout', function () {
+    Queue::fake();
+
+    Date::setTestNow('2026-11-05 10:00:00');
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+    $sid = session(OidcSessionService::SESSION_KEY);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    redeemCode($this->client, $code, $this->pkce['verifier'])->assertOk();
+
+    Date::setTestNow('2026-11-05 10:10:00');
+    $freshPkce = pkcePair();
+    $response = $this->get(authorizeUrl($this->client, $freshPkce['challenge'], [
+        'max_age' => '60',
+        'prompt' => 'none',
+    ]));
+
+    $query = redirectQuery($response->headers->get('Location'));
+
+    expect($query['error'])->toBe('login_required')
+        ->and(auth()->check())->toBeTrue()
+        ->and(auth()->id())->toBe($this->user->id)
+        ->and(session(OidcSessionService::SESSION_KEY))->toBe($sid);
+
+    Queue::assertNotPushed(SendBackChannelLogoutJob::class);
 });
 
 test('when max_age was sent the id_token always carries auth_time', function () {
