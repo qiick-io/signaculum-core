@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Oidc\EndSessionController;
+use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\OrganizationMemberController;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +33,19 @@ Route::post('oauth/end-session/confirm', [EndSessionController::class, 'confirm'
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    Route::get('organizations', [OrganizationController::class, 'index'])->name('organizations.index');
+    Route::post('organizations', [OrganizationController::class, 'store'])->name('organizations.store');
+    Route::get('organizations/{organization}', [OrganizationController::class, 'show'])->name('organizations.show');
+    Route::put('organizations/{organization}', [OrganizationController::class, 'update'])->name('organizations.update');
+    Route::delete('organizations/{organization}', [OrganizationController::class, 'destroy'])->name('organizations.destroy');
+
+    Route::post('organizations/{organization}/members', [OrganizationMemberController::class, 'store'])
+        ->name('organizations.members.store');
+    Route::put('organizations/{organization}/members/{user}', [OrganizationMemberController::class, 'update'])
+        ->name('organizations.members.update');
+    Route::delete('organizations/{organization}/members/{user}', [OrganizationMemberController::class, 'destroy'])
+        ->name('organizations.members.destroy');
 });
 
 require __DIR__.'/admin.php';

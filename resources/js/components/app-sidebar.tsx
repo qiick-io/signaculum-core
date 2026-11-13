@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     AppWindow,
     BookOpen,
+    Building2,
     FolderGit2,
     House,
     ScrollText,
@@ -27,6 +28,7 @@ import { dashboard } from '@/routes';
 import { index as adminActivityLogsIndex } from '@/routes/admin/activity-logs';
 import { index as adminApplicationsIndex } from '@/routes/admin/applications';
 import { index as adminUsersIndex } from '@/routes/admin/users';
+import { index as organizationsIndex } from '@/routes/organizations';
 import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
 
@@ -44,6 +46,12 @@ export function AppSidebar() {
             title: t('nav.home'),
             href: dashboard(),
             icon: House,
+        },
+        {
+            title: t('nav.organizations'),
+            href: organizationsIndex(),
+            icon: Building2,
+            activePrefix: '/organizations',
         },
         {
             title: t('nav.settings'),
