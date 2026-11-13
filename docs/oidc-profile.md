@@ -27,7 +27,7 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `scopes_supported`: `openid`, `profile`, `email`, `qiick.orgs`
 - `response_types_supported`: `code`
 - `response_modes_supported`: `query`
-- `grant_types_supported`: `authorization_code`, `refresh_token`
+- `grant_types_supported`: `authorization_code`, `refresh_token`, `client_credentials`
 - `subject_types_supported`: `public`
 - `id_token_signing_alg_values_supported`: `RS256`
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `none`
@@ -47,10 +47,21 @@ Every redirect back to the client's `redirect_uri` — success (`code`) and erro
 
 ## PKCE and nonce
 
-- Authorization code flow only. Device code grant is disabled.
+- Interactive SSO uses the authorization code flow. Device code grant is disabled.
 - **PKCE S256 required for every client** (confidential included) when `OIDC_REQUIRE_PKCE` is true (default). `plain` is refused. Missing challenge → `invalid_request` redirect with `state`.
 - **`nonce` required** on every `openid` authorization request when `OIDC_REQUIRE_NONCE` is true (default). Echoed in the `id_token`. Missing nonce → `invalid_request` redirect with `state`.
 - Both flags may be relaxed only for the OpenID Foundation conformance suite, never in production.
+
+## Client credentials (machine clients)
+
+OAuth 2.0 client credentials (`grant_type=client_credentials`) is for **machine-to-machine** callers — jobs, MCP agents, service-to-service APIs — that need an access token **without a browser or end-user**.
+
+| Prefer…                     | When…                                                                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Authorization code (+ PKCE) | A person signs in (SSO into Externa, Excubia, …). Issues `id_token` / refresh; userinfo and `orgs` apply.                       |
+| Client credentials          | No human is present. Access token only; **no** `id_token`, **no** refresh token, **no** userinfo / `sid` / back-channel logout. |
+
+Opt-in per confidential application (Admin → Applications → “Allow client credentials”). Public clients cannot enable it. Passport already registers the grant; Signaculum only adds `client_credentials` to that client's `grant_types`. Device flow and dynamic registration stay out of scope.
 
 ## `prompt` and `max_age`
 
@@ -109,14 +120,19 @@ Authorization code exchange (Passport + `IdTokenResponse`):
 - Refresh-token grants do **not** mint a new `id_token`
 - Redeeming a code records a `client_sessions` row for `(user, client, sid)` used later by back-channel logout
 
+Client credentials exchange:
+
+- Always: `token_type`, `expires_in`, `access_token`
+- Never: `id_token`, `refresh_token`
+
 ## Token introspection (RFC 7662)
 
 `POST /oauth/introspect` with `application/x-www-form-urlencoded`:
 
 - **Caller:** confidential client only (`client_secret_basic` or `client_secret_post`). Public clients and bad secrets → HTTP 401 `invalid_client`
 - **Body:** `token` (required), optional `token_type_hint` (`access_token` / `refresh_token`)
-- **Active token:** JSON with `active: true` plus `scope`, `client_id`, `username` (email), `token_type` (`Bearer` or `refresh_token`), `exp`, `iat` (access tokens), `sub` (OIDC subject UUID), `aud` (access tokens), `iss`
-- **Inactive / unknown / revoked / expired:** `{ "active": false }` only (no reason leaked)
+- **Active token:** JSON with `active: true` plus `scope`, `client_id`, `username` (email), `token_type` (`Bearer` or `refresh_token`), `exp`, `iat` (access tokens), `sub` (OIDC subject UUID), `aud` (access tokens), `iss` — only when the token was issued to the calling client (`client_id` match). Another client's token is treated as inactive (RFC 7662 §2.2 / §4).
+- **Inactive / unknown / revoked / expired / foreign client:** `{ "active": false }` only (no reason leaked)
 - Out of scope for this endpoint: JWT access-token migration, DPoP
 
 ## Token revocation (RFC 7009)

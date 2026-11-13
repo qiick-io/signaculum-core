@@ -12,6 +12,7 @@ use Laravel\Passport\ClientRepository;
  * Registers an authorization-code OIDC application through Passport's ClientRepository.
  *
  * Side effects: creates an `oauth_clients` row (random secret when confidential).
+ * Opt-in `client_credentials` is written onto `grant_types` after Passport's create.
  */
 final class CreateApplicationAction
 {
@@ -34,6 +35,7 @@ final class CreateApplicationAction
 
         $client->forceFill([
             'is_first_party' => $applicationData->isFirstParty,
+            'grant_types' => $applicationData->grantTypes(),
         ])->save();
 
         $client->plainSecret = $plainSecret;

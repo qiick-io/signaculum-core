@@ -424,7 +424,9 @@
                 "confidential": "Client confidenziale",
                 "confidentialHint": "Usa un client secret sull'endpoint token. Disattiva per le SPA pubbliche.",
                 "firstParty": "App qiick first-party",
-                "firstPartyHint": "Salta la schermata di consenso per gli utenti autenticati."
+                "firstPartyHint": "Salta la schermata di consenso per gli utenti autenticati.",
+                "clientCredentials": "Consenti client credentials",
+                "clientCredentialsHint": "Access token macchina senza utente. Per job, agenti MCP e servizi — non per SSO nel browser."
             },
             "empty": {
                 "title": "Nessuna applicazione",

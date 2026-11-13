@@ -45,7 +45,7 @@ Written 2026-11-13 for scoping **`v1.0.0-beta.1`**. Sources: public docs of each
 | PAR (RFC 9126)                     | ✗ **later**           | ✓        | partial | partial   | ✗        | ✗       | ✓       | ✓     | ✗       |
 | DPoP (RFC 9449)                    | ✗ **later**           | ✓        | partial | partial   | ✗        | ✗       | ✓       | ✓     | ✗       |
 | Device authorization flow          | ✗ **later**           | ✓        | ✓       | ✓         | ✗        | ✓       | ✓       | ✓     | ✗       |
-| Client credentials (M2M)           | ✗ → **in beta**       | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | ✓       |
+| Client credentials (M2M)           | ✓ (opt-in, #51)       | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | ✓       |
 | Dynamic client registration        | ✗ **later**           | ✓        | ✗       | ✓         | ✗        | partial | ✓       | ✓     | ✗       |
 
 ---
@@ -129,7 +129,7 @@ Already in the design or checklist: OIDC core (code+PKCE, discovery, JWKS rotati
 | ----------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Token revocation RFC 7009 (advertised + tested) | #49   | Passport can revoke; customers and RFC 9700 expect a standard `/oauth/revoke` and discovery. Design §5 already names revocation. |
 | Token introspection RFC 7662                    | #50   | Resource servers and API gateways validate opaque access tokens this way; every serious IdP ships it.                            |
-| Client credentials grant                        | #51   | Machine clients (MCP agents, jobs) need M2M without a browser; design already separates machine credentials from SSO.            |
+| Client credentials grant                        | #51   | **Shipped** — opt-in on confidential apps; discovery advertises the grant; no `id_token` on this flow.                           |
 | Brute-force lockout                             | #52   | Instance settings already track login attempts; a real lockout matches Keycloak/Logto/Authelia regulation.                       |
 | Editable email templates                        | #53   | Invitations, verification and resets are expected to match brand; competitors expose templates in admin.                         |
 | Account data export                             | #54   | GDPR portability; Auth0/Clerk treat export as table stakes for account self-service.                                             |
