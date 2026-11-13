@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Enums\OidcScopeEnum;
+use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Listeners\EndOidcSessionOnLogoutListener;
 use App\Listeners\RecordAuthenticationMethodListener;
 use App\Listeners\RecordAuthenticationTimeListener;
@@ -69,6 +70,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureActivityLogging();
         $this->registerAuthActivityListeners();
         $this->attachOidcRateLimitMiddleware();
+        $this->attachAuthorizationResponseIssuerMiddleware();
     }
 
     /**
@@ -127,6 +129,31 @@ class AppServiceProvider extends ServiceProvider
 
                 if ($routeName === 'password.email') {
                     $route->middleware('throttle:password-reset');
+                }
+            }
+        });
+    }
+
+    /**
+     * RFC 9207 `iss` only on Passport authorization responses (authorize / approve / deny).
+     *
+     * Must not run on the whole `web` group: an unrelated redirect whose query already
+     * has `code` or `error` must stay untouched.
+     */
+    protected function attachAuthorizationResponseIssuerMiddleware(): void
+    {
+        $this->app->booted(function (): void {
+            $authorizeRouteNames = [
+                'passport.authorizations.authorize',
+                'passport.authorizations.approve',
+                'passport.authorizations.deny',
+            ];
+
+            foreach (Route::getRoutes()->getRoutes() as $route) {
+                $routeName = $route->getName();
+
+                if (is_string($routeName) && in_array($routeName, $authorizeRouteNames, true)) {
+                    $route->middleware(AddIssuerToAuthorizationResponseMiddleware::class);
                 }
             }
         });
