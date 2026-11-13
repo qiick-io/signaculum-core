@@ -281,3 +281,32 @@ test('install helpers escape empty values and detect a missing production env', 
         restoreInstallEnv($path, $backup);
     }
 });
+
+test('install builds a mysql process environment for child artisan calls', function () {
+    config([
+        'app.key' => 'base64:dGVzdGtleQ==',
+        'database.connections.mysql' => [
+            'host' => 'db.example',
+            'port' => '3306',
+            'database' => 'signaculum',
+            'username' => 'signaculum',
+            'password' => 'secret',
+        ],
+    ]);
+
+    $command = app(InstallCommand::class);
+    $method = new ReflectionMethod(InstallCommand::class, 'databaseProcessEnvironment');
+    $method->setAccessible(true);
+
+    $environment = $method->invoke($command, 'mysql');
+
+    expect($environment)->toMatchArray([
+        'DB_CONNECTION' => 'mysql',
+        'DB_HOST' => 'db.example',
+        'DB_PORT' => '3306',
+        'DB_DATABASE' => 'signaculum',
+        'DB_USERNAME' => 'signaculum',
+        'DB_PASSWORD' => 'secret',
+        'APP_KEY' => 'base64:dGVzdGtleQ==',
+    ]);
+});
