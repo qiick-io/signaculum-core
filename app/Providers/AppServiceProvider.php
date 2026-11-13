@@ -8,14 +8,17 @@ use App\Listeners\RecordAuthenticationMethodListener;
 use App\Listeners\RecordAuthenticationTimeListener;
 use App\Listeners\RegenerateOidcSessionOnLoginListener;
 use App\Models\Client;
+use App\Models\User;
 use App\Oidc\IdTokenResponse;
 use App\Oidc\OidcAuthCodeGrant;
 use App\Oidc\OidcAuthCodeRepository;
+use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
 use Carbon\CarbonImmutable;
 use DateInterval;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Database\Eloquent\Model;
@@ -33,6 +36,8 @@ use Laravel\Passport\Bridge\RefreshTokenRepository;
 use Laravel\Passport\Passport;
 use Laravel\Passport\Scope;
 use League\OAuth2\Server\AuthorizationServer;
+use Spatie\Activitylog\Facades\Activity;
+use Spatie\Activitylog\Models\Activity as ActivityModel;
 use Symfony\Component\HttpFoundation\Response;
 
 class AppServiceProvider extends ServiceProvider
@@ -56,6 +61,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureOpenIdConnect();
+        $this->configureActivityLogging();
+        $this->registerAuthActivityListeners();
     }
 
     /**
@@ -125,5 +132,63 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ValidTwoFactorAuthenticationCodeProvided::class, RecordAuthenticationMethodListener::class);
         Event::listen(PasskeyVerified::class, RecordAuthenticationMethodListener::class);
         Event::listen(Logout::class, EndOidcSessionOnLogoutListener::class);
+    }
+
+    /**
+     * Every activity also records the request IP and user agent.
+     */
+    protected function configureActivityLogging(): void
+    {
+        Gate::policy(ActivityModel::class, ActivityPolicy::class);
+
+        Activity::beforeLogging(function (ActivityModel $activity): void {
+            $activity->properties = ($activity->properties ?? collect())->merge([
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+        });
+    }
+
+    /**
+     * Logs logins, logouts and failed login attempts in the `auth` log.
+     */
+    protected function registerAuthActivityListeners(): void
+    {
+        Event::listen(Login::class, function (Login $event): void {
+            if (! $event->user instanceof User) {
+                return;
+            }
+
+            activity()
+                ->causedBy($event->user)
+                ->useLog('auth')
+                ->event('login')
+                ->log('User logged in');
+        });
+
+        Event::listen(Logout::class, function (Logout $event): void {
+            if (! $event->user instanceof User) {
+                return;
+            }
+
+            activity()
+                ->causedBy($event->user)
+                ->useLog('auth')
+                ->event('logout')
+                ->log('User logged out');
+        });
+
+        Event::listen(Failed::class, function (Failed $event): void {
+            $identifier = $event->credentials['email'] ?? null;
+
+            activity()
+                ->causedByAnonymous()
+                ->useLog('auth')
+                ->event('failed')
+                ->withProperties([
+                    'identifier' => is_string($identifier) ? $identifier : null,
+                ])
+                ->log('Failed login attempt');
+        });
     }
 }

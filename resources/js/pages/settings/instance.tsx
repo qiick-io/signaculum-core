@@ -21,7 +21,7 @@ import type { BreadcrumbItem, InstanceSettingsForm } from '@/types';
 
 type GeneralInstanceSettings = Pick<
     InstanceSettingsForm,
-    'app_name' | 'description' | 'report_bug_url'
+    'app_name' | 'description' | 'report_bug_url' | 'activity_retention_days'
 >;
 
 type Props = {
@@ -33,13 +33,13 @@ function buildFormState(instance: GeneralInstanceSettings) {
         app_name: instance.app_name ?? '',
         description: instance.description ?? '',
         report_bug_url: instance.report_bug_url ?? '',
+        activity_retention_days: instance.activity_retention_days,
     };
 }
 
 /**
- * Settings → General: the instance name and description, and the bug report link of the
- * settings nav. Copied from Excubia's project settings (`pages/settings/project.tsx`),
- * without its Checks and Data retention sections.
+ * Settings → General: the instance name and description, the bug report link, and
+ * activity log retention. Copied from Excubia's project settings.
  */
 export default function InstanceSettingsPage({ instance }: Props) {
     const { t } = useTranslation();
@@ -207,6 +207,71 @@ export default function InstanceSettingsPage({ instance }: Props) {
                                         </FieldDescription>
                                         <FieldError id="instance-report-bug-url-error">
                                             {errors.report_bug_url}
+                                        </FieldError>
+                                    </Field>
+                                </FieldGroup>
+                            </div>
+
+                            <Separator />
+
+                            <div className="space-y-6">
+                                <Heading
+                                    variant="small"
+                                    title={t(
+                                        'settings.instance.retentionTitle',
+                                    )}
+                                    description={t(
+                                        'settings.instance.retentionDescription',
+                                    )}
+                                />
+
+                                <FieldGroup className="gap-6">
+                                    <Field
+                                        data-invalid={
+                                            errors.activity_retention_days
+                                                ? true
+                                                : undefined
+                                        }
+                                    >
+                                        <FieldLabel htmlFor="activity_retention_days">
+                                            {t(
+                                                'settings.instance.activityRetentionDays',
+                                            )}
+                                        </FieldLabel>
+                                        <Input
+                                            id="activity_retention_days"
+                                            name="activity_retention_days"
+                                            type="number"
+                                            min={1}
+                                            max={3650}
+                                            value={form.activity_retention_days}
+                                            onChange={(event) =>
+                                                setForm((current) => ({
+                                                    ...current,
+                                                    activity_retention_days:
+                                                        Number(
+                                                            event.target.value,
+                                                        ),
+                                                }))
+                                            }
+                                            aria-invalid={
+                                                errors.activity_retention_days
+                                                    ? true
+                                                    : undefined
+                                            }
+                                            aria-describedby={
+                                                errors.activity_retention_days
+                                                    ? 'instance-activity-retention-error'
+                                                    : 'instance-activity-retention-hint'
+                                            }
+                                        />
+                                        <FieldDescription id="instance-activity-retention-hint">
+                                            {t(
+                                                'settings.instance.activityRetentionDaysHint',
+                                            )}
+                                        </FieldDescription>
+                                        <FieldError id="instance-activity-retention-error">
+                                            {errors.activity_retention_days}
                                         </FieldError>
                                     </Field>
                                 </FieldGroup>

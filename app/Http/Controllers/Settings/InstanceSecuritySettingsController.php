@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Settings\Concerns\LogsInstanceSettingsUpdateTrait;
 use App\Http\Requests\Settings\UpdateInstanceSecuritySettingsRequest;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,8 @@ use Inertia\Response;
  */
 final class InstanceSecuritySettingsController extends Controller
 {
+    use LogsInstanceSettingsUpdateTrait;
+
     public function __construct(private readonly SettingsRepositoryService $settings) {}
 
     public function edit(): Response
@@ -36,7 +39,9 @@ final class InstanceSecuritySettingsController extends Controller
 
     public function update(UpdateInstanceSecuritySettingsRequest $request): RedirectResponse
     {
-        $this->settings->save($request->settings());
+        $values = $request->settings();
+        $this->settings->save($values);
+        $this->logInstanceSettingsUpdate($request, 'security', $values);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Settings saved.')]);
 

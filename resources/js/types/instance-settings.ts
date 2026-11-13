@@ -17,6 +17,7 @@ export type InstanceSettingsForm = {
     app_name: string | null;
     description: string | null;
     report_bug_url: string | null;
+    activity_retention_days: number;
     default_language: string;
     default_appearance: DefaultAppearance;
     password_policy: PasswordPolicy;
