@@ -21,6 +21,7 @@
     },
     "common": {
         "actions": "Aktionen",
+        "back": "Zurück",
         "cancel": "Abbrechen",
         "confirmPassword": "Passwort bestätigen",
         "delete": "Löschen",
@@ -396,6 +397,38 @@
                 "filteredDescription": "Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.",
                 "cta": "Neue Anwendung"
             }
+        }
+    },
+    "errors": {
+        "403": {
+            "head": "Zugriff verweigert",
+            "title": "Keine Berechtigung",
+            "description": "Sie sind angemeldet, aber diese Seite oder Aktion ist für Ihr Konto nicht verfügbar.",
+            "goHome": "Zurück zum Dashboard",
+            "signIn": "Anmelden"
+        },
+        "404": {
+            "head": "Seite nicht gefunden",
+            "title": "Seite nicht gefunden",
+            "description": "Die angeforderte Seite existiert nicht oder ist nicht mehr verfügbar.",
+            "goHome": "Zurück zum Dashboard",
+            "signIn": "Anmelden"
+        },
+        "500": {
+            "head": "Etwas ist schiefgelaufen",
+            "title": "Etwas ist schiefgelaufen",
+            "description": "Es ist ein unerwarteter Fehler aufgetreten. Versuchen Sie es in einem Moment erneut.",
+            "goHome": "Zurück zum Dashboard",
+            "signIn": "Anmelden",
+            "tryAgain": "Erneut versuchen"
+        },
+        "503": {
+            "head": "Vorübergehend nicht verfügbar",
+            "title": "Vorübergehend nicht verfügbar",
+            "description": "Der Dienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es bald erneut.",
+            "goHome": "Zurück zum Dashboard",
+            "signIn": "Anmelden",
+            "tryAgain": "Erneut versuchen"
         }
     }
 }

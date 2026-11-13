@@ -21,6 +21,7 @@
     },
     "common": {
         "actions": "Azioni",
+        "back": "Indietro",
         "cancel": "Annulla",
         "confirmPassword": "Conferma password",
         "delete": "Elimina",
@@ -396,6 +397,38 @@
                 "filteredDescription": "Prova un'altra ricerca o cancella i filtri.",
                 "cta": "Nuova applicazione"
             }
+        }
+    },
+    "errors": {
+        "403": {
+            "head": "Accesso negato",
+            "title": "Non hai il permesso",
+            "description": "Hai effettuato l'accesso, ma questa pagina o azione non è disponibile per il tuo account.",
+            "goHome": "Torna alla dashboard",
+            "signIn": "Accedi"
+        },
+        "404": {
+            "head": "Pagina non trovata",
+            "title": "Pagina non trovata",
+            "description": "La pagina richiesta non esiste o non è più disponibile.",
+            "goHome": "Torna alla dashboard",
+            "signIn": "Accedi"
+        },
+        "500": {
+            "head": "Qualcosa è andato storto",
+            "title": "Qualcosa è andato storto",
+            "description": "Si è verificato un errore imprevisto. Riprova tra poco.",
+            "goHome": "Torna alla dashboard",
+            "signIn": "Accedi",
+            "tryAgain": "Riprova"
+        },
+        "503": {
+            "head": "Temporaneamente non disponibile",
+            "title": "Temporaneamente non disponibile",
+            "description": "Il servizio non è temporaneamente disponibile. Riprova a breve.",
+            "goHome": "Torna alla dashboard",
+            "signIn": "Accedi",
+            "tryAgain": "Riprova"
         }
     }
 }

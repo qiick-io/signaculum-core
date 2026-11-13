@@ -21,6 +21,7 @@
     },
     "common": {
         "actions": "Actions",
+        "back": "Back",
         "cancel": "Cancel",
         "confirmPassword": "Confirm password",
         "delete": "Delete",
@@ -396,6 +397,38 @@
                 "filteredDescription": "Try another search or clear the filters.",
                 "cta": "New application"
             }
+        }
+    },
+    "errors": {
+        "403": {
+            "head": "Forbidden",
+            "title": "You do not have permission",
+            "description": "You are signed in, but this page or action is not available for your account.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "404": {
+            "head": "Page not found",
+            "title": "Page not found",
+            "description": "The page you requested does not exist or is no longer available.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "500": {
+            "head": "Something went wrong",
+            "title": "Something went wrong",
+            "description": "An unexpected error occurred. Try again in a moment.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in",
+            "tryAgain": "Try again"
+        },
+        "503": {
+            "head": "Temporarily unavailable",
+            "title": "Temporarily unavailable",
+            "description": "The service is temporarily unavailable. Please try again soon.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in",
+            "tryAgain": "Try again"
         }
     }
 }
