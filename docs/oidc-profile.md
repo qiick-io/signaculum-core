@@ -58,12 +58,12 @@ Every redirect back to the client's `redirect_uri` — success (`code`) and erro
 
 User claims come from `OidcClaimsService` (same values in `id_token` and userinfo). Empty optional claims are omitted, never sent as empty strings.
 
-| Scope         | Claims                                                                                                                                                        |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| _(always)_    | `sub` (opaque UUIDv7 on `users.subject`, not the DB id)                                                                                                       |
-| `profile`     | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
-| `email`       | `email`, `email_verified`                                                                                                                                     |
-| `qiick.orgs`  | `orgs`: `[{ id, slug, roles }]` (roles `owner` / `admin` / `member` / `billing`; empty list when the user has no memberships; sorted by `slug`)                |
+| Scope        | Claims                                                                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _(always)_   | `sub` (opaque UUIDv7 on `users.subject`, not the DB id)                                                                                                       |
+| `profile`    | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
+| `email`      | `email`, `email_verified`                                                                                                                                     |
+| `qiick.orgs` | `orgs`: `[{ id, slug, roles }]` (roles `owner` / `admin` / `member` / `billing`; empty list when the user has no memberships; sorted by `slug`)               |
 
 **Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, `auth_time` when known (and **always** when the authorization request carried `max_age`), **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login), **`amr`** (always present; RFC 8176), optional **`acr`** (only when requested).
 
