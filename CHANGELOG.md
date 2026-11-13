@@ -8,6 +8,7 @@
 
 ### Added
 
+- RFC 7662 token introspection at `POST /oauth/introspect` (confidential clients), advertised as `introspection_endpoint` in discovery; inactive / revoked / expired tokens return `{ "active": false }`.
 - OAuth 2.0 `client_credentials` for confidential applications that opt in (Admin → Applications): machine access tokens without `id_token`; discovery `grant_types_supported` includes `client_credentials`.
 - RFC 7009 token revocation at `/oauth/revoke` (`revocation_endpoint`), with the same client auth methods as the token endpoint.
 - OIDC scope `qiick.orgs` and claim `orgs: [{ id, slug, roles }]` on `id_token` and userinfo (consent copy; discovery `scopes_supported` / `claims_supported`).
@@ -19,7 +20,7 @@
 - Organisations and memberships (`organizations`, `organization_user`): multi-role JSON (`owner` / `admin` / `member` / `billing`), never zero owners, CRUD UI under Organisations.
 - RFC 9207 `iss` on every authorization response (success and error) and discovery flag `authorization_response_iss_parameter_supported: true`.
 - `amr` on every `id_token` (RFC 8176): recorded at login as `pwd` / `otp` / `hwk` / `swk`, plus `mfa` when two factors were used, and carried with the authorization code.
-- Named rate limiters for `/oauth/token`, `/oauth/authorize`, end-session, password-reset email, and (reserved) organisation invitations.
+- Named rate limiters for `/oauth/token`, `/oauth/authorize`, end-session, introspection, password-reset email, and (reserved) organisation invitations.
 - Admin → Users: deactivate/reactivate (login refused, tokens revoked, back-channel logout), reset two-factor, grant/revoke instance admin (never the last one).
 - Activity log (`spatie/laravel-activitylog`): admin page, auth/consent/revoke/settings events, and `activity_retention_days` with a daily prune.
 - Instance setting `registration_enabled` (default off): self-registration and the login "Sign up" link stay closed until an instance admin turns them on (Settings → Authentication & security). qiick Cloud can enable registration on its hosted instance.

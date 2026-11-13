@@ -6,22 +6,24 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 
 ## Endpoints
 
-| Path                                | Methods       | Notes                                                                          |
-| ----------------------------------- | ------------- | ------------------------------------------------------------------------------ |
-| `/.well-known/openid-configuration` | `GET`         | Discovery (`DiscoveryController`)                                              |
-| `/.well-known/jwks.json`            | `GET`         | Public signing keys (`JwksController`), `Cache-Control: public, max-age=300`   |
-| `/oauth/authorize`                  | `GET`, `POST` | Passport authorization + consent UI (`resources/js/pages/oauth/authorize.tsx`) |
-| `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                            |
-| `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                   |
-| `/oauth/revoke`                     | `POST`        | RFC 7009 token revocation (`revocation_endpoint`)                              |
-| `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing   |
-| `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                |
+| Path                                | Methods       | Notes                                                                               |
+| ----------------------------------- | ------------- | ----------------------------------------------------------------------------------- |
+| `/.well-known/openid-configuration` | `GET`         | Discovery (`DiscoveryController`)                                                   |
+| `/.well-known/jwks.json`            | `GET`         | Public signing keys (`JwksController`), `Cache-Control: public, max-age=300`        |
+| `/oauth/authorize`                  | `GET`, `POST` | Passport authorization + consent UI (`resources/js/pages/oauth/authorize.tsx`)      |
+| `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                                 |
+| `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                        |
+| `/oauth/introspect`                 | `POST`        | RFC 7662 introspection; confidential clients only (`client_secret_basic` / `_post`) |
+| `/oauth/revoke`                     | `POST`        | RFC 7009 token revocation (`revocation_endpoint`)                                   |
+| `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing        |
+| `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                     |
 
 ## Discovery fields
 
 Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
-- `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `revocation_endpoint`, `end_session_endpoint`, `jwks_uri`
+- `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `introspection_endpoint`, `revocation_endpoint`, `end_session_endpoint`, `jwks_uri`
+- `introspection_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post` (no `none`)
 - `scopes_supported`: `openid`, `profile`, `email`, `qiick.orgs`
 - `response_types_supported`: `code`
 - `response_modes_supported`: `query`
@@ -123,6 +125,16 @@ Client credentials exchange:
 - Always: `token_type`, `expires_in`, `access_token`
 - Never: `id_token`, `refresh_token`
 
+## Token introspection (RFC 7662)
+
+`POST /oauth/introspect` with `application/x-www-form-urlencoded`:
+
+- **Caller:** confidential client only (`client_secret_basic` or `client_secret_post`). Public clients and bad secrets → HTTP 401 `invalid_client`
+- **Body:** `token` (required), optional `token_type_hint` (`access_token` / `refresh_token`)
+- **Active token:** JSON with `active: true` plus `scope`, `client_id`, `username` (email), `token_type` (`Bearer` or `refresh_token`), `exp`, `iat` (access tokens), `sub` (OIDC subject UUID), `aud` (access tokens), `iss` — only when the token was issued to the calling client (`client_id` match). Another client's token is treated as inactive (RFC 7662 §2.2 / §4).
+- **Inactive / unknown / revoked / expired / foreign client:** `{ "active": false }` only (no reason leaked)
+- Out of scope for this endpoint: JWT access-token migration, DPoP
+
 ## Token revocation (RFC 7009)
 
 `POST /oauth/revoke` (`application/x-www-form-urlencoded`):
@@ -183,6 +195,8 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 | Revocation with a wrong client secret                                                               | HTTP 401 `invalid_client`                                                                  |
 | Userinfo without / with invalid Bearer                                                              | 401 `invalid_token` + `WWW-Authenticate`                                                   |
 | Userinfo without `openid` scope                                                                     | 403 `insufficient_scope`                                                                   |
+| Introspection without / with bad client auth                                                        | 401 `invalid_client`                                                                       |
+| Introspection missing `token`                                                                       | 400 `invalid_request`                                                                      |
 | Unregistered `post_logout_redirect_uri`                                                             | HTTP 400                                                                                   |
 | Forged / foreign `id_token_hint` while signed in                                                    | Confirmation page, then logout of the local session on confirm                             |
 

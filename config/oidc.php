@@ -66,6 +66,7 @@ return [
         'token_per_minute' => (int) env('OIDC_RATE_LIMIT_TOKEN', 60),
         'authorize_per_minute' => (int) env('OIDC_RATE_LIMIT_AUTHORIZE', 60),
         'end_session_per_minute' => (int) env('OIDC_RATE_LIMIT_END_SESSION', 30),
+        'introspect_per_minute' => (int) env('OIDC_RATE_LIMIT_INTROSPECT', 60),
         'organization_invitations_per_minute' => (int) env('OIDC_RATE_LIMIT_ORG_INVITATIONS', 10),
         'password_reset_per_minute' => (int) env('OIDC_RATE_LIMIT_PASSWORD_RESET', 5),
     ],
