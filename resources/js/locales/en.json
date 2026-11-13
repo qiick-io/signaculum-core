@@ -237,7 +237,10 @@
             "linkSent": "A new verification link has been sent to your email address.",
             "resend": "Click here to resend the verification email.",
             "title": "Profile information",
-            "unverified": "Your email address is unverified."
+            "unverified": "Your email address is unverified.",
+            "exportTitle": "Download your data",
+            "exportDescription": "A JSON file with your profile, organisations, sessions and connected apps. Passwords and two-factor secrets are never included.",
+            "exportDownload": "Download JSON"
         },
         "security": {
             "addPasskey": "Add passkey",
@@ -514,7 +517,7 @@
         "create": "Create organisation",
         "emptyTitle": "No organisations yet",
         "emptyDescription": "Create an organisation to group members and roles for the qiick.orgs claim.",
-        "showDescription": "Organisation settings and members.",
+        "showDescription": "Organisation members and roles.",
         "members": {
             "title": "Members",
             "description": "Each member may hold one or more roles. An organisation always keeps at least one owner.",
@@ -534,6 +537,38 @@
             "description": "Deletes the organisation and every membership. This cannot be undone.",
             "confirmTitle": "Delete this organisation?",
             "confirmDescription": "Type the organisation name to confirm permanent deletion."
+        },
+        "views": {
+            "label": "Organisation views",
+            "members": "Members",
+            "invitations": "Invitations",
+            "settings": "Settings"
+        },
+        "invitations": {
+            "head": "Invitations — {{name}}",
+            "title": "Invitations",
+            "description": "Invite people by email. They join with the roles you choose when they accept.",
+            "expires": "Expires",
+            "expired": "Expired",
+            "empty": "No pending invitations.",
+            "send": "Send invitation",
+            "resend": "Resend",
+            "revoke": "Revoke"
+        },
+        "settings": {
+            "head": "Settings — {{name}}",
+            "title": "Settings",
+            "description": "Organisation name, slug and deletion."
+        },
+        "accept": {
+            "head": "Organisation invitation",
+            "title": "Organisation invitation",
+            "description": "Accept an invitation to join an organisation on Signaculum",
+            "expired": "This invitation to {{name}} has expired.",
+            "guest": "You were invited to {{name}} as {{email}}. Sign in with that email to continue.",
+            "signIn": "Sign in",
+            "ready": "Join {{name}} as {{email}}?",
+            "confirm": "Accept invitation"
         }
     }
 }

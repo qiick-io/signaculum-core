@@ -70,4 +70,9 @@ return [
         'password_reset_per_minute' => (int) env('OIDC_RATE_LIMIT_PASSWORD_RESET', 5),
     ],
 
+    /**
+     * How long an organisation invitation email link stays valid.
+     */
+    'organization_invitation_ttl_days' => (int) env('OIDC_ORG_INVITATION_TTL_DAYS', 7),
+
 ];
