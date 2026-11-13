@@ -30,6 +30,8 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property Carbon|null $email_verified_at
  * @property bool $is_instance_admin may edit instance settings (SettingPolicy)
  * @property bool $is_active false refuses login (Fortify + EnsureUserIsActiveMiddleware)
+ * @property int $failed_login_attempts consecutive wrong passwords since last success
+ * @property Carbon|null $locked_until when set in the future, password login is refused
  * @property string $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -90,6 +92,8 @@ class User extends Authenticatable implements MustVerifyEmail, OAuthenticatable,
             'email_verified_at' => 'datetime',
             'is_instance_admin' => 'boolean',
             'is_active' => 'boolean',
+            'failed_login_attempts' => 'integer',
+            'locked_until' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];

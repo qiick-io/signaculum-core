@@ -208,7 +208,11 @@
             "retentionTitle": "Data retention",
             "retentionDescription": "How long Signaculum keeps the activity log. Older entries are deleted daily.",
             "activityRetentionDays": "Activity log (days)",
-            "activityRetentionDaysHint": "Activity log entries older than this are deleted."
+            "activityRetentionDaysHint": "Activity log entries older than this are deleted.",
+            "loginLockoutThreshold": "Failed attempts before lockout",
+            "loginLockoutThresholdDescription": "Wrong passwords for one account before it is locked.",
+            "loginLockoutMinutes": "Lockout duration (minutes)",
+            "loginLockoutMinutesDescription": "How long a locked account must wait before trying again."
         },
         "layout": {
             "appearance": "Appearance",
@@ -334,7 +338,8 @@
                 "reactivate": "Reactivate",
                 "resetTwoFactor": "Reset two-factor",
                 "grantInstanceAdmin": "Make instance admin",
-                "revokeInstanceAdmin": "Remove instance admin"
+                "revokeInstanceAdmin": "Remove instance admin",
+                "unlock": "Clear lockout"
             },
             "confirm": {
                 "deactivateTitle": "Deactivate {{name}}?",

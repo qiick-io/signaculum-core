@@ -208,7 +208,11 @@
             "retentionTitle": "Datenaufbewahrung",
             "retentionDescription": "Wie lange Signaculum das Aktivitätsprotokoll behält. Ältere Einträge werden täglich gelöscht.",
             "activityRetentionDays": "Aktivitätsprotokoll (Tage)",
-            "activityRetentionDaysHint": "Aktivitätsprotokolleinträge älter als dieser Wert werden gelöscht."
+            "activityRetentionDaysHint": "Aktivitätsprotokolleinträge älter als dieser Wert werden gelöscht.",
+            "loginLockoutThreshold": "Fehlversuche vor Sperre",
+            "loginLockoutThresholdDescription": "Falsche Passwörter für ein Konto, bevor es gesperrt wird.",
+            "loginLockoutMinutes": "Sperrdauer (Minuten)",
+            "loginLockoutMinutesDescription": "Wie lange ein gesperrtes Konto warten muss, bevor es erneut versuchen darf."
         },
         "layout": {
             "appearance": "Darstellung",
@@ -334,7 +338,8 @@
                 "reactivate": "Reaktivieren",
                 "resetTwoFactor": "Zwei-Faktor zurücksetzen",
                 "grantInstanceAdmin": "Zum Instanz-Admin machen",
-                "revokeInstanceAdmin": "Instanz-Admin entziehen"
+                "revokeInstanceAdmin": "Instanz-Admin entziehen",
+                "unlock": "Sperre aufheben"
             },
             "confirm": {
                 "deactivateTitle": "{{name}} deaktivieren?",

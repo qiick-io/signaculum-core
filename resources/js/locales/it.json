@@ -208,7 +208,11 @@
             "retentionTitle": "Conservazione dati",
             "retentionDescription": "Per quanto tempo Signaculum conserva il registro attività. Le voci più vecchie vengono eliminate ogni giorno.",
             "activityRetentionDays": "Registro attività (giorni)",
-            "activityRetentionDaysHint": "Le voci del registro attività più vecchie di questo valore vengono eliminate."
+            "activityRetentionDaysHint": "Le voci del registro attività più vecchie di questo valore vengono eliminate.",
+            "loginLockoutThreshold": "Tentativi falliti prima del blocco",
+            "loginLockoutThresholdDescription": "Password errate per un account prima che venga bloccato.",
+            "loginLockoutMinutes": "Durata del blocco (minuti)",
+            "loginLockoutMinutesDescription": "Per quanto tempo un account bloccato deve attendere prima di riprovare."
         },
         "layout": {
             "appearance": "Aspetto",
@@ -334,7 +338,8 @@
                 "reactivate": "Riattiva",
                 "resetTwoFactor": "Reimposta il 2FA",
                 "grantInstanceAdmin": "Rendi admin dell'istanza",
-                "revokeInstanceAdmin": "Togli admin dell'istanza"
+                "revokeInstanceAdmin": "Togli admin dell'istanza",
+                "unlock": "Sblocca accesso"
             },
             "confirm": {
                 "deactivateTitle": "Disattivare {{name}}?",

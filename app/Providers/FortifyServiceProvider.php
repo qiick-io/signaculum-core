@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
+use App\Services\LoginLockoutService;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
@@ -62,11 +64,28 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureAuthentication(): void
     {
         Fortify::authenticateUsing(function (Request $request): ?User {
+            $loginLockoutService = app(LoginLockoutService::class);
             $user = User::query()->where('email', $request->input(Fortify::username()))->first();
 
-            if ($user === null || ! $user->is_active || ! Hash::check((string) $request->input('password'), $user->password)) {
+            if ($user === null) {
                 return null;
             }
+
+            if ($loginLockoutService->isLocked($user)) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => __('This account is temporarily locked. Try again later or ask an administrator to unlock it.'),
+                ]);
+            }
+
+            if (! $user->is_active || ! Hash::check((string) $request->input('password'), $user->password)) {
+                if ($user->is_active) {
+                    $loginLockoutService->recordFailure($user);
+                }
+
+                return null;
+            }
+
+            $loginLockoutService->clear($user);
 
             return $user;
         });
