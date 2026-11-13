@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\DispatchBackChannelLogoutAction;
 use App\Jobs\SendBackChannelLogoutJob;
 use App\Models\User;
 use App\Services\LogoutTokenService;
@@ -117,4 +118,28 @@ test('remove access fans out only for that client', function () {
 
     Queue::assertPushed(SendBackChannelLogoutJob::class, fn (SendBackChannelLogoutJob $job): bool => $job->clientId === $this->client->getKey());
     Queue::assertPushed(SendBackChannelLogoutJob::class, 1);
+});
+
+test('a session-not-required client still receives sid in the logout token job', function () {
+    Queue::fake();
+
+    $this->client->forceFill([
+        'is_backchannel_logout_session_required' => false,
+    ])->save();
+
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    $idToken = redeemCode($this->client, $code, $this->pkce['verifier'])->json('id_token');
+    $sid = verifiedIdToken($idToken)->claims()->get('sid');
+    // Fan-out with a null filter (e.g. user-wide logout) must still send each row's sid.
+    $this->flushSession();
+
+    app(DispatchBackChannelLogoutAction::class)->execute($this->user);
+
+    Queue::assertPushed(
+        SendBackChannelLogoutJob::class,
+        fn (SendBackChannelLogoutJob $job): bool => $job->clientId === $this->client->getKey()
+            && $job->oidcSessionId === $sid
+            && $job->subject === $this->user->subject,
+    );
 });

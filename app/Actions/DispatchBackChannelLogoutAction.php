@@ -49,15 +49,14 @@ final class DispatchBackChannelLogoutAction
                 continue;
             }
 
-            $sessionIdForToken = $client->is_backchannel_logout_session_required
-                ? $clientSession->oidc_session_id
-                : $oidcSessionId;
-
+            // Always send this client session's sid when we have it (Back-Channel
+            // Logout 1.0 §2.4). is_backchannel_logout_session_required only tells
+            // the RP that sid will be present; it must not drop sid from the token.
             SendBackChannelLogoutJob::dispatch(
                 clientId: $client->getKey(),
                 backchannelLogoutUri: $client->backchannel_logout_uri,
                 subject: $user->subject,
-                oidcSessionId: $sessionIdForToken,
+                oidcSessionId: $clientSession->oidc_session_id,
             );
 
             $clientSession->forceFill(['ended_at' => Date::now()])->save();

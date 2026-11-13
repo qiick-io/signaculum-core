@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\ClientSession;
 use App\Models\User;
 use App\Services\OidcSessionService;
 use Illuminate\Support\Facades\Auth;
@@ -98,4 +99,71 @@ test('an expired id_token_hint is still accepted when the signature is valid', f
         'client_id' => $this->client->getKey(),
         'post_logout_redirect_uri' => TEST_POST_LOGOUT_URI,
     ]))->assertRedirect(TEST_POST_LOGOUT_URI);
+});
+
+test('a guest with a valid id_token_hint does not end sessions or fan out', function () {
+    $oidcSessionId = 'sid-guest-'.bin2hex(random_bytes(8));
+
+    ClientSession::query()->create([
+        'user_id' => $this->user->getKey(),
+        'client_id' => $this->client->getKey(),
+        'oidc_session_id' => $oidcSessionId,
+    ]);
+
+    $hint = mintSignedHint($this->user, $this->client->getKey(), ['sid' => $oidcSessionId]);
+
+    $this->get('/oauth/end-session?'.http_build_query([
+        'id_token_hint' => $hint,
+        'client_id' => $this->client->getKey(),
+        'post_logout_redirect_uri' => TEST_POST_LOGOUT_URI,
+        'state' => 'guest-hint',
+    ]))->assertRedirect(TEST_POST_LOGOUT_URI.'?state=guest-hint');
+
+    Queue::assertNothingPushed();
+    expect(ClientSession::query()->where('oidc_session_id', $oidcSessionId)->whereNull('ended_at')->exists())
+        ->toBeTrue();
+});
+
+test('a signed-in user with another users hint and confirmed=1 only shows confirmation', function () {
+    $otherUser = User::factory()->create(['email' => 'bob@example.test']);
+    $otherOidcSessionId = 'sid-bob-'.bin2hex(random_bytes(8));
+
+    ClientSession::query()->create([
+        'user_id' => $otherUser->getKey(),
+        'client_id' => $this->client->getKey(),
+        'oidc_session_id' => $otherOidcSessionId,
+    ]);
+
+    $otherHint = mintSignedHint($otherUser, $this->client->getKey(), ['sid' => $otherOidcSessionId]);
+
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+
+    $this->get('/oauth/end-session?'.http_build_query([
+        'id_token_hint' => $otherHint,
+        'client_id' => $this->client->getKey(),
+        'post_logout_redirect_uri' => TEST_POST_LOGOUT_URI,
+        'confirmed' => '1',
+    ]))->assertOk()
+        ->assertInertia(fn ($page) => $page->component('oauth/logout'));
+
+    expect(Auth::guard('web')->check())->toBeTrue()
+        ->and(Auth::guard('web')->id())->toBe($this->user->getKey());
+    Queue::assertNothingPushed();
+    expect(ClientSession::query()->where('oidc_session_id', $otherOidcSessionId)->whereNull('ended_at')->exists())
+        ->toBeTrue();
+});
+
+test('confirmed=1 on the main end-session endpoint never skips confirmation', function () {
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+
+    $this->get('/oauth/end-session?'.http_build_query([
+        'id_token_hint' => 'not.a.jwt',
+        'client_id' => $this->client->getKey(),
+        'post_logout_redirect_uri' => TEST_POST_LOGOUT_URI,
+        'confirmed' => '1',
+    ]))->assertOk()
+        ->assertInertia(fn ($page) => $page->component('oauth/logout'));
+
+    expect(Auth::guard('web')->check())->toBeTrue();
+    Queue::assertNothingPushed();
 });

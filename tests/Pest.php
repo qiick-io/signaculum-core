@@ -1,11 +1,15 @@
 <?php
 
 use App\Models\SigningKey;
+use App\Models\User;
+use App\Services\SigningKeyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Client;
 use Laravel\Passport\ClientRepository;
+use Lcobucci\JWT\Configuration;
+use Lcobucci\JWT\Encoding\ChainedFormatter;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
@@ -160,4 +164,60 @@ function verifiedIdToken(string $idToken): UnencryptedToken
     expect((new Validator)->validate($token, new SignedWith(new Sha256, InMemory::plainText($signingKey->public_key))))->toBeTrue();
 
     return $token;
+}
+
+/**
+ * Mint an RS256 JWT with the active signing key (for id_token_hint tests).
+ *
+ * @param  array<string, mixed>  $claimOverrides
+ */
+function mintSignedHint(User $user, string $audience, array $claimOverrides = []): string
+{
+    $signingKey = app(SigningKeyService::class)->activeKey();
+    $jwtConfiguration = Configuration::forAsymmetricSigner(
+        new Sha256,
+        InMemory::plainText($signingKey->private_key),
+        InMemory::plainText($signingKey->public_key),
+    );
+
+    $issuedAt = new DateTimeImmutable('@'.time());
+    $claims = array_merge([
+        'iss' => (string) config('oidc.issuer', 'https://id.example.test'),
+        'sub' => $user->subject,
+        'aud' => $audience,
+        'exp' => $issuedAt->modify('+120 seconds'),
+        'iat' => $issuedAt,
+    ], $claimOverrides);
+
+    $tokenBuilder = $jwtConfiguration->builder(ChainedFormatter::withUnixTimestampDates())
+        ->withHeader('kid', $signingKey->kid)
+        ->issuedBy((string) $claims['iss'])
+        ->issuedAt($claims['iat'] instanceof DateTimeImmutable ? $claims['iat'] : $issuedAt)
+        ->expiresAt($claims['exp'] instanceof DateTimeImmutable ? $claims['exp'] : $issuedAt->modify('+120 seconds'));
+
+    if (is_string($claims['sub']) && $claims['sub'] !== '') {
+        $tokenBuilder = $tokenBuilder->relatedTo($claims['sub']);
+    }
+
+    $audienceClaim = $claims['aud'] ?? null;
+
+    if (is_string($audienceClaim) && $audienceClaim !== '') {
+        $tokenBuilder = $tokenBuilder->permittedFor($audienceClaim);
+    } elseif (is_array($audienceClaim)) {
+        foreach ($audienceClaim as $audienceValue) {
+            if (is_string($audienceValue) && $audienceValue !== '') {
+                $tokenBuilder = $tokenBuilder->permittedFor($audienceValue);
+            }
+        }
+    } elseif ($audienceClaim !== null) {
+        $tokenBuilder = $tokenBuilder->withClaim('aud', $audienceClaim);
+    }
+
+    if (array_key_exists('sid', $claims) && is_string($claims['sid'])) {
+        $tokenBuilder = $tokenBuilder->withClaim('sid', $claims['sid']);
+    }
+
+    return $tokenBuilder
+        ->getToken($jwtConfiguration->signer(), $jwtConfiguration->signingKey())
+        ->toString();
 }

@@ -21,8 +21,11 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 /**
  * `end_session_endpoint` (OIDC RP-Initiated Logout 1.0).
  *
- * GET|POST `/oauth/end-session`. When the hint is missing or belongs to another user,
- * show a confirmation page before ending the Signaculum session.
+ * GET|POST `/oauth/end-session`. Ends only the user signed in to *this* browser.
+ * An `id_token_hint` is not a credential: it skips confirmation when it matches
+ * that user, and otherwise the End-User is asked (OIDC RP-Initiated Logout 1.0 §2).
+ * `confirmed` on this CSRF-exempt endpoint is ignored; only POST
+ * `oidc.end-session.confirm` confirms.
  */
 final class EndSessionController extends Controller
 {
@@ -71,14 +74,24 @@ final class EndSessionController extends Controller
 
         /** @var User|null $authenticatedUser */
         $authenticatedUser = Auth::guard('web')->user();
-        $hintUser = $hintSubject !== null ? $idTokenHintValidatorService->userForSubject($hintSubject) : null;
 
-        $needsConfirmation = ! $isHintValid
-            || $authenticatedUser === null
-            || $hintUser === null
-            || $authenticatedUser->isNot($hintUser);
+        // No browser session: nothing to end. A hint alone must never log anyone out
+        // (hints travel in URLs/logs and expired ones are accepted).
+        if ($authenticatedUser === null) {
+            return $this->redirectAfterLogout($postLogoutRedirectUri, $state);
+        }
 
-        if ($needsConfirmation && $authenticatedUser !== null && ! $request->boolean('confirmed')) {
+        $hintUser = $hintSubject !== null
+            ? $idTokenHintValidatorService->userForSubject($hintSubject)
+            : null;
+
+        $hintMatchesCurrentUser = $isHintValid
+            && $hintUser !== null
+            && $authenticatedUser->is($hintUser);
+
+        // Missing, invalid, or foreign hint → ask the End-User (RP-Initiated Logout §2).
+        // Never honour `confirmed` here: GET is CSRF-exempt.
+        if (! $hintMatchesCurrentUser) {
             return Inertia::render('oauth/logout', [
                 'clientId' => $clientId,
                 'postLogoutRedirectUri' => $postLogoutRedirectUri,
@@ -87,23 +100,18 @@ final class EndSessionController extends Controller
             ]);
         }
 
-        if ($needsConfirmation && $authenticatedUser === null && ! $isHintValid) {
-            return $this->redirectAfterLogout($postLogoutRedirectUri, $state);
-        }
-
-        $userToLogout = $hintUser ?? $authenticatedUser;
-
-        if ($userToLogout instanceof User) {
-            $endOidcSessionAction->execute(
-                user: $userToLogout,
-                oidcSessionId: $hintOidcSessionId,
-                shouldLogoutWeb: true,
-            );
-        }
+        $endOidcSessionAction->execute(
+            user: $authenticatedUser,
+            oidcSessionId: $hintOidcSessionId,
+            shouldLogoutWeb: true,
+        );
 
         return $this->redirectAfterLogout($postLogoutRedirectUri, $state);
     }
 
+    /**
+     * CSRF-protected confirmation: ends only the signed-in browser user.
+     */
     public function confirm(Request $request, EndOidcSessionAction $endOidcSessionAction): RedirectResponse|SymfonyResponse
     {
         $request->validate([

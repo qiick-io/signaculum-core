@@ -12,16 +12,11 @@ use App\Models\OidcSession;
 use App\Models\User;
 use App\Services\IdTokenHintValidatorService;
 use App\Services\LogoutTokenService;
-use App\Services\SigningKeyService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
-use Lcobucci\JWT\Configuration;
-use Lcobucci\JWT\Encoding\ChainedFormatter;
-use Lcobucci\JWT\Signer\Key\InMemory;
-use Lcobucci\JWT\Signer\Rsa\Sha256;
 
 beforeEach(function () {
     config(['oidc.issuer' => 'https://id.example.test']);
@@ -35,61 +30,6 @@ beforeEach(function () {
     ])->save();
 });
 
-/**
- * Mint an RS256 JWT with the active signing key and optional claim overrides.
- *
- * @param  array<string, mixed>  $claimOverrides
- */
-function mintSignedHint(User $user, string $audience, array $claimOverrides = []): string
-{
-    $signingKey = app(SigningKeyService::class)->activeKey();
-    $jwtConfiguration = Configuration::forAsymmetricSigner(
-        new Sha256,
-        InMemory::plainText($signingKey->private_key),
-        InMemory::plainText($signingKey->public_key),
-    );
-
-    $issuedAt = new DateTimeImmutable('@'.time());
-    $claims = array_merge([
-        'iss' => 'https://id.example.test',
-        'sub' => $user->subject,
-        'aud' => $audience,
-        'exp' => $issuedAt->modify('+120 seconds'),
-        'iat' => $issuedAt,
-    ], $claimOverrides);
-
-    $tokenBuilder = $jwtConfiguration->builder(ChainedFormatter::withUnixTimestampDates())
-        ->withHeader('kid', $signingKey->kid)
-        ->issuedBy((string) $claims['iss'])
-        ->issuedAt($claims['iat'] instanceof DateTimeImmutable ? $claims['iat'] : $issuedAt)
-        ->expiresAt($claims['exp'] instanceof DateTimeImmutable ? $claims['exp'] : $issuedAt->modify('+120 seconds'));
-
-    if (is_string($claims['sub']) && $claims['sub'] !== '') {
-        $tokenBuilder = $tokenBuilder->relatedTo($claims['sub']);
-    }
-
-    $audienceClaim = $claims['aud'] ?? null;
-
-    if (is_string($audienceClaim) && $audienceClaim !== '') {
-        $tokenBuilder = $tokenBuilder->permittedFor($audienceClaim);
-    } elseif (is_array($audienceClaim)) {
-        foreach ($audienceClaim as $audienceValue) {
-            if (is_string($audienceValue) && $audienceValue !== '') {
-                $tokenBuilder = $tokenBuilder->permittedFor($audienceValue);
-            }
-        }
-    } elseif ($audienceClaim !== null) {
-        $tokenBuilder = $tokenBuilder->withClaim('aud', $audienceClaim);
-    }
-
-    if (array_key_exists('sid', $claims) && is_string($claims['sid'])) {
-        $tokenBuilder = $tokenBuilder->withClaim('sid', $claims['sid']);
-    }
-
-    return $tokenBuilder
-        ->getToken($jwtConfiguration->signer(), $jwtConfiguration->signingKey())
-        ->toString();
-}
 test('send back-channel logout job retries on http failure and logs when it gives up', function () {
     Http::fake([
         'client.example.test/*' => Http::response('no', 500),
