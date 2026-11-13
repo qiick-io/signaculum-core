@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
+use App\Http\Middleware\EnsureUserIsActiveMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocaleMiddleware;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
+            EnsureUserIsActiveMiddleware::class,
             SetLocaleMiddleware::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,

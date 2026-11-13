@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Traits\LogsApplicationActivityTrait;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Passport\Client as PassportClient;
 use Laravel\Passport\Scope;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * OIDC application (Passport client) registered on this IdP.
@@ -29,6 +31,8 @@ use Laravel\Passport\Scope;
  */
 class Client extends PassportClient
 {
+    use LogsApplicationActivityTrait;
+
     /**
      * @var array<string, string>
      */
@@ -52,6 +56,15 @@ class Client extends PassportClient
     public function skipsAuthorization(Authenticatable $user, array $scopes): bool
     {
         return (bool) $this->is_first_party;
+    }
+
+    /**
+     * Never log the client secret (hashed or plain).
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return $this->applicationActivityLogOptions()
+            ->logExcept(['secret']);
     }
 
     /**

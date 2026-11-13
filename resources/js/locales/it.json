@@ -88,7 +88,8 @@
         "settings": "Impostazioni",
         "admin": "Amministrazione",
         "users": "Utenti",
-        "applications": "Applicazioni"
+        "applications": "Applicazioni",
+        "activityLog": "Registro attività"
     },
     "realtime": {
         "connected": "Realtime connesso",
@@ -202,7 +203,11 @@
             },
             "securityTitle": "Sicurezza",
             "twoFactorRequired": "Richiedi autenticazione a due fattori per tutti gli utenti",
-            "twoFactorRequiredHint": "Se attiva, gli utenti devono abilitare la 2FA TOTP o registrare una passkey nella pagina Sicurezza prima di usare l'app."
+            "twoFactorRequiredHint": "Se attiva, gli utenti devono abilitare la 2FA TOTP o registrare una passkey nella pagina Sicurezza prima di usare l'app.",
+            "retentionTitle": "Conservazione dati",
+            "retentionDescription": "Per quanto tempo Signaculum conserva il registro attività. Le voci più vecchie vengono eliminate ogni giorno.",
+            "activityRetentionDays": "Registro attività (giorni)",
+            "activityRetentionDaysHint": "Le voci del registro attività più vecchie di questo valore vengono eliminate."
         },
         "layout": {
             "appearance": "Aspetto",
@@ -323,7 +328,20 @@
                 "actions": "Azioni"
             },
             "actions": {
-                "edit": "Modifica utente"
+                "edit": "Modifica utente",
+                "deactivate": "Disattiva",
+                "reactivate": "Riattiva",
+                "resetTwoFactor": "Reimposta il 2FA",
+                "grantInstanceAdmin": "Rendi admin dell'istanza",
+                "revokeInstanceAdmin": "Togli admin dell'istanza"
+            },
+            "confirm": {
+                "deactivateTitle": "Disattivare {{name}}?",
+                "deactivateDescription": "Non potrà accedere. I token vengono revocati e le app collegate ricevono un back-channel logout.",
+                "resetTwoFactorTitle": "Reimpostare il 2FA di {{name}}?",
+                "resetTwoFactorDescription": "L'autenticatore e i codici di recupero smettono di funzionare. Dovrà registrarli di nuovo.",
+                "revokeInstanceAdminTitle": "Togliere admin dell'istanza a {{name}}?",
+                "revokeInstanceAdminDescription": "Perde l'accesso ad Admin e alle impostazioni dell'istanza. Deve restare almeno un admin."
             },
             "status": {
                 "active": "Attivo",
@@ -407,6 +425,49 @@
                 "cta": "Nuova applicazione"
             }
         }
+    },
+    "activityLog": {
+        "title": "Registro attività",
+        "description": "Traccia di audit in sola lettura di modifiche ai modelli e eventi di autenticazione.",
+        "searchPlaceholder": "Cerca descrizione o soggetto…",
+        "allUsers": "Tutti gli utenti",
+        "allActions": "Tutte le azioni",
+        "allLogs": "Tutti i log",
+        "filterByAction": "Filtra per azione",
+        "filterByLog": "Filtra per nome log",
+        "dateFrom": "Data da",
+        "dateTo": "Data a",
+        "empty": "Nessuna attività trovata per i filtri selezionati.",
+        "system": "Sistema",
+        "noChanges": "Nessuna modifica ai campi registrata.",
+        "expand": "Espandi modifiche",
+        "collapse": "Comprimi modifiche",
+        "logName": "Nome log",
+        "columns": {
+            "date": "Data",
+            "user": "Utente",
+            "action": "Azione",
+            "description": "Descrizione",
+            "subject": "Soggetto"
+        },
+        "events": {
+            "created": "Creato",
+            "updated": "Aggiornato",
+            "deleted": "Eliminato",
+            "login": "Accesso",
+            "logout": "Uscita",
+            "failed": "Accesso non riuscito",
+            "settings_updated": "Impostazioni aggiornate",
+            "consent_granted": "Consenso concesso",
+            "token_revoked": "Accesso revocato",
+            "secret_rotated": "Segreto ruotato"
+        },
+        "logs": {
+            "default": "Applicazione",
+            "auth": "Autenticazione",
+            "settings": "Impostazioni"
+        },
+        "ipAddress": "IP"
     },
     "errors": {
         "forbidden": {
