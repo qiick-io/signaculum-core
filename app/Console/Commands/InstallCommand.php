@@ -13,7 +13,6 @@ use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 use function Laravel\Prompts\confirm;
@@ -273,9 +272,7 @@ final class InstallCommand extends Command
     }
 
     /**
-     * The first account can sign in. `is_instance_admin` is set only when that
-     * column exists (instance settings). Until then this user is still the
-     * account created at install.
+     * Creates the first sign-in account as an instance admin (`is_instance_admin`).
      */
     private function createFirstAdministrator(): int
     {
@@ -288,9 +285,12 @@ final class InstallCommand extends Command
         $email = $this->isNonInteractive()
             ? $this->environmentValue('SIGNACULUM_ADMIN_EMAIL', 'admin@example.com')
             : text('Administrator email', default: 'admin@example.com', required: true);
-        $name = $this->isNonInteractive()
-            ? $this->environmentValue('SIGNACULUM_ADMIN_NAME', 'Administrator')
-            : text('Administrator name', default: 'Administrator', required: true);
+        $firstName = $this->isNonInteractive()
+            ? $this->environmentValue('SIGNACULUM_ADMIN_FIRST_NAME', $this->environmentValue('SIGNACULUM_ADMIN_NAME', 'Administrator'))
+            : text('Administrator first name', default: 'Administrator', required: true);
+        $lastName = $this->isNonInteractive()
+            ? $this->environmentValue('SIGNACULUM_ADMIN_LAST_NAME', '')
+            : text('Administrator last name', default: '');
         $passwordFromEnvironment = $this->environmentValue('SIGNACULUM_ADMIN_PASSWORD', '');
         $shouldPrintPassword = false;
 
@@ -303,20 +303,17 @@ final class InstallCommand extends Command
             $password = password('Administrator password', required: true);
         }
 
-        $administrator = User::query()->create([
-            'name' => $name,
+        $administrator = (new User)->forceFill([
+            'first_name' => $firstName,
+            'last_name' => $lastName !== '' ? $lastName : null,
             'email' => $email,
             'password' => $password,
-        ]);
-        $updates = [
+            'is_active' => true,
+            'is_instance_admin' => true,
             'email_verified_at' => now(),
-        ];
+        ]);
+        $administrator->save();
 
-        if (Schema::hasColumn('users', 'is_instance_admin')) {
-            $updates['is_instance_admin'] = true;
-        }
-
-        DB::table('users')->where('id', $administrator->id)->update($updates);
         $this->components->info("Created the first administrator [{$email}].");
 
         if ($shouldPrintPassword) {

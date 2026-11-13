@@ -4,22 +4,22 @@
 # Do not use create-project to upgrade. Use signaculum:upgrade.
 
 services:
-  signaculum:
-    build:
-      context: .
-      target: production
-    ports:
-      - "8080:80"
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
-      DB_CONNECTION: sqlite
-      DB_DATABASE: /var/www/html/database/database.sqlite
-      RUN_MIGRATIONS: "true"
-    volumes:
-      - signaculum-database:/var/www/html/database
-      - signaculum-storage:/var/www/html/storage
+    signaculum:
+        build:
+            context: .
+            target: production
+        ports:
+            - '8080:80'
+        environment:
+            APP_ENV: local
+            APP_DEBUG: 'true'
+            DB_CONNECTION: sqlite
+            DB_DATABASE: /var/www/html/database/database.sqlite
+            RUN_MIGRATIONS: 'true'
+        volumes:
+            - signaculum-database:/var/www/html/database
+            - signaculum-storage:/var/www/html/storage
 
 volumes:
-  signaculum-database:
-  signaculum-storage:
+    signaculum-database:
+    signaculum-storage:

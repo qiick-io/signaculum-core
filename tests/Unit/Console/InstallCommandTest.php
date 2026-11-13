@@ -51,13 +51,17 @@ test('install migrates sqlite, creates keys and the first administrator', functi
         ]);
         DB::purge('sqlite');
 
-        $password = DB::connection('sqlite')->table('users')->where('email', 'admin@example.com')->value('password');
+        $administrator = DB::connection('sqlite')->table('users')->where('email', 'admin@example.com')->first();
 
         expect(Schema::connection('sqlite')->hasTable('users'))->toBeTrue()
             ->and(Schema::connection('sqlite')->hasTable('signing_keys'))->toBeTrue()
             ->and(DB::connection('sqlite')->table('users')->count())->toBe(1)
             ->and(DB::connection('sqlite')->table('signing_keys')->whereNull('retired_at')->count())->toBe(1)
-            ->and(is_string($password) && Hash::check('password', $password))->toBeTrue()
+            ->and($administrator)->not->toBeNull()
+            ->and($administrator->first_name)->toBe('Administrator')
+            ->and((bool) $administrator->is_instance_admin)->toBeTrue()
+            ->and((bool) $administrator->is_active)->toBeTrue()
+            ->and(is_string($administrator->password) && Hash::check('password', $administrator->password))->toBeTrue()
             ->and(File::exists(Passport::keyPath('oauth-private.key')))->toBeTrue()
             ->and(File::get($envPath))->toContain('APP_NAME=Signaculum')
             ->and(File::get($envPath))->toContain('DB_CONNECTION=sqlite');
