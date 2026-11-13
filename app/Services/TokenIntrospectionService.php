@@ -21,9 +21,11 @@ use League\OAuth2\Server\Entities\ScopeEntityInterface;
 /**
  * RFC 7662 token introspection for Passport access and refresh tokens.
  *
- * Only confidential clients may call the endpoint (RFC 7662 §4). Inactive,
- * unknown, expired or revoked tokens answer with `{ "active": false }` alone
- * so the response never leaks why a token failed (RFC 7662 §2.2).
+ * Only confidential clients may call the endpoint (RFC 7662 §4). A token is
+ * reported active only when it was issued to the calling client (`client_id`
+ * match); another client's token is treated as inactive so introspection never
+ * leaks `sub`, scopes or peer client ids (RFC 7662 §2.2 / §4). Inactive,
+ * unknown, expired or revoked tokens answer with `{ "active": false }` alone.
  */
 final class TokenIntrospectionService
 {
@@ -79,7 +81,7 @@ final class TokenIntrospectionService
      *     iss: string
      * }
      */
-    public function introspect(string $token, ?string $tokenTypeHint = null): array
+    public function introspect(string $token, Client $callingClient, ?string $tokenTypeHint = null): array
     {
         $hint = $tokenTypeHint === 'refresh_token' ? 'refresh_token' : 'access_token';
 
@@ -87,21 +89,65 @@ final class TokenIntrospectionService
             $refreshPayload = $this->claimsForRefreshToken($token);
 
             if ($refreshPayload !== null) {
-                return $refreshPayload;
+                return $this->activeOnlyForCallingClient($refreshPayload, $callingClient);
             }
 
             $accessPayload = $this->claimsForAccessToken($token);
 
-            return $accessPayload ?? ['active' => false];
+            return $this->activeOnlyForCallingClient($accessPayload ?? ['active' => false], $callingClient);
         }
 
         $accessPayload = $this->claimsForAccessToken($token);
 
         if ($accessPayload !== null) {
-            return $accessPayload;
+            return $this->activeOnlyForCallingClient($accessPayload, $callingClient);
         }
 
-        return $this->claimsForRefreshToken($token) ?? ['active' => false];
+        return $this->activeOnlyForCallingClient(
+            $this->claimsForRefreshToken($token) ?? ['active' => false],
+            $callingClient,
+        );
+    }
+
+    /**
+     * Collapse a foreign-client active payload to inactive (RFC 7662 §2.2 / §4).
+     *
+     * @param  array{active: false}|array{
+     *     active: true,
+     *     scope: string,
+     *     client_id: string,
+     *     username?: string,
+     *     token_type: string,
+     *     exp: int,
+     *     iat?: int,
+     *     sub: string,
+     *     aud?: string,
+     *     iss: string
+     * }  $payload
+     * @return array{active: false}|array{
+     *     active: true,
+     *     scope: string,
+     *     client_id: string,
+     *     username?: string,
+     *     token_type: string,
+     *     exp: int,
+     *     iat?: int,
+     *     sub: string,
+     *     aud?: string,
+     *     iss: string
+     * }
+     */
+    private function activeOnlyForCallingClient(array $payload, Client $callingClient): array
+    {
+        if ($payload['active'] !== true) {
+            return ['active' => false];
+        }
+
+        if ((string) $payload['client_id'] !== (string) $callingClient->getKey()) {
+            return ['active' => false];
+        }
+
+        return $payload;
     }
 
     /**

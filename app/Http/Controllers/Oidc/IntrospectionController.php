@@ -11,12 +11,17 @@ use Illuminate\Http\Request;
 /**
  * `POST /oauth/introspect` (RFC 7662 §2): confidential clients ask whether a
  * token is active and receive the standard claim set when it is.
+ *
+ * Active claims are returned only for tokens issued to the authenticated
+ * caller; another client's token yields `{ "active": false }` (RFC 7662 §2.2 / §4).
  */
 final class IntrospectionController
 {
     public function __invoke(Request $request, TokenIntrospectionService $tokenIntrospectionService): JsonResponse
     {
-        if ($tokenIntrospectionService->authenticateClient($request) === null) {
+        $callingClient = $tokenIntrospectionService->authenticateClient($request);
+
+        if ($callingClient === null) {
             return response()
                 ->json(['error' => 'invalid_client'], 401)
                 ->header('Cache-Control', 'no-store');
@@ -35,6 +40,7 @@ final class IntrospectionController
         return response()
             ->json($tokenIntrospectionService->introspect(
                 $token,
+                $callingClient,
                 is_string($tokenTypeHint) ? $tokenTypeHint : null,
             ))
             ->header('Cache-Control', 'no-store');

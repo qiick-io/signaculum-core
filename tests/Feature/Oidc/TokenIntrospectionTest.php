@@ -192,6 +192,19 @@ test('a public client cannot call introspection', function () {
         ->assertJson(['error' => 'invalid_client']);
 });
 
+test('a client cannot introspect another client\'s token', function () {
+    $tokens = issueTokens($this);
+    $otherClient = createOidcClient();
+
+    $this->post('/oauth/introspect', [
+        'token' => $tokens['access_token'],
+        'client_id' => $otherClient->getKey(),
+        'client_secret' => $otherClient->plainSecret,
+    ])
+        ->assertOk()
+        ->assertExactJson(['active' => false]);
+});
+
 test('a missing token parameter is invalid_request', function () {
     $this->post('/oauth/introspect', [
         'client_id' => $this->client->getKey(),
