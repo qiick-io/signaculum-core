@@ -24,6 +24,7 @@ export type AdminUserRow = {
     created_at: string | null;
     updated_at: string | null;
     can_update: boolean;
+    can_impersonate: boolean;
 };
 
 /** One row of `App\Http\Resources\ActivityLogResource`. */

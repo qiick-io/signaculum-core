@@ -10,6 +10,7 @@ use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrganizationInvitationController;
 use App\Http\Controllers\OrganizationMemberController;
 use App\Http\Controllers\OrganizationSettingsController;
+use App\Http\Controllers\StopImpersonationController;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +44,8 @@ Route::post('invitations/{token}', [AcceptInvitationController::class, 'store'])
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    Route::delete('impersonation', StopImpersonationController::class)->name('impersonation.destroy');
 
     Route::get('organizations', [OrganizationController::class, 'index'])->name('organizations.index');
     Route::post('organizations', [OrganizationController::class, 'store'])->name('organizations.store');

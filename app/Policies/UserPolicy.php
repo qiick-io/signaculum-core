@@ -26,4 +26,26 @@ final class UserPolicy
     {
         return (bool) $actor->is_instance_admin;
     }
+
+    /**
+     * Start a time-boxed session as another user (Admin → Users → Impersonate).
+     * Instance admins cannot be impersonated; the actor cannot impersonate themselves;
+     * the target must be active.
+     */
+    public function impersonate(User $actor, User $target): bool
+    {
+        if (! $actor->is_instance_admin) {
+            return false;
+        }
+
+        if ($actor->is($target)) {
+            return false;
+        }
+
+        if ($target->is_instance_admin) {
+            return false;
+        }
+
+        return (bool) $target->is_active;
+    }
 }

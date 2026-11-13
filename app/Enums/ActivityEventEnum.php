@@ -21,6 +21,9 @@ enum ActivityEventEnum: string
     case ConsentGranted = 'consent_granted';
     case TokenRevoked = 'token_revoked';
     case SecretRotated = 'secret_rotated';
+    case UserImpersonationStarted = 'user_impersonation_started';
+    case UserImpersonationStopped = 'user_impersonation_stopped';
+    case UserImpersonationExpired = 'user_impersonation_expired';
 
     /**
      * @return list<string>
