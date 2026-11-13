@@ -237,7 +237,10 @@
             "linkSent": "Un nuovo link di verifica è stato inviato al tuo indirizzo email.",
             "resend": "Clicca qui per reinviare l'email di verifica.",
             "title": "Informazioni profilo",
-            "unverified": "Il tuo indirizzo email non è verificato."
+            "unverified": "Il tuo indirizzo email non è verificato.",
+            "exportTitle": "Scarica i tuoi dati",
+            "exportDescription": "Un file JSON con profilo, organizzazioni, sessioni e app collegate. Password e segreti 2FA non sono mai inclusi.",
+            "exportDownload": "Scarica JSON"
         },
         "security": {
             "addPasskey": "Aggiungi passkey",
@@ -514,7 +517,7 @@
         "create": "Crea organizzazione",
         "emptyTitle": "Nessuna organizzazione",
         "emptyDescription": "Crea un’organizzazione per raggruppare membri e ruoli per il claim qiick.orgs.",
-        "showDescription": "Impostazioni e membri dell’organizzazione.",
+        "showDescription": "Membri e ruoli dell'organizzazione.",
         "members": {
             "title": "Membri",
             "description": "Ogni membro può avere uno o più ruoli. Un’organizzazione mantiene sempre almeno un owner.",
@@ -534,6 +537,38 @@
             "description": "Elimina l’organizzazione e tutte le membership. L’azione non è reversibile.",
             "confirmTitle": "Eliminare questa organizzazione?",
             "confirmDescription": "Digita il nome dell’organizzazione per confermare l’eliminazione permanente."
+        },
+        "views": {
+            "label": "Viste dell'organizzazione",
+            "members": "Membri",
+            "invitations": "Inviti",
+            "settings": "Impostazioni"
+        },
+        "invitations": {
+            "head": "Inviti — {{name}}",
+            "title": "Inviti",
+            "description": "Invita persone via email. Entrano con i ruoli che scegli quando accettano.",
+            "expires": "Scade",
+            "expired": "Scaduto",
+            "empty": "Nessun invito in sospeso.",
+            "send": "Invia invito",
+            "resend": "Reinvia",
+            "revoke": "Revoca"
+        },
+        "settings": {
+            "head": "Impostazioni — {{name}}",
+            "title": "Impostazioni",
+            "description": "Nome, slug ed eliminazione dell'organizzazione."
+        },
+        "accept": {
+            "head": "Invito all'organizzazione",
+            "title": "Invito all'organizzazione",
+            "description": "Accetta un invito a unirti a un'organizzazione su Signaculum",
+            "expired": "Questo invito a {{name}} è scaduto.",
+            "guest": "Sei stato invitato a {{name}} come {{email}}. Accedi con quella email per continuare.",
+            "signIn": "Accedi",
+            "ready": "Unirti a {{name}} come {{email}}?",
+            "confirm": "Accetta invito"
         }
     }
 }
