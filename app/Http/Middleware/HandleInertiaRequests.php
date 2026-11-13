@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Client;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\ImpersonationService;
 use App\Services\SettingsRepositoryService;
 use App\Services\ThemePresetService;
 use Illuminate\Http\Request;
@@ -66,6 +67,7 @@ class HandleInertiaRequests extends Middleware
                 'canManageUsers' => (bool) $request->user()?->can('viewAny', User::class),
                 'canManageApplications' => (bool) $request->user()?->can('viewAny', Client::class),
                 'canShowActivityLogs' => (bool) $request->user()?->can('viewAny', Activity::class),
+                'impersonation' => app(ImpersonationService::class)->sharedState($request),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

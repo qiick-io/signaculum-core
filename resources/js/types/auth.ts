@@ -15,6 +15,12 @@ export type User = {
     [key: string]: unknown;
 };
 
+/** Active impersonation session shared for the stop banner. */
+export type ImpersonationState = {
+    actor_name: string;
+    expires_at: string | null;
+};
+
 /** Shared auth context: the signed-in user, if any. */
 export type Auth = {
     user: User | null;
@@ -26,6 +32,8 @@ export type Auth = {
     canManageApplications: boolean;
     /** Instance admin: shows the Admin → Activity log nav (the server checks too). */
     canShowActivityLogs: boolean;
+    /** Present while an instance admin is viewing as another user. */
+    impersonation: ImpersonationState | null;
 };
 
 /** Passkey registered by the current user (Laravel passkeys). */
