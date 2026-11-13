@@ -10,10 +10,15 @@ use Laravel\Passport\Passport;
 
 /**
  * Withdraw an application's access: revoke every access and refresh token the user
- * gave it. The next login to that application asks for consent again.
+ * gave it, and send a back-channel logout for that client. The next login asks for
+ * consent again.
  */
 final class RevokeApplicationAccessAction
 {
+    public function __construct(
+        private readonly DispatchBackChannelLogoutAction $dispatchBackChannelLogoutAction,
+    ) {}
+
     public function execute(User $user, string $clientId): void
     {
         DB::transaction(function () use ($user, $clientId): void {
@@ -25,5 +30,11 @@ final class RevokeApplicationAccessAction
             Passport::token()->newQuery()->whereKey($accessTokenIds)->update(['revoked' => true]);
             Passport::refreshToken()->newQuery()->whereIn('access_token_id', $accessTokenIds)->update(['revoked' => true]);
         });
+
+        $this->dispatchBackChannelLogoutAction->execute(
+            user: $user,
+            oidcSessionId: null,
+            clientId: $clientId,
+        );
     }
 }

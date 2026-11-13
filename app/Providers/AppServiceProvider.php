@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Enums\OidcScopeEnum;
+use App\Listeners\EndOidcSessionOnLogoutListener;
 use App\Listeners\RecordAuthenticationTimeListener;
+use App\Listeners\RegenerateOidcSessionOnLoginListener;
 use App\Models\Client;
 use App\Oidc\IdTokenResponse;
 use App\Oidc\OidcAuthCodeGrant;
@@ -14,6 +16,7 @@ use App\Services\SettingsRepositoryService;
 use Carbon\CarbonImmutable;
 use DateInterval;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -114,5 +117,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Event::listen(Login::class, RecordAuthenticationTimeListener::class);
+        Event::listen(Login::class, RegenerateOidcSessionOnLoginListener::class);
+        Event::listen(Logout::class, EndOidcSessionOnLogoutListener::class);
     }
 }
