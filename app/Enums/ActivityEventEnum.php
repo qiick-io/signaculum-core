@@ -16,6 +16,7 @@ enum ActivityEventEnum: string
     case Login = 'login';
     case Logout = 'logout';
     case Failed = 'failed';
+    case Locked = 'locked';
     case SettingsUpdated = 'settings_updated';
     case ConsentGranted = 'consent_granted';
     case TokenRevoked = 'token_revoked';

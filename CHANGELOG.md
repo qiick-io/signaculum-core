@@ -4,6 +4,7 @@
 
 ### Added
 
+- Brute-force login lockout: configurable failure threshold and duration, activity log on lock, admin unlock on Users.
 - Organisations and memberships (`organizations`, `organization_user`): multi-role JSON (`owner` / `admin` / `member` / `billing`), never zero owners, CRUD UI under Organisations.
 - RFC 9207 `iss` on every authorization response (success and error) and discovery flag `authorization_response_iss_parameter_supported: true`.
 - `amr` on every `id_token` (RFC 8176): recorded at login as `pwd` / `otp` / `hwk` / `swk`, plus `mfa` when two factors were used, and carried with the authorization code.
