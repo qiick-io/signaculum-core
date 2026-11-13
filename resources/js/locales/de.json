@@ -514,7 +514,7 @@
         "create": "Organisation erstellen",
         "emptyTitle": "Noch keine Organisationen",
         "emptyDescription": "Erstellen Sie eine Organisation, um Mitglieder und Rollen für den Claim qiick.orgs zu gruppieren.",
-        "showDescription": "Organisationseinstellungen und Mitglieder.",
+        "showDescription": "Mitglieder und Rollen der Organisation.",
         "members": {
             "title": "Mitglieder",
             "description": "Jedes Mitglied kann eine oder mehrere Rollen haben. Eine Organisation behält immer mindestens einen Owner.",
@@ -534,6 +534,38 @@
             "description": "Löscht die Organisation und alle Mitgliedschaften. Dies kann nicht rückgängig gemacht werden.",
             "confirmTitle": "Diese Organisation löschen?",
             "confirmDescription": "Geben Sie den Organisationsnamen ein, um die endgültige Löschung zu bestätigen."
+        },
+        "views": {
+            "label": "Organisationsansichten",
+            "members": "Mitglieder",
+            "invitations": "Einladungen",
+            "settings": "Einstellungen"
+        },
+        "invitations": {
+            "head": "Einladungen — {{name}}",
+            "title": "Einladungen",
+            "description": "Laden Sie Personen per E-Mail ein. Sie treten mit den von Ihnen gewählten Rollen bei, wenn sie annehmen.",
+            "expires": "Läuft ab",
+            "expired": "Abgelaufen",
+            "empty": "Keine ausstehenden Einladungen.",
+            "send": "Einladung senden",
+            "resend": "Erneut senden",
+            "revoke": "Widerrufen"
+        },
+        "settings": {
+            "head": "Einstellungen — {{name}}",
+            "title": "Einstellungen",
+            "description": "Name, Slug und Löschung der Organisation."
+        },
+        "accept": {
+            "head": "Organisationseinladung",
+            "title": "Organisationseinladung",
+            "description": "Nehmen Sie eine Einladung an, einer Organisation auf Signaculum beizutreten",
+            "expired": "Diese Einladung zu {{name}} ist abgelaufen.",
+            "guest": "Sie wurden zu {{name}} als {{email}} eingeladen. Melden Sie sich mit dieser E-Mail an, um fortzufahren.",
+            "signIn": "Anmelden",
+            "ready": "{{name}} als {{email}} beitreten?",
+            "confirm": "Einladung annehmen"
         }
     }
 }

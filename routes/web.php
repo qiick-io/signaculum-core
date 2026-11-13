@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AcceptInvitationController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Oidc\EndSessionController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\OrganizationInvitationController;
 use App\Http\Controllers\OrganizationMemberController;
+use App\Http\Controllers\OrganizationSettingsController;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +34,13 @@ Route::post('oauth/end-session/confirm', [EndSessionController::class, 'confirm'
     ->middleware('throttle:oidc-end-session')
     ->name('oidc.end-session.confirm');
 
+Route::get('invitations/{token}', [AcceptInvitationController::class, 'show'])
+    ->middleware('throttle:organization-invitations')
+    ->name('invitations.accept');
+Route::post('invitations/{token}', [AcceptInvitationController::class, 'store'])
+    ->middleware(['auth', 'verified', 'throttle:organization-invitations'])
+    ->name('invitations.accept.store');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
@@ -39,6 +49,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('organizations/{organization}', [OrganizationController::class, 'show'])->name('organizations.show');
     Route::put('organizations/{organization}', [OrganizationController::class, 'update'])->name('organizations.update');
     Route::delete('organizations/{organization}', [OrganizationController::class, 'destroy'])->name('organizations.destroy');
+
+    Route::get('organizations/{organization}/invitations', [OrganizationInvitationController::class, 'index'])
+        ->name('organizations.invitations.index');
+    Route::post('organizations/{organization}/invitations', [OrganizationInvitationController::class, 'store'])
+        ->middleware('throttle:organization-invitations')
+        ->name('organizations.invitations.store');
+    Route::put('organizations/{organization}/invitations/{invitation}', [OrganizationInvitationController::class, 'update'])
+        ->middleware('throttle:organization-invitations')
+        ->name('organizations.invitations.update');
+    Route::delete('organizations/{organization}/invitations/{invitation}', [OrganizationInvitationController::class, 'destroy'])
+        ->name('organizations.invitations.destroy');
+
+    Route::get('organizations/{organization}/settings', OrganizationSettingsController::class)
+        ->name('organizations.settings');
 
     Route::post('organizations/{organization}/members', [OrganizationMemberController::class, 'store'])
         ->name('organizations.members.store');
