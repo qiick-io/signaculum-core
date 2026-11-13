@@ -8,6 +8,7 @@
 
 ### Added
 
+- RFC 7009 token revocation at `/oauth/revoke` (`revocation_endpoint`), with the same client auth methods as the token endpoint.
 - `acr` on the `id_token` only when requested (`acr_values` or `claims`): `urn:qiick:loa:pwd` or `urn:qiick:loa:mfa`, with discovery `acr_values_supported`.
 - Account data export (JSON) from Settings → Profile: profile, organisations, sessions and connected apps (never passwords or 2FA secrets).
 - Organisation invitations (email, hashed token, expiry, resend/revoke) and Members / Invitations / Settings view tabs.

@@ -13,6 +13,7 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 | `/oauth/authorize`                  | `GET`, `POST` | Passport authorization + consent UI (`resources/js/pages/oauth/authorize.tsx`) |
 | `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                            |
 | `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                   |
+| `/oauth/revoke`                     | `POST`        | RFC 7009 token revocation (`revocation_endpoint`)                              |
 | `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing   |
 | `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                |
 
@@ -20,7 +21,7 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 
 Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
-- `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `end_session_endpoint`, `jwks_uri`
+- `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `revocation_endpoint`, `end_session_endpoint`, `jwks_uri`
 - `scopes_supported`: `openid`, `profile`, `email` (enum cases today; `qiick.orgs` is planned, S5)
 - `response_types_supported`: `code`
 - `response_modes_supported`: `query`
@@ -28,6 +29,7 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `subject_types_supported`: `public`
 - `id_token_signing_alg_values_supported`: `RS256`
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `none`
+- `revocation_endpoint_auth_methods_supported`: same as the token endpoint
 - `code_challenge_methods_supported`: `S256`
 - `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, `amr`, `acr`, plus user claims below
 - `acr_values_supported`: `urn:qiick:loa:pwd`, `urn:qiick:loa:mfa`
@@ -105,6 +107,17 @@ Authorization code exchange (Passport + `IdTokenResponse`):
 - Refresh-token grants do **not** mint a new `id_token`
 - Redeeming a code records a `client_sessions` row for `(user, client, sid)` used later by back-channel logout
 
+## Token revocation (RFC 7009)
+
+`POST /oauth/revoke` (`application/x-www-form-urlencoded`):
+
+- Required: `token` (access or refresh token string)
+- Optional: `token_type_hint` = `access_token` | `refresh_token`
+- Client auth: `client_secret_basic`, `client_secret_post`, or `client_id` alone for public clients (`none`)
+- Success and unknown/foreign tokens: HTTP 200 with an empty JSON array body (`[]`) and `Cache-Control: no-store` (no probing oracle)
+- Invalid client credentials: HTTP 401 `invalid_client`
+- Revoking either half of a grant also revokes the paired access and refresh tokens
+
 ## Logout
 
 ### Client registration fields
@@ -151,6 +164,7 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 | `max_age` exceeded (no `prompt=none`) or `prompt=login`                                             | Redirect to Signaculum `/login` (then back to authorize)                                   |
 | Unknown client or unregistered `redirect_uri`                                                       | HTTP 401 (no redirect to an attacker URI)                                                  |
 | Bad token request (verifier, client secret, …)                                                      | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …)                 |
+| Revocation with a wrong client secret                                                               | HTTP 401 `invalid_client`                                                                  |
 | Userinfo without / with invalid Bearer                                                              | 401 `invalid_token` + `WWW-Authenticate`                                                   |
 | Userinfo without `openid` scope                                                                     | 403 `insufficient_scope`                                                                   |
 | Unregistered `post_logout_redirect_uri`                                                             | HTTP 400                                                                                   |
