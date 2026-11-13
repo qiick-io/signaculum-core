@@ -26,6 +26,7 @@ function generalSettingsPayload(array $overrides = []): array
         'app_name' => 'Acme ID',
         'description' => 'Sign-in for the Acme apps.',
         'report_bug_url' => 'https://example.com/bugs/new',
+        'activity_retention_days' => 365,
         ...$overrides,
     ];
 }

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\ApplicationController;
 use App\Http\Controllers\Admin\ApplicationSecretController;
 use App\Http\Controllers\Admin\InstanceAdminController;
@@ -26,4 +27,6 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::put('applications/{application}', [ApplicationController::class, 'update'])->name('applications.update');
     Route::put('applications/{application}/secret', [ApplicationSecretController::class, 'update'])->name('applications.secret.update');
     Route::delete('applications/{application}', [ApplicationController::class, 'destroy'])->name('applications.destroy');
+
+    Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 });

@@ -25,6 +25,30 @@ export type AdminUserRow = {
     can_update: boolean;
 };
 
+/** One row of `App\Http\Resources\ActivityLogResource`. */
+export type AdminActivityLogRow = {
+    id: number;
+    event: string | null;
+    description: string;
+    log_name: string | null;
+    created_at: string;
+    causer: { id: number; name: string; email: string } | null;
+    subject: { type: string; id: number | string; label: string } | null;
+    changes: Record<string, unknown>;
+    properties: {
+        ip: string | null;
+        user_agent: string | null;
+        meta: Record<string, unknown>;
+    };
+};
+
+/** Compact user option for activity-log filters. */
+export type AdminUserRef = {
+    id: number;
+    name: string;
+    email: string;
+};
+
 /** One row of `App\Http\Resources\ApplicationResource`. */
 export type AdminApplicationRow = {
     id: string;

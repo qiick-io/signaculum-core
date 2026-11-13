@@ -64,6 +64,7 @@ final class SettingsRepositoryService
             // (qiick Cloud can enable it). Decision of 2026-11-13 on #23.
             'registration_enabled' => false,
             'two_factor_required' => false,
+            'activity_retention_days' => (int) config('activitylog.clean_after_days', 365),
         ];
     }
 
@@ -222,6 +223,14 @@ final class SettingsRepositoryService
     public function isTwoFactorRequired(): bool
     {
         return (bool) $this->all()['two_factor_required'];
+    }
+
+    /**
+     * Days to keep activity log rows before the daily `activitylog:clean` schedule deletes them.
+     */
+    public function activityRetentionDays(): int
+    {
+        return $this->integer('activity_retention_days', 1, 3650);
     }
 
     /**

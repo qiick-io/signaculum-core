@@ -88,7 +88,8 @@
         "settings": "Settings",
         "admin": "Admin",
         "users": "Users",
-        "applications": "Applications"
+        "applications": "Applications",
+        "activityLog": "Activity Log"
     },
     "realtime": {
         "connected": "Realtime connected",
@@ -202,7 +203,11 @@
             },
             "securityTitle": "Security",
             "twoFactorRequired": "Require two-factor authentication for all users",
-            "twoFactorRequiredHint": "When enabled, users must enable TOTP 2FA or register a passkey on the Security page before using the app."
+            "twoFactorRequiredHint": "When enabled, users must enable TOTP 2FA or register a passkey on the Security page before using the app.",
+            "retentionTitle": "Data retention",
+            "retentionDescription": "How long Signaculum keeps the activity log. Older entries are deleted daily.",
+            "activityRetentionDays": "Activity log (days)",
+            "activityRetentionDaysHint": "Activity log entries older than this are deleted."
         },
         "layout": {
             "appearance": "Appearance",
@@ -420,6 +425,49 @@
                 "cta": "New application"
             }
         }
+    },
+    "activityLog": {
+        "title": "Activity Log",
+        "description": "Read-only audit trail of model changes and authentication events.",
+        "searchPlaceholder": "Search description or subject…",
+        "allUsers": "All users",
+        "allActions": "All actions",
+        "allLogs": "All logs",
+        "filterByAction": "Filter by action",
+        "filterByLog": "Filter by log name",
+        "dateFrom": "From date",
+        "dateTo": "To date",
+        "empty": "No activity found for the selected filters.",
+        "system": "System",
+        "noChanges": "No field changes recorded.",
+        "expand": "Expand changes",
+        "collapse": "Collapse changes",
+        "logName": "Log name",
+        "columns": {
+            "date": "Date",
+            "user": "User",
+            "action": "Action",
+            "description": "Description",
+            "subject": "Subject"
+        },
+        "events": {
+            "created": "Created",
+            "updated": "Updated",
+            "deleted": "Deleted",
+            "login": "Login",
+            "logout": "Logout",
+            "failed": "Failed login",
+            "settings_updated": "Settings updated",
+            "consent_granted": "Consent granted",
+            "token_revoked": "Access revoked",
+            "secret_rotated": "Secret rotated"
+        },
+        "logs": {
+            "default": "Application",
+            "auth": "Authentication",
+            "settings": "Settings"
+        },
+        "ipAddress": "IP"
     },
     "errors": {
         "forbidden": {
