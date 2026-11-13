@@ -60,6 +60,8 @@ final class SettingsRepositoryService
             'public_favicon' => null,
             'password_policy' => app()->isProduction() ? 'strong' : 'weak',
             'login_max_attempts' => 5,
+            'login_lockout_threshold' => 5,
+            'login_lockout_minutes' => 15,
             // Closed IdP default: self-hosting stays invite-only until an admin turns this on
             // (qiick Cloud can enable it). Decision of 2026-11-13 on #23.
             'registration_enabled' => false,
@@ -208,6 +210,22 @@ final class SettingsRepositoryService
     public function loginMaxAttempts(): int
     {
         return $this->integer('login_max_attempts', 1, 100);
+    }
+
+    /**
+     * Failed password logins before the account is locked (per user, not per IP).
+     */
+    public function loginLockoutThreshold(): int
+    {
+        return $this->integer('login_lockout_threshold', 1, 100);
+    }
+
+    /**
+     * How long a lockout lasts after the failure threshold is reached.
+     */
+    public function loginLockoutMinutes(): int
+    {
+        return $this->integer('login_lockout_minutes', 1, 1440);
     }
 
     /**

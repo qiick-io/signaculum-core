@@ -4,6 +4,7 @@ import {
     ArrowDownAZ,
     ArrowUpAZ,
     KeyRound,
+    LockOpen,
     Pencil,
     SearchX,
     Shield,
@@ -50,6 +51,7 @@ import { normalizePaginated } from '@/lib/pagination';
 import type { LaravelPaginated } from '@/lib/pagination';
 import { update as updateActivation } from '@/routes/admin/users/activation';
 import { update as updateInstanceAdmin } from '@/routes/admin/users/instance-admin';
+import { destroy as destroyLockout } from '@/routes/admin/users/lockout';
 import { destroy as destroyTwoFactor } from '@/routes/admin/users/two-factor';
 import { index as usersIndex } from '@/routes/admin/users';
 import type { AdminUserRow, BreadcrumbItem, Paginated } from '@/types';
@@ -235,6 +237,14 @@ export default function AdminUsersIndex({
                 });
             }
 
+            if (user.is_locked) {
+                actions.push({
+                    key: 'unlock',
+                    label: t('admin.users.actions.unlock'),
+                    icon: LockOpen,
+                });
+            }
+
             actions.push(
                 user.is_instance_admin
                     ? {
@@ -275,6 +285,14 @@ export default function AdminUsersIndex({
 
             if (key === 'resetTwoFactor') {
                 setPendingAction({ type: 'resetTwoFactor', user });
+
+                return;
+            }
+
+            if (key === 'unlock') {
+                router.delete(destroyLockout.url(user.id), {
+                    preserveScroll: true,
+                });
 
                 return;
             }
