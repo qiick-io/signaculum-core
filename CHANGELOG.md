@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Remember-me recaller login no longer records a spurious `pwd` authentication method for `amr` (only interactive password login does).
+
 ### Added
 
 - Account data export (JSON) from Settings → Profile: profile, organisations, sessions and connected apps (never passwords or 2FA secrets).
