@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -40,6 +41,8 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsureTwoFactorIsEnabledMiddleware::class,
+            // Before the Passport authorize action (OIDC Core §3.1.2.1 `max_age`).
+            EnforceMaximumAuthenticationAgeMiddleware::class,
             // Last so defense headers apply to the final HTML (app-ui security-headers.md).
             SetSecurityHeadersMiddleware::class,
         ]);

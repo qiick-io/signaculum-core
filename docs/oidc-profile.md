@@ -42,6 +42,11 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - **`nonce` required** on every `openid` authorization request when `OIDC_REQUIRE_NONCE` is true (default). Echoed in the `id_token`. Missing nonce → `invalid_request` redirect with `state`.
 - Both flags may be relaxed only for the OpenID Foundation conformance suite, never in production.
 
+## `prompt` and `max_age`
+
+- **`prompt`** (Passport): `none` returns `login_required` / `consent_required` without interaction; `login` forces a fresh Signaculum login; `consent` always shows the consent screen. Space-separated values are accepted; `none` wins over the others.
+- **`max_age`** (OIDC Core §3.1.2.1, `EnforceMaximumAuthenticationAgeMiddleware`): when the elapsed seconds since session `auth_time` exceed `max_age` (or `auth_time` is unknown), the user must re-authenticate. With `prompt=none` the client receives `login_required`; otherwise the browser is sent to login with the authorize URL as `url.intended`. When `max_age` was sent, the `id_token` always includes `auth_time`.
+
 ## Claims per scope
 
 User claims come from `OidcClaimsService` (same values in `id_token` and userinfo). Empty optional claims are omitted, never sent as empty strings.
@@ -52,7 +57,7 @@ User claims come from `OidcClaimsService` (same values in `id_token` and userinf
 | `profile`  | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
 | `email`    | `email`, `email_verified`                                                                                                                                     |
 
-**Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, optional `auth_time`, **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login).
+**Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, `auth_time` when known (and **always** when the authorization request carried `max_age`), **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login).
 
 Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_name` / `last_name` columns use `given_name` / `family_name` when present (`PersonNameData` in `qiick/laravel-oidc`).
 
@@ -110,14 +115,15 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 
 ## Errors
 
-| Situation                                                   | Behaviour                                                                  |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------- |
-| PKCE / nonce / consent deny / `prompt=none` without session | Redirect to the registered `redirect_uri` with `error` and echoed `state`  |
-| Unknown client or unregistered `redirect_uri`               | HTTP 401 (no redirect to an attacker URI)                                  |
-| Bad token request (verifier, client secret, …)              | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …) |
-| Userinfo without / with invalid Bearer                      | 401 `invalid_token` + `WWW-Authenticate`                                   |
-| Userinfo without `openid` scope                             | 403 `insufficient_scope`                                                   |
-| Unregistered `post_logout_redirect_uri`                     | HTTP 400                                                                   |
-| Forged / foreign `id_token_hint` while signed in            | Confirmation page, then logout of the local session on confirm             |
+| Situation                                                                                           | Behaviour                                                                  |
+| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| PKCE / nonce / consent deny / `prompt=none` without session / `max_age` exceeded with `prompt=none` | Redirect to the registered `redirect_uri` with `error` and echoed `state`  |
+| `max_age` exceeded (no `prompt=none`) or `prompt=login`                                             | Redirect to Signaculum `/login` (then back to authorize)                   |
+| Unknown client or unregistered `redirect_uri`                                                       | HTTP 401 (no redirect to an attacker URI)                                  |
+| Bad token request (verifier, client secret, …)                                                      | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …) |
+| Userinfo without / with invalid Bearer                                                              | 401 `invalid_token` + `WWW-Authenticate`                                   |
+| Userinfo without `openid` scope                                                                     | 403 `insufficient_scope`                                                   |
+| Unregistered `post_logout_redirect_uri`                                                             | HTTP 400                                                                   |
+| Forged / foreign `id_token_hint` while signed in                                                    | Confirmation page, then logout of the local session on confirm             |
 
 Redirect URIs and post-logout redirect URIs match **exactly** (no prefix or wildcard matching).

@@ -4,6 +4,7 @@
 
 ### Added
 
+- OIDC `max_age` on `/oauth/authorize`: re-authenticate when session `auth_time` is too old; always emit `auth_time` in the `id_token` when `max_age` was sent. Passport already covers `prompt=none|login|consent` (locked in by tests).
 - Instance setting `registration_enabled` (default off): self-registration and the login "Sign up" link stay closed until an instance admin turns them on (Settings → Authentication & security). qiick Cloud can enable registration on its hosted instance.
 - `signaculum:install` and `signaculum:upgrade` for a self-hosted tree.
 - `GET /health/live` and `GET /health/ready`.
