@@ -46,6 +46,8 @@ final class DiscoveryDocumentService
             'request_uri_parameter_supported' => false,
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,
+            // RFC 9207 §3: clients that see true require `iss` on authorize redirects.
+            'authorization_response_iss_parameter_supported' => true,
         ];
     }
 }
