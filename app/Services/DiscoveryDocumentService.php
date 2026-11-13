@@ -9,9 +9,10 @@ use App\Enums\OidcScopeEnum;
 /**
  * The OpenID Provider metadata (OpenID Connect Discovery 1.0 §3).
  *
- * It advertises exactly the qiick profile: authorization code only, PKCE S256,
- * RS256 id_tokens, query response mode. Clients (`qiick/laravel-oidc`) read every
- * endpoint from here, so a value that changes here is a wire-contract change.
+ * It advertises exactly the qiick profile: authorization code (+ refresh), optional
+ * client_credentials for opted-in confidential clients, PKCE S256, RS256 id_tokens,
+ * query response mode. Clients (`qiick/laravel-oidc`) read every endpoint from here,
+ * so a value that changes here is a wire-contract change.
  */
 final class DiscoveryDocumentService
 {
@@ -32,7 +33,7 @@ final class DiscoveryDocumentService
             'scopes_supported' => array_map(fn (OidcScopeEnum $scope): string => $scope->value, OidcScopeEnum::cases()),
             'response_types_supported' => ['code'],
             'response_modes_supported' => ['query'],
-            'grant_types_supported' => ['authorization_code', 'refresh_token'],
+            'grant_types_supported' => ['authorization_code', 'refresh_token', 'client_credentials'],
             'subject_types_supported' => ['public'],
             'id_token_signing_alg_values_supported' => [SigningKeyService::ALGORITHM],
             'token_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post', 'none'],
