@@ -29,7 +29,7 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `id_token_signing_alg_values_supported`: `RS256`
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `none`
 - `code_challenge_methods_supported`: `S256`
-- `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, plus user claims below
+- `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, `amr`, plus user claims below
 - `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false`
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
@@ -52,13 +52,27 @@ User claims come from `OidcClaimsService` (same values in `id_token` and userinf
 | `profile`  | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
 | `email`    | `email`, `email_verified`                                                                                                                                     |
 
-**Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, optional `auth_time`, **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login).
+**Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, optional `auth_time`, **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login), **`amr`** (always present; RFC 8176).
+
+#### `amr` (RFC 8176)
+
+Always emitted on the `id_token` from methods recorded at login (`AuthenticationContextService`, session key `oidc.authentication_methods`, copied onto the auth code):
+
+| Value | When |
+| ----- | ---- |
+| `pwd` | Password authentication (also the fallback when a signed-in session has no recorded method) |
+| `otp` | Fortify TOTP / recovery-code challenge |
+| `hwk` | Passkey whose credential transports include a hardware channel (`usb` / `nfc` / `ble` / `smart-card`) |
+| `swk` | Passkey without a hardware transport (platform / hybrid) |
+| `mfa` | Two or more of the concrete factors above were used in the same authentication |
+
+`acr` is out of scope for this slice (emit only when requested; see #69).
 
 Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_name` / `last_name` columns use `given_name` / `family_name` when present (`PersonNameData` in `qiick/laravel-oidc`).
 
 ### Still planned (not on this branch)
 
-- `preferred_username`, `picture`, `amr`, `acr`
+- `preferred_username`, `picture`, `acr` (S2 remainder / #69)
 - Scope `qiick.orgs` with `orgs`: `[{ id, slug, roles }]` and roles `owner` / `admin` / `member` / `billing` (S5)
 
 ## Token response
