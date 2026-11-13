@@ -42,7 +42,8 @@
         "copy": "Copy",
         "clearFilters": "Clear filters",
         "sortAscending": "Sort ascending",
-        "sortDescending": "Sort descending"
+        "sortDescending": "Sort descending",
+        "back": "Back"
     },
     "confirmDestructive": {
         "typeToConfirm": "Type \"{{name}}\" to confirm"
@@ -396,6 +397,36 @@
                 "filteredDescription": "Try another search or clear the filters.",
                 "cta": "New application"
             }
+        }
+    },
+    "errors": {
+        "forbidden": {
+            "head": "Forbidden",
+            "title": "You do not have permission",
+            "description": "This page needs a different role or permission. Ask an instance admin if you need access.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "notFound": {
+            "head": "Not found",
+            "title": "Page not found",
+            "description": "That address does not match anything here. Check the URL or go back.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "serverError": {
+            "head": "Something went wrong",
+            "title": "Something went wrong",
+            "description": "An unexpected error occurred. Try again in a moment.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "serviceUnavailable": {
+            "head": "Unavailable",
+            "title": "Temporarily unavailable",
+            "description": "Signaculum is briefly unavailable. Please try again soon.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
         }
     }
 }

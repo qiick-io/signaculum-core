@@ -42,7 +42,8 @@
         "copy": "Copia",
         "clearFilters": "Cancella filtri",
         "sortAscending": "Ordine crescente",
-        "sortDescending": "Ordine decrescente"
+        "sortDescending": "Ordine decrescente",
+        "back": "Indietro"
     },
     "confirmDestructive": {
         "typeToConfirm": "Digita \"{{name}}\" per confermare"
@@ -396,6 +397,36 @@
                 "filteredDescription": "Prova un'altra ricerca o cancella i filtri.",
                 "cta": "Nuova applicazione"
             }
+        }
+    },
+    "errors": {
+        "forbidden": {
+            "head": "Non autorizzato",
+            "title": "Non hai il permesso",
+            "description": "Questa pagina richiede un ruolo o un permesso diverso. Chiedi a un admin di istanza se ti serve l'accesso.",
+            "goHome": "Torna alla dashboard",
+            "signIn": "Accedi"
+        },
+        "notFound": {
+            "head": "Non trovato",
+            "title": "Pagina non trovata",
+            "description": "Questo indirizzo non corrisponde a nulla. Controlla l'URL o torna indietro.",
+            "goHome": "Torna alla dashboard",
+            "signIn": "Accedi"
+        },
+        "serverError": {
+            "head": "Qualcosa è andato storto",
+            "title": "Qualcosa è andato storto",
+            "description": "Si è verificato un errore imprevisto. Riprova tra un momento.",
+            "goHome": "Torna alla dashboard",
+            "signIn": "Accedi"
+        },
+        "serviceUnavailable": {
+            "head": "Non disponibile",
+            "title": "Temporaneamente non disponibile",
+            "description": "Signaculum non è disponibile per un momento. Riprova tra poco.",
+            "goHome": "Torna alla dashboard",
+            "signIn": "Accedi"
         }
     }
 }
