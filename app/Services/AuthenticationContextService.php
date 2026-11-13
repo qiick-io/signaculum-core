@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\AuthenticationContextClassEnum;
 use App\Enums\AuthenticationMethodEnum;
 use Laravel\Passkeys\Passkey;
 use Webauthn\PublicKeyCredentialDescriptor;
@@ -122,6 +123,24 @@ final class AuthenticationContextService
         }
 
         return $authenticationMethods;
+    }
+
+    /**
+     * `acr` value for the given (or current) methods when the client requested one (OIDC Core §2).
+     *
+     * MFA (`urn:qiick:loa:mfa`) when `amr` includes `mfa`; otherwise password-only.
+     *
+     * @param  list<string>  $authenticationMethods
+     */
+    public function authenticationContextClass(array $authenticationMethods = []): AuthenticationContextClassEnum
+    {
+        $methods = $authenticationMethods !== [] ? $authenticationMethods : $this->amrValues();
+
+        if (in_array(AuthenticationMethodEnum::MultipleFactors->value, $methods, true)) {
+            return AuthenticationContextClassEnum::MultipleFactors;
+        }
+
+        return AuthenticationContextClassEnum::Password;
     }
 
     private function methodForPasskey(Passkey $passkey): AuthenticationMethodEnum

@@ -68,6 +68,7 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
         $this->pendingAuthorizationService->remember(
             $authorizationRequest->getClient()->getIdentifier(),
             $isOpenIdRequest ? $nonce : null,
+            $this->isAcrRequested($request),
         );
 
         return $authorizationRequest;
@@ -97,6 +98,7 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
             'auth_time',
             'oidc_session_id',
             'authentication_methods',
+            'is_acr_requested',
         ]);
 
         return new AuthorizationContextData(
@@ -104,7 +106,38 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
             authTime: $authCode?->getAttribute('auth_time') === null ? null : (int) $authCode->getAttribute('auth_time'),
             oidcSessionId: $authCode?->getAttribute('oidc_session_id'),
             authenticationMethods: $this->authenticationMethodsFrom($authCode?->getAttribute('authentication_methods')),
+            isAcrRequested: (bool) $authCode?->getAttribute('is_acr_requested'),
         );
+    }
+
+    /**
+     * True when the client asked for `acr` via `acr_values` or the `claims` parameter
+     * (OIDC Core §5.5 / §3.1.2.1). Discovery still advertises `claims_parameter_supported`
+     * as false for full claims requests; we only look for an `acr` ask.
+     */
+    private function isAcrRequested(ServerRequestInterface $request): bool
+    {
+        $acrValues = $this->getQueryStringParameter('acr_values', $request);
+
+        if (is_string($acrValues)) {
+            return true;
+        }
+
+        $claimsParameter = $this->getQueryStringParameter('claims', $request);
+
+        if (! is_string($claimsParameter)) {
+            return false;
+        }
+
+        $decodedClaims = json_decode($claimsParameter, true);
+
+        if (! is_array($decodedClaims)) {
+            return false;
+        }
+
+        $idTokenClaims = $decodedClaims['id_token'] ?? null;
+
+        return is_array($idTokenClaims) && array_key_exists('acr', $idTokenClaims);
     }
 
     /**

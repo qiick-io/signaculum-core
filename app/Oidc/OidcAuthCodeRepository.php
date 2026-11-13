@@ -46,6 +46,7 @@ final class OidcAuthCodeRepository extends AuthCodeRepository
             'auth_time' => $authorizationContext->authTime,
             'oidc_session_id' => $authorizationContext->oidcSessionId,
             'authentication_methods' => json_encode($authorizationContext->authenticationMethods),
+            'is_acr_requested' => $authorizationContext->isAcrRequested,
         ])->save();
 
         $user = User::query()->find($userId);
