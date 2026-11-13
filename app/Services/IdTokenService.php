@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Actions\RecordClientSessionAction;
 use App\Data\IdTokenRequestData;
+use App\Enums\AuthenticationMethodEnum;
 use DateTimeImmutable;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Encoding\ChainedFormatter;
@@ -19,6 +20,7 @@ use LogicException;
  * The header carries the `kid` of the active signing key so clients pick the right JWK.
  * `aud` is the client id and `azp` repeats it; `nonce`, `auth_time` and `sid` come from
  * the authorization request / browser session and are only present when known.
+ * `amr` is always present (RFC 8176) from the recorded authentication methods.
  */
 final class IdTokenService
 {
@@ -40,6 +42,11 @@ final class IdTokenService
 
         $issuedAt = new DateTimeImmutable('@'.time());
         $userClaims = $this->oidcClaimsService->claimsFor($idTokenRequest->user, $idTokenRequest->scopes);
+        $authenticationMethods = $idTokenRequest->context->authenticationMethods;
+
+        if ($authenticationMethods === []) {
+            $authenticationMethods = [AuthenticationMethodEnum::Password->value];
+        }
 
         $tokenBuilder = $jwtConfiguration->builder(ChainedFormatter::withUnixTimestampDates())
             ->withHeader('kid', $signingKey->kid)
@@ -48,7 +55,8 @@ final class IdTokenService
             ->permittedFor($this->nonEmpty($idTokenRequest->clientId))
             ->issuedAt($issuedAt)
             ->expiresAt($issuedAt->modify('+'.(int) config('oidc.id_token_ttl').' seconds'))
-            ->withClaim('azp', $idTokenRequest->clientId);
+            ->withClaim('azp', $idTokenRequest->clientId)
+            ->withClaim('amr', $authenticationMethods);
 
         if ($idTokenRequest->context->authTime !== null) {
             $tokenBuilder = $tokenBuilder->withClaim('auth_time', $idTokenRequest->context->authTime);

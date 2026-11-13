@@ -6,6 +6,7 @@ namespace App\Listeners;
 
 use App\Actions\DispatchBackChannelLogoutAction;
 use App\Models\User;
+use App\Services\AuthenticationContextService;
 use App\Services\OidcReauthenticationService;
 use App\Services\OidcSessionService;
 use Illuminate\Auth\Events\Logout;
@@ -17,6 +18,7 @@ use Illuminate\Auth\Events\Logout;
  * tears the session down when possible, and falls back to the binding table.
  * Skips fan-out during OIDC re-authentication (`max_age` / `prompt=login`): that
  * only asks for fresh credentials and must keep the same SSO `sid`.
+ * Also clears recorded RFC 8176 authentication methods for the next login.
  */
 final class EndOidcSessionOnLogoutListener
 {
@@ -24,6 +26,7 @@ final class EndOidcSessionOnLogoutListener
         private readonly DispatchBackChannelLogoutAction $dispatchBackChannelLogoutAction,
         private readonly OidcSessionService $oidcSessionService,
         private readonly OidcReauthenticationService $oidcReauthenticationService,
+        private readonly AuthenticationContextService $authenticationContextService,
     ) {}
 
     public function handle(Logout $logout): void
@@ -62,5 +65,7 @@ final class EndOidcSessionOnLogoutListener
         if ($oidcSessionId !== null) {
             $this->oidcSessionService->markEnded($oidcSessionId);
         }
+
+        $this->authenticationContextService->reset();
     }
 }

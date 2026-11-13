@@ -187,6 +187,8 @@ class AppServiceProvider extends ServiceProvider
             ])->toResponse(request());
         });
 
+        // OIDC Login/Logout listeners are auto-discovered from app/Listeners
+        // (manual Event::listen would register them twice).
     }
 
     /**
