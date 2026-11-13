@@ -89,7 +89,8 @@
         "admin": "Admin",
         "users": "Users",
         "applications": "Applications",
-        "activityLog": "Activity Log"
+        "activityLog": "Activity Log",
+        "organizations": "Organisations"
     },
     "realtime": {
         "connected": "Realtime connected",
@@ -207,7 +208,11 @@
             "retentionTitle": "Data retention",
             "retentionDescription": "How long Signaculum keeps the activity log. Older entries are deleted daily.",
             "activityRetentionDays": "Activity log (days)",
-            "activityRetentionDaysHint": "Activity log entries older than this are deleted."
+            "activityRetentionDaysHint": "Activity log entries older than this are deleted.",
+            "loginLockoutThreshold": "Failed attempts before lockout",
+            "loginLockoutThresholdDescription": "Wrong passwords for one account before it is locked.",
+            "loginLockoutMinutes": "Lockout duration (minutes)",
+            "loginLockoutMinutesDescription": "How long a locked account must wait before trying again."
         },
         "layout": {
             "appearance": "Appearance",
@@ -333,7 +338,8 @@
                 "reactivate": "Reactivate",
                 "resetTwoFactor": "Reset two-factor",
                 "grantInstanceAdmin": "Make instance admin",
-                "revokeInstanceAdmin": "Remove instance admin"
+                "revokeInstanceAdmin": "Remove instance admin",
+                "unlock": "Clear lockout"
             },
             "confirm": {
                 "deactivateTitle": "Deactivate {{name}}?",
@@ -497,6 +503,37 @@
             "description": "Signaculum is briefly unavailable. Please try again soon.",
             "goHome": "Back to dashboard",
             "signIn": "Sign in"
+        }
+    },
+    "organizations": {
+        "breadcrumb": "Organisations",
+        "head": "Organisations",
+        "title": "Organisations",
+        "description": "Organisations you belong to. Create one to start managing members and roles.",
+        "slug": "Slug",
+        "create": "Create organisation",
+        "emptyTitle": "No organisations yet",
+        "emptyDescription": "Create an organisation to group members and roles for the qiick.orgs claim.",
+        "showDescription": "Organisation settings and members.",
+        "members": {
+            "title": "Members",
+            "description": "Each member may hold one or more roles. An organisation always keeps at least one owner.",
+            "rolesLabel": "Roles",
+            "userId": "User ID",
+            "add": "Add member",
+            "remove": "Remove",
+            "roles": {
+                "owner": "Owner",
+                "admin": "Admin",
+                "member": "Member",
+                "billing": "Billing"
+            }
+        },
+        "danger": {
+            "title": "Delete organisation",
+            "description": "Deletes the organisation and every membership. This cannot be undone.",
+            "confirmTitle": "Delete this organisation?",
+            "confirmDescription": "Type the organisation name to confirm permanent deletion."
         }
     }
 }

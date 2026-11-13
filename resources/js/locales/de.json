@@ -89,7 +89,8 @@
         "admin": "Administration",
         "users": "Benutzer",
         "applications": "Anwendungen",
-        "activityLog": "Aktivitätsprotokoll"
+        "activityLog": "Aktivitätsprotokoll",
+        "organizations": "Organisationen"
     },
     "realtime": {
         "connected": "Realtime verbunden",
@@ -207,7 +208,11 @@
             "retentionTitle": "Datenaufbewahrung",
             "retentionDescription": "Wie lange Signaculum das Aktivitätsprotokoll behält. Ältere Einträge werden täglich gelöscht.",
             "activityRetentionDays": "Aktivitätsprotokoll (Tage)",
-            "activityRetentionDaysHint": "Aktivitätsprotokolleinträge älter als dieser Wert werden gelöscht."
+            "activityRetentionDaysHint": "Aktivitätsprotokolleinträge älter als dieser Wert werden gelöscht.",
+            "loginLockoutThreshold": "Fehlversuche vor Sperre",
+            "loginLockoutThresholdDescription": "Falsche Passwörter für ein Konto, bevor es gesperrt wird.",
+            "loginLockoutMinutes": "Sperrdauer (Minuten)",
+            "loginLockoutMinutesDescription": "Wie lange ein gesperrtes Konto warten muss, bevor es erneut versuchen darf."
         },
         "layout": {
             "appearance": "Darstellung",
@@ -333,7 +338,8 @@
                 "reactivate": "Reaktivieren",
                 "resetTwoFactor": "Zwei-Faktor zurücksetzen",
                 "grantInstanceAdmin": "Zum Instanz-Admin machen",
-                "revokeInstanceAdmin": "Instanz-Admin entziehen"
+                "revokeInstanceAdmin": "Instanz-Admin entziehen",
+                "unlock": "Sperre aufheben"
             },
             "confirm": {
                 "deactivateTitle": "{{name}} deaktivieren?",
@@ -497,6 +503,37 @@
             "description": "Signaculum ist kurz nicht erreichbar. Bitte versuchen Sie es bald erneut.",
             "goHome": "Zur Übersicht",
             "signIn": "Anmelden"
+        }
+    },
+    "organizations": {
+        "breadcrumb": "Organisationen",
+        "head": "Organisationen",
+        "title": "Organisationen",
+        "description": "Organisationen, denen Sie angehören. Erstellen Sie eine, um Mitglieder und Rollen zu verwalten.",
+        "slug": "Slug",
+        "create": "Organisation erstellen",
+        "emptyTitle": "Noch keine Organisationen",
+        "emptyDescription": "Erstellen Sie eine Organisation, um Mitglieder und Rollen für den Claim qiick.orgs zu gruppieren.",
+        "showDescription": "Organisationseinstellungen und Mitglieder.",
+        "members": {
+            "title": "Mitglieder",
+            "description": "Jedes Mitglied kann eine oder mehrere Rollen haben. Eine Organisation behält immer mindestens einen Owner.",
+            "rolesLabel": "Rollen",
+            "userId": "Benutzer-ID",
+            "add": "Mitglied hinzufügen",
+            "remove": "Entfernen",
+            "roles": {
+                "owner": "Owner",
+                "admin": "Admin",
+                "member": "Member",
+                "billing": "Billing"
+            }
+        },
+        "danger": {
+            "title": "Organisation löschen",
+            "description": "Löscht die Organisation und alle Mitgliedschaften. Dies kann nicht rückgängig gemacht werden.",
+            "confirmTitle": "Diese Organisation löschen?",
+            "confirmDescription": "Geben Sie den Organisationsnamen ein, um die endgültige Löschung zu bestätigen."
         }
     }
 }
