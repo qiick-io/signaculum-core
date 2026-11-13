@@ -23,6 +23,8 @@ final class PendingAuthorizationService
 
     private const string AUTH_TIME_SESSION_KEY = 'oidc.auth_time';
 
+    private const string MAX_AGE_REQUESTED_SESSION_KEY = 'oidc.max_age_requested';
+
     public function __construct(
         private readonly OidcSessionService $oidcSessionService,
         private readonly AuthenticationContextService $authenticationContextService,
@@ -41,8 +43,37 @@ final class PendingAuthorizationService
     }
 
     /**
+     * Mark that this authorization request carried `max_age` (OIDC Core §3.1.2.1):
+     * the resulting id_token must include `auth_time`.
+     */
+    public function rememberMaxAgeRequested(): void
+    {
+        if (request()->hasSession()) {
+            request()->session()->put(self::MAX_AGE_REQUESTED_SESSION_KEY, true);
+        }
+    }
+
+    /**
+     * Unix timestamp of the last interactive login in this browser session, if known.
+     */
+    public function authenticationTime(): ?int
+    {
+        if (! request()->hasSession()) {
+            return null;
+        }
+
+        $authenticationTime = request()->session()->get(self::AUTH_TIME_SESSION_KEY);
+
+        return is_int($authenticationTime) ? $authenticationTime : null;
+    }
+
+    /**
      * Take the pending context for this client out of the session. A context saved for
      * another client is discarded, never reused.
+     *
+     * When `max_age` was on the authorization request and `auth_time` is somehow still
+     * missing after a successful login, fall back to "now" so the id_token still carries
+     * the claim the spec requires (OIDC Core §3.1.2.1).
      */
     public function pull(string $clientId): AuthorizationContextData
     {
@@ -58,8 +89,13 @@ final class PendingAuthorizationService
         /** @var array{client_id?: string, nonce?: string|null}|null $pendingAuthorization */
         $pendingAuthorization = request()->session()->pull(self::PENDING_SESSION_KEY);
         $isSameClient = ($pendingAuthorization['client_id'] ?? null) === $clientId;
+        $isMaxAgeRequested = (bool) request()->session()->pull(self::MAX_AGE_REQUESTED_SESSION_KEY, false);
 
-        $authTime = request()->session()->get(self::AUTH_TIME_SESSION_KEY);
+        $authTime = $this->authenticationTime();
+
+        if ($authTime === null && $isMaxAgeRequested) {
+            $authTime = Date::now()->getTimestamp();
+        }
 
         $user = request()->user();
         $oidcSessionId = $user instanceof User
@@ -68,7 +104,7 @@ final class PendingAuthorizationService
 
         return new AuthorizationContextData(
             nonce: $isSameClient ? ($pendingAuthorization['nonce'] ?? null) : null,
-            authTime: is_int($authTime) ? $authTime : null,
+            authTime: $authTime,
             oidcSessionId: $oidcSessionId,
             authenticationMethods: $this->authenticationContextService->amrValues(),
         );
