@@ -5,10 +5,6 @@ namespace App\Providers;
 use App\Enums\OidcScopeEnum;
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
-use App\Listeners\EndOidcSessionOnLogoutListener;
-use App\Listeners\RecordAuthenticationMethodListener;
-use App\Listeners\RecordAuthenticationTimeListener;
-use App\Listeners\RegenerateOidcSessionOnLoginListener;
 use App\Models\Client;
 use App\Models\User;
 use App\Oidc\IdTokenResponse;
@@ -35,8 +31,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
-use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
-use Laravel\Passkeys\Events\PasskeyVerified;
 use Laravel\Passport\Bridge\AuthCodeRepository;
 use Laravel\Passport\Bridge\RefreshTokenRepository;
 use Laravel\Passport\Passport;
@@ -161,7 +155,6 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-
     /**
      * OIDC Core §3.1.2.1 `max_age` / `prompt=login` only on the authorize endpoint.
      *
@@ -240,12 +233,9 @@ class AppServiceProvider extends ServiceProvider
             ])->toResponse(request());
         });
 
-        Event::listen(Login::class, RecordAuthenticationTimeListener::class);
-        Event::listen(Login::class, RegenerateOidcSessionOnLoginListener::class);
-        Event::listen(Login::class, RecordAuthenticationMethodListener::class);
-        Event::listen(ValidTwoFactorAuthenticationCodeProvided::class, RecordAuthenticationMethodListener::class);
-        Event::listen(PasskeyVerified::class, RecordAuthenticationMethodListener::class);
-        Event::listen(Logout::class, EndOidcSessionOnLogoutListener::class);
+        // OIDC Login/Logout / amr listeners are auto-discovered from app/Listeners
+        // (manual Event::listen would register them twice and break sid preservation
+        // during max_age / prompt=login re-authentication).
     }
 
     /**
