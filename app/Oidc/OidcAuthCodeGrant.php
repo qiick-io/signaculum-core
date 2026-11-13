@@ -92,13 +92,44 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
 
     private function storedContext(string $authCodeId): AuthorizationContextData
     {
-        $authCode = Passport::authCode()->newQuery()->whereKey($authCodeId)->first(['nonce', 'auth_time', 'oidc_session_id']);
+        $authCode = Passport::authCode()->newQuery()->whereKey($authCodeId)->first([
+            'nonce',
+            'auth_time',
+            'oidc_session_id',
+            'authentication_methods',
+        ]);
 
         return new AuthorizationContextData(
             nonce: $authCode?->getAttribute('nonce'),
             authTime: $authCode?->getAttribute('auth_time') === null ? null : (int) $authCode->getAttribute('auth_time'),
             oidcSessionId: $authCode?->getAttribute('oidc_session_id'),
+            authenticationMethods: $this->authenticationMethodsFrom($authCode?->getAttribute('authentication_methods')),
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function authenticationMethodsFrom(mixed $storedMethods): array
+    {
+        if (is_string($storedMethods) && $storedMethods !== '') {
+            $decodedMethods = json_decode($storedMethods, true);
+            $storedMethods = is_array($decodedMethods) ? $decodedMethods : [];
+        }
+
+        if (! is_array($storedMethods)) {
+            return [];
+        }
+
+        $authenticationMethods = [];
+
+        foreach ($storedMethods as $storedMethod) {
+            if (is_string($storedMethod) && $storedMethod !== '') {
+                $authenticationMethods[] = $storedMethod;
+            }
+        }
+
+        return $authenticationMethods;
     }
 
     /**

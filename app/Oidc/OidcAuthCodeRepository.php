@@ -14,7 +14,7 @@ use League\OAuth2\Server\Entities\ScopeEntityInterface;
 
 /**
  * Passport's auth code repository, plus the OpenID Connect context (`nonce`,
- * `auth_time`, `sid`) saved with each code so the token endpoint can put it in the id_token.
+ * `auth_time`, `sid`, `amr`) saved with each code so the token endpoint can put it in the id_token.
  *
  * Side effects: writes a `consent_granted` activity entry (client id and scope ids only).
  */
@@ -45,6 +45,7 @@ final class OidcAuthCodeRepository extends AuthCodeRepository
             'nonce' => $authorizationContext->nonce,
             'auth_time' => $authorizationContext->authTime,
             'oidc_session_id' => $authorizationContext->oidcSessionId,
+            'authentication_methods' => json_encode($authorizationContext->authenticationMethods),
         ])->save();
 
         $user = User::query()->find($userId);

@@ -38,7 +38,7 @@ final class DiscoveryDocumentService
             'token_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post', 'none'],
             'code_challenge_methods_supported' => ['S256'],
             'claims_supported' => [
-                'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce', 'azp', 'sid',
+                'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce', 'azp', 'sid', 'amr',
                 ...OidcClaimsService::SUPPORTED_USER_CLAIMS,
             ],
             'claims_parameter_supported' => false,
