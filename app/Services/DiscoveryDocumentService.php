@@ -38,8 +38,12 @@ final class DiscoveryDocumentService
             'token_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post', 'none'],
             'code_challenge_methods_supported' => ['S256'],
             'claims_supported' => [
-                'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce', 'azp', 'sid', 'amr',
+                'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce', 'azp', 'sid', 'amr', 'acr',
                 ...OidcClaimsService::SUPPORTED_USER_CLAIMS,
+            ],
+            'acr_values_supported' => [
+                'urn:qiick:loa:pwd',
+                'urn:qiick:loa:mfa',
             ],
             'claims_parameter_supported' => false,
             'request_parameter_supported' => false,
