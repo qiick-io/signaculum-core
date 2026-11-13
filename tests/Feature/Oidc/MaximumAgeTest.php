@@ -129,6 +129,31 @@ test('max_age older than auth_time with prompt=none returns login_required', fun
         ->and($query['iss'])->toBe('https://id.example.test');
 });
 
+test('login_required preserves an existing query string on the redirect URI', function () {
+    $redirectUriWithQuery = 'https://client.example.test/auth/oidc/callback?tenant=acme';
+    $this->client->forceFill(['redirect_uris' => [$redirectUriWithQuery]])->save();
+
+    Date::setTestNow('2026-11-05 10:00:00');
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+
+    Date::setTestNow('2026-11-05 10:10:00');
+
+    $response = $this->get(authorizeUrl($this->client, $this->pkce['challenge'], [
+        'redirect_uri' => $redirectUriWithQuery,
+        'max_age' => '60',
+        'prompt' => 'none',
+    ]));
+
+    $location = $response->headers->get('Location');
+    $query = redirectQuery($location);
+
+    expect($location)->toStartWith($redirectUriWithQuery.'&')
+        ->and($query['tenant'])->toBe('acme')
+        ->and($query['error'])->toBe('login_required')
+        ->and($query['state'])->toBe('state-123')
+        ->and($query['iss'])->toBe('https://id.example.test');
+});
+
 test('max_age with prompt=none keeps the Signaculum session and does not fan out logout', function () {
     Queue::fake();
 

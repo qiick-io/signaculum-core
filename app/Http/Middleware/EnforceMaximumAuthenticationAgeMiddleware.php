@@ -150,6 +150,8 @@ final class EnforceMaximumAuthenticationAgeMiddleware
             $query['state'] = $state;
         }
 
-        return redirect()->away($redirectUri.'?'.http_build_query($query));
+        $separator = str_contains($redirectUri, '?') ? '&' : '?';
+
+        return redirect()->away($redirectUri.$separator.http_build_query($query));
     }
 }
