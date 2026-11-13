@@ -22,6 +22,8 @@ export type Auth = {
     canManageSettings: boolean;
     /** Instance admin: shows the Admin → Users nav (the server checks too). */
     canManageUsers: boolean;
+    /** Instance admin: shows the Admin → Applications nav (the server checks too). */
+    canManageApplications: boolean;
 };
 
 /** Passkey registered by the current user (Laravel passkeys). */

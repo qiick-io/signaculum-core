@@ -85,7 +85,8 @@
         "repository": "Repository",
         "settings": "Impostazioni",
         "admin": "Amministrazione",
-        "users": "Utenti"
+        "users": "Utenti",
+        "applications": "Applicazioni"
     },
     "realtime": {
         "connected": "Realtime connesso",
@@ -334,6 +335,50 @@
                 "filteredTitle": "Nessun utente corrisponde",
                 "filteredDescription": "Prova un'altra ricerca o cancella i filtri.",
                 "cta": "Nuovo utente"
+            }
+        },
+        "applications": {
+            "head": "Applicazioni",
+            "title": "Applicazioni",
+            "newApplication": "Nuova applicazione",
+            "searchPlaceholder": "Cerca applicazioni…",
+            "sortBy": "Ordina per",
+            "redirectUriCount": "{{count}} URI di redirect",
+            "columns": {
+                "created": "Creata",
+                "updated": "Aggiornata",
+                "name": "Nome",
+                "type": "Tipo",
+                "redirectUris": "URI di redirect",
+                "actions": "Azioni"
+            },
+            "actions": {
+                "edit": "Modifica applicazione"
+            },
+            "type": {
+                "confidential": "Confidenziale",
+                "public": "Pubblica",
+                "firstParty": "First-party"
+            },
+            "form": {
+                "editTitle": "Modifica applicazione",
+                "editDescription": "Aggiorna nome, URI di redirect e flag del client OIDC.",
+                "createDescription": "Registra un client OIDC per una relying party. Il secret viene generato per le app confidenziali.",
+                "requiredHint": "I campi contrassegnati con * sono obbligatori.",
+                "nameRequired": "Nome *",
+                "redirectUrisRequired": "URI di redirect *",
+                "redirectUrisHint": "Un URL assoluto per riga. Corrispondenza esatta a runtime.",
+                "confidential": "Client confidenziale",
+                "confidentialHint": "Usa un client secret sull'endpoint token. Disattiva per le SPA pubbliche.",
+                "firstParty": "App qiick first-party",
+                "firstPartyHint": "Salta la schermata di consenso per gli utenti autenticati."
+            },
+            "empty": {
+                "title": "Nessuna applicazione",
+                "description": "Registra il primo client OIDC per questa istanza Signaculum.",
+                "filteredTitle": "Nessuna applicazione corrisponde",
+                "filteredDescription": "Prova un'altra ricerca o cancella i filtri.",
+                "cta": "Nuova applicazione"
             }
         }
     }

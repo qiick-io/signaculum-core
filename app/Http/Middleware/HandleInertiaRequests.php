@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Client;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\SettingsRepositoryService;
@@ -59,9 +60,10 @@ class HandleInertiaRequests extends Middleware
             },
             'auth' => [
                 'user' => $request->user(),
-                // Only hides UI: the server still checks every request (SettingPolicy / UserPolicy).
+                // Only hides UI: the server still checks every request (policies).
                 'canManageSettings' => (bool) $request->user()?->can('update', Setting::class),
                 'canManageUsers' => (bool) $request->user()?->can('viewAny', User::class),
+                'canManageApplications' => (bool) $request->user()?->can('viewAny', Client::class),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

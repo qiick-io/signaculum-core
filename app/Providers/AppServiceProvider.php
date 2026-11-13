@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Enums\OidcScopeEnum;
 use App\Listeners\RecordAuthenticationTimeListener;
+use App\Models\Client;
 use App\Oidc\IdTokenResponse;
 use App\Oidc\OidcAuthCodeGrant;
 use App\Oidc\OidcAuthCodeRepository;
+use App\Policies\ApplicationPolicy;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
 use Carbon\CarbonImmutable;
@@ -16,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -74,6 +77,9 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureOpenIdConnect(): void
     {
+        Passport::useClientModel(Client::class);
+        Gate::policy(Client::class, ApplicationPolicy::class);
+
         Passport::tokensCan(OidcScopeEnum::descriptions());
         Passport::useAuthorizationServerResponseType(new IdTokenResponse);
 
