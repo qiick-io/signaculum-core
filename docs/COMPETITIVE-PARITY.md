@@ -125,32 +125,32 @@ Already in the design or checklist: OIDC core (code+PKCE, discovery, JWKS rotati
 
 **New proposals** (issues labelled `needs-decision`, `priority:P2` until Luca confirms):
 
-| Gap | Why parity needs it |
-| --- | --- |
-| Token revocation RFC 7009 (advertised + tested) | Passport can revoke; customers and RFC 9700 expect a standard `/oauth/revoke` and discovery. Design §5 already names revocation. |
-| Token introspection RFC 7662 | Resource servers and API gateways validate opaque access tokens this way; every serious IdP ships it. |
-| Client credentials grant | Machine clients (MCP agents, jobs) need M2M without a browser; design already separates machine credentials from SSO. |
-| Brute-force lockout | Instance settings already track login attempts; a real lockout matches Keycloak/Logto/Authelia regulation. |
-| Editable email templates | Invitations, verification and resets are expected to match brand; competitors expose templates in admin. |
-| Account data export | GDPR portability; Auth0/Clerk treat export as table stakes for account self-service. |
+| Gap | Issue | Why parity needs it |
+| --- | --- | --- |
+| Token revocation RFC 7009 (advertised + tested) | #49 | Passport can revoke; customers and RFC 9700 expect a standard `/oauth/revoke` and discovery. Design §5 already names revocation. |
+| Token introspection RFC 7662 | #50 | Resource servers and API gateways validate opaque access tokens this way; every serious IdP ships it. |
+| Client credentials grant | #51 | Machine clients (MCP agents, jobs) need M2M without a browser; design already separates machine credentials from SSO. |
+| Brute-force lockout | #52 | Instance settings already track login attempts; a real lockout matches Keycloak/Logto/Authelia regulation. |
+| Editable email templates | #53 | Invitations, verification and resets are expected to match brand; competitors expose templates in admin. |
+| Account data export | #54 | GDPR portability; Auth0/Clerk treat export as table stakes for account self-service. |
 
 ### Later (milestone `Later`, not beta without Luca’s OK)
 
-| Gap | Why later |
-| --- | --- |
-| SAML | Design: not in v1; enterprise apps that need SAML keep Keycloak/Zitadel/Authentik. |
-| SCIM | Design: not in v1; Cloud provisioning can add it later. |
-| Social logins inside the IdP | Design: not in v1; apps may still use Socialite separately. |
-| IdP-initiated login | Design: not in v1; SP-initiated OIDC only. |
-| Dynamic client registration | Design: not in v1; admin-registered clients only. |
-| LDAP / Active Directory | Large federation surface; out of MVP. |
-| HA clustering | Ops-heavy; single-node Compose is enough for beta self-host. |
-| PAR / DPoP | FAPI-oriented; no qiick RP needs them for beta. |
-| Device authorization flow | Explicitly disabled in the profile today; TV/CLI can wait. |
-| Front-channel logout | Design: never rely on iframes/third-party cookies; back-channel + RP-initiated only. |
-| Impersonation | Support tooling; not required to run qiick SSO. |
-| Per-organisation branding | Instance branding covers beta; multi-tenant themes wait for Cloud. |
-| Prometheus metrics | Nice for ops; health endpoints cover install smoke. |
+| Gap | Issue | Why later |
+| --- | --- | --- |
+| SAML | #55 | Design: not in v1; enterprise apps that need SAML keep Keycloak/Zitadel/Authentik. |
+| SCIM | #56 | Design: not in v1; Cloud provisioning can add it later. |
+| Social logins inside the IdP | #57 | Design: not in v1; apps may still use Socialite separately. |
+| IdP-initiated login | #58 | Design: not in v1; SP-initiated OIDC only. |
+| Dynamic client registration | #59 | Design: not in v1; admin-registered clients only. |
+| LDAP / Active Directory | #60 | Large federation surface; out of MVP. |
+| HA clustering | #61 | Ops-heavy; single-node Compose is enough for beta self-host. |
+| PAR / DPoP | #62 / #63 | FAPI-oriented; no qiick RP needs them for beta. |
+| Device authorization flow | #64 | Explicitly disabled in the profile today; TV/CLI can wait. |
+| Front-channel logout | #65 | Design: never rely on iframes/third-party cookies; back-channel + RP-initiated only. |
+| Impersonation | #66 | Support tooling; not required to run qiick SSO. |
+| Per-organisation branding | #67 | Instance branding covers beta; multi-tenant themes wait for Cloud. |
+| Prometheus metrics | #68 | Nice for ops; health endpoints cover install smoke. |
 
 ### Never (for Signaculum’s product intent)
 
