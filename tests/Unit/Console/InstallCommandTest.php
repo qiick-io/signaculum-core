@@ -28,14 +28,86 @@ test('install refuses a production .env without --force', function () {
     }
 });
 
+test('install refuses when .env.example is missing', function () {
+    $examplePath = base_path('.env.example');
+    $exampleBackup = File::exists($examplePath) ? File::get($examplePath) : null;
+    File::delete($examplePath);
+
+    try {
+        $this->artisan(InstallCommand::class, [
+            '--force' => true,
+            '--no-npm' => true,
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain('.env.example is missing')
+            ->assertFailed();
+    } finally {
+        if ($exampleBackup !== null) {
+            File::put($examplePath, $exampleBackup);
+        }
+    }
+});
+
+test('install refuses an existing .env without --force in non-interactive mode', function () {
+    $path = base_path('.env');
+    $backup = File::exists($path) ? File::get($path) : null;
+    File::put($path, "APP_ENV=local\nAPP_KEY=base64:dGVzdA==\n");
+
+    try {
+        $this->artisan(InstallCommand::class, [
+            '--no-npm' => true,
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain('.env already exists')
+            ->assertFailed();
+    } finally {
+        restoreInstallEnv($path, $backup);
+    }
+});
+
+test('install skips creating an administrator when a user already exists', function () {
+    [$envPath, $envBackup] = beginInstallFixtures();
+    File::delete(Passport::keyPath('oauth-private.key'));
+    File::delete(Passport::keyPath('oauth-public.key'));
+
+    try {
+        $this->artisan(InstallCommand::class, [
+            '--force' => true,
+            '--no-npm' => true,
+            '--no-interaction' => true,
+        ])->assertSuccessful();
+
+        config([
+            'database.connections.sqlite.database' => database_path('database.sqlite'),
+        ]);
+        DB::purge('sqlite');
+
+        $this->artisan(InstallCommand::class, [
+            '--force' => true,
+            '--no-npm' => true,
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain('An account already exists')
+            ->assertSuccessful();
+
+        expect(DB::connection('sqlite')->table('users')->count())->toBe(1);
+    } finally {
+        restoreInstallEnv($envPath, $envBackup);
+    }
+});
+
 test('install migrates sqlite, creates keys and the first administrator', function () {
     [$envPath, $envBackup] = beginInstallFixtures();
     File::delete(Passport::keyPath('oauth-private.key'));
     File::delete(Passport::keyPath('oauth-public.key'));
     putenv('SIGNACULUM_ADMIN_EMAIL=admin@example.com');
     putenv('SIGNACULUM_ADMIN_PASSWORD=password');
+    putenv('SIGNACULUM_ADMIN_FIRST_NAME=Ada');
+    putenv('SIGNACULUM_ADMIN_LAST_NAME=Lovelace');
     $_ENV['SIGNACULUM_ADMIN_EMAIL'] = 'admin@example.com';
     $_ENV['SIGNACULUM_ADMIN_PASSWORD'] = 'password';
+    $_ENV['SIGNACULUM_ADMIN_FIRST_NAME'] = 'Ada';
+    $_ENV['SIGNACULUM_ADMIN_LAST_NAME'] = 'Lovelace';
 
     try {
         $this->artisan(InstallCommand::class, [
@@ -58,7 +130,8 @@ test('install migrates sqlite, creates keys and the first administrator', functi
             ->and(DB::connection('sqlite')->table('users')->count())->toBe(1)
             ->and(DB::connection('sqlite')->table('signing_keys')->whereNull('retired_at')->count())->toBe(1)
             ->and($administrator)->not->toBeNull()
-            ->and($administrator->first_name)->toBe('Administrator')
+            ->and($administrator->first_name)->toBe('Ada')
+            ->and($administrator->last_name)->toBe('Lovelace')
             ->and((bool) $administrator->is_instance_admin)->toBeTrue()
             ->and((bool) $administrator->is_active)->toBeTrue()
             ->and(is_string($administrator->password) && Hash::check('password', $administrator->password))->toBeTrue()
@@ -68,8 +141,63 @@ test('install migrates sqlite, creates keys and the first administrator', functi
     } finally {
         putenv('SIGNACULUM_ADMIN_EMAIL');
         putenv('SIGNACULUM_ADMIN_PASSWORD');
-        unset($_ENV['SIGNACULUM_ADMIN_EMAIL'], $_ENV['SIGNACULUM_ADMIN_PASSWORD']);
+        putenv('SIGNACULUM_ADMIN_FIRST_NAME');
+        putenv('SIGNACULUM_ADMIN_LAST_NAME');
+        unset(
+            $_ENV['SIGNACULUM_ADMIN_EMAIL'],
+            $_ENV['SIGNACULUM_ADMIN_PASSWORD'],
+            $_ENV['SIGNACULUM_ADMIN_FIRST_NAME'],
+            $_ENV['SIGNACULUM_ADMIN_LAST_NAME'],
+        );
         restoreInstallEnv($envPath, $envBackup);
+    }
+});
+
+test('install prints a generated administrator password when none is provided', function () {
+    [$envPath, $envBackup] = beginInstallFixtures();
+    File::delete(Passport::keyPath('oauth-private.key'));
+    File::delete(Passport::keyPath('oauth-public.key'));
+    putenv('SIGNACULUM_ADMIN_EMAIL=generated@example.com');
+    $_ENV['SIGNACULUM_ADMIN_EMAIL'] = 'generated@example.com';
+    putenv('SIGNACULUM_ADMIN_PASSWORD');
+    unset($_ENV['SIGNACULUM_ADMIN_PASSWORD']);
+
+    try {
+        $this->artisan(InstallCommand::class, [
+            '--force' => true,
+            '--no-npm' => true,
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain('Administrator password (shown once):')
+            ->assertSuccessful();
+
+        config([
+            'database.connections.sqlite.database' => database_path('database.sqlite'),
+        ]);
+        DB::purge('sqlite');
+
+        expect(DB::connection('sqlite')->table('users')->where('email', 'generated@example.com')->exists())->toBeTrue();
+    } finally {
+        putenv('SIGNACULUM_ADMIN_EMAIL');
+        unset($_ENV['SIGNACULUM_ADMIN_EMAIL']);
+        restoreInstallEnv($envPath, $envBackup);
+    }
+});
+
+test('install refuses a production APP_ENV in an existing .env without --force', function () {
+    $path = base_path('.env');
+    $backup = File::exists($path) ? File::get($path) : null;
+    File::put($path, "APP_ENV=production\nAPP_KEY=\n");
+
+    try {
+        $this->artisan(InstallCommand::class, [
+            '--no-npm' => true,
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain('Refusing: APP_ENV looks like production')
+            ->assertFailed();
+    } finally {
+        restoreInstallEnv($path, $backup);
     }
 });
 

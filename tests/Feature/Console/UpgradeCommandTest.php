@@ -73,6 +73,141 @@ test('upgrade dry-runs --sync-upstream without merging', function () {
     Process::assertRanTimes(fn (PendingProcess $process): bool => implode(' ', upgradeGitArguments($process)) === 'merge --no-edit v1.0.0', 0);
 });
 
+test('upgrade refuses a dirty tree without --force', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(" M README.md\n"),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('Git working tree is dirty')
+        ->assertFailed();
+});
+
+test('upgrade refuses --sync-upstream with a dirty tree without --force', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(" M README.md\n"),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v1.0.0',
+        '--dry-run' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('Git working tree is dirty')
+        ->assertFailed();
+});
+
+test('upgrade reports a failed git fetch during --sync-upstream', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(''),
+        'remote' => Process::result("origin\nupstream\n"),
+        'fetch --tags upstream' => Process::result(errorOutput: 'network down', exitCode: 1),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v1.0.0',
+        '--dry-run' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('git fetch failed')
+        ->assertFailed();
+});
+
+test('upgrade reports a missing tag after fetch', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(''),
+        'remote' => Process::result("origin\nupstream\n"),
+        'fetch --tags upstream' => Process::result(''),
+        'rev-parse --verify refs/tags/v9.9.9' => Process::result(errorOutput: 'not found', exitCode: 1),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v9.9.9',
+        '--dry-run' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('Tag not found after fetch')
+        ->assertFailed();
+});
+
+test('upgrade dry-run reports when HEAD already matches the tag', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(''),
+        'remote' => Process::result("origin\nupstream\n"),
+        'fetch --tags upstream' => Process::result(''),
+        'rev-parse --verify refs/tags/v1.0.0' => Process::result("abc123\n"),
+        'diff --name-status HEAD v1.0.0' => Process::result(''),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v1.0.0',
+        '--dry-run' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('No file differences')
+        ->assertSuccessful();
+});
+
+test('upgrade adds the upstream remote when it is missing then merges with --yes', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(''),
+        'remote' => Process::result("origin\n"),
+        'remote add upstream https://github.com/qiick-io/signaculum-core.git' => Process::result(''),
+        'fetch --tags upstream' => Process::result(''),
+        'rev-parse --verify refs/tags/v1.0.0' => Process::result("abc123\n"),
+        'diff --name-status HEAD v1.0.0' => Process::result("M\tREADME.md\n"),
+        'merge --no-edit v1.0.0' => Process::result(''),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v1.0.0',
+        '--yes' => true,
+        '--force' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('Synced tag v1.0.0')
+        ->assertSuccessful();
+});
+
+test('upgrade reports a failed merge during --sync-upstream', function () {
+    fakeUpgradeGit([
+        'rev-parse --is-inside-work-tree' => Process::result("true\n"),
+        'status --porcelain' => Process::result(''),
+        'remote' => Process::result("origin\nupstream\n"),
+        'fetch --tags upstream' => Process::result(''),
+        'rev-parse --verify refs/tags/v1.0.0' => Process::result("abc123\n"),
+        'diff --name-status HEAD v1.0.0' => Process::result("M\tREADME.md\n"),
+        'merge --no-edit v1.0.0' => Process::result(errorOutput: 'CONFLICT', exitCode: 1),
+    ]);
+
+    $this->artisan(UpgradeCommand::class, [
+        '--sync-upstream' => 'v1.0.0',
+        '--yes' => true,
+        '--force' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('Merge failed')
+        ->assertFailed();
+});
+
+test('upgrade refuses --sync-upstream without a tag value', function () {
+    $this->artisan('signaculum:upgrade', [
+        '--sync-upstream' => '',
+        '--force' => true,
+        '--no-migrate' => true,
+    ])
+        ->expectsOutputToContain('Pass a release tag')
+        ->assertFailed();
+});
+
 /**
  * @param  array<string, ProcessResult>  $map
  */
