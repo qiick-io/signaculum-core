@@ -6,16 +6,16 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 
 ## Endpoints
 
-| Path                                | Methods       | Notes                                                                          |
-| ----------------------------------- | ------------- | ------------------------------------------------------------------------------ |
-| `/.well-known/openid-configuration` | `GET`         | Discovery (`DiscoveryController`)                                              |
-| `/.well-known/jwks.json`            | `GET`         | Public signing keys (`JwksController`), `Cache-Control: public, max-age=300`   |
-| `/oauth/authorize`                  | `GET`, `POST` | Passport authorization + consent UI (`resources/js/pages/oauth/authorize.tsx`) |
-| `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                            |
-| `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                   |
+| Path                                | Methods       | Notes                                                                               |
+| ----------------------------------- | ------------- | ----------------------------------------------------------------------------------- |
+| `/.well-known/openid-configuration` | `GET`         | Discovery (`DiscoveryController`)                                                   |
+| `/.well-known/jwks.json`            | `GET`         | Public signing keys (`JwksController`), `Cache-Control: public, max-age=300`        |
+| `/oauth/authorize`                  | `GET`, `POST` | Passport authorization + consent UI (`resources/js/pages/oauth/authorize.tsx`)      |
+| `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                                 |
+| `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                        |
 | `/oauth/introspect`                 | `POST`        | RFC 7662 introspection; confidential clients only (`client_secret_basic` / `_post`) |
-| `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing   |
-| `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                |
+| `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing        |
+| `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                     |
 
 ## Discovery fields
 
