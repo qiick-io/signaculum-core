@@ -55,3 +55,36 @@ test('json clients keep the default error payload', function (): void {
         ->assertNotFound()
         ->assertJsonStructure(['message']);
 });
+
+test('an authenticated 500 renders the inertia error page when debug is off', function (): void {
+    config(['app.debug' => false]);
+
+    $this->actingAs(User::factory()->create())
+        ->get('/__test/http-error/500')
+        ->assertStatus(500)
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('errors/error-page')
+            ->where('status', 500));
+});
+
+test('a guest branding 404 stays a real 404', function (): void {
+    $this->get(route('branding.show', 'logo-dark'))
+        ->assertNotFound();
+});
+
+test('a model-not-found 404 shares auth so the app layout can render', function (): void {
+    $admin = User::factory()->instanceAdmin()->create();
+
+    // Route matches (session runs) but binding fails before HandleInertiaRequests.
+    Route::middleware('web')->get('/__test-users/{user}', function (User $user) {
+        return response('ok');
+    });
+
+    $this->actingAs($admin)
+        ->get('/__test-users/999999')
+        ->assertNotFound()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('errors/error-page')
+            ->where('auth.user.id', $admin->id)
+            ->where('auth.canManageUsers', true));
+});

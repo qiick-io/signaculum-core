@@ -21,11 +21,15 @@ use DateInterval;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -60,9 +64,72 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureRateLimiting();
         $this->configureOpenIdConnect();
         $this->configureActivityLogging();
         $this->registerAuthActivityListeners();
+        $this->attachOidcRateLimitMiddleware();
+    }
+
+    /**
+     * Named limiters for OIDC and invite endpoints (S6). Limits read config at
+     * request time so tests can lower them without re-registering.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('oidc-token', function (Request $request) {
+            return Limit::perMinute((int) config('oidc.rate_limits.token_per_minute', 60))
+                ->by((string) $request->ip());
+        });
+
+        RateLimiter::for('oidc-authorize', function (Request $request) {
+            return Limit::perMinute((int) config('oidc.rate_limits.authorize_per_minute', 60))
+                ->by((string) $request->ip());
+        });
+
+        RateLimiter::for('oidc-end-session', function (Request $request) {
+            return Limit::perMinute((int) config('oidc.rate_limits.end_session_per_minute', 30))
+                ->by((string) $request->ip());
+        });
+
+        // Reserved for organisation invitation POSTs (S5); registered now so routes can attach it.
+        RateLimiter::for('organization-invitations', function (Request $request) {
+            $identifier = $request->user()?->getAuthIdentifier() ?? $request->ip();
+
+            return Limit::perMinute((int) config('oidc.rate_limits.organization_invitations_per_minute', 10))
+                ->by((string) $identifier);
+        });
+    }
+
+    /**
+     * Passport registers `/oauth/authorize` and `/oauth/token` itself; append the
+     * named throttle middleware once the route collection is ready.
+     */
+    protected function attachOidcRateLimitMiddleware(): void
+    {
+        $this->app->booted(function (): void {
+            $authorizeRouteNames = [
+                'passport.authorizations.authorize',
+                'passport.authorizations.approve',
+                'passport.authorizations.deny',
+            ];
+
+            foreach (Route::getRoutes()->getRoutes() as $route) {
+                $routeName = $route->getName();
+
+                if ($routeName === 'passport.token') {
+                    $route->middleware('throttle:oidc-token');
+                }
+
+                if (is_string($routeName) && in_array($routeName, $authorizeRouteNames, true)) {
+                    $route->middleware('throttle:oidc-authorize');
+                }
+
+                if ($routeName === 'password.email') {
+                    $route->middleware('throttle:password-reset');
+                }
+            }
+        });
     }
 
     /**
