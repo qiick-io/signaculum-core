@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\AccountExportController;
 use App\Http\Controllers\Settings\AppearanceSettingsController;
 use App\Http\Controllers\Settings\BrowserSessionController;
 use App\Http\Controllers\Settings\ConnectedApplicationController;
@@ -18,6 +19,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('settings/profile/export', AccountExportController::class)
+        ->middleware('throttle:account-export')
+        ->name('profile.export');
 
     Route::patch('settings/locale', [LocaleController::class, 'update'])->name('locale.update');
 });

@@ -237,7 +237,10 @@
             "linkSent": "Un nuovo link di verifica è stato inviato al tuo indirizzo email.",
             "resend": "Clicca qui per reinviare l'email di verifica.",
             "title": "Informazioni profilo",
-            "unverified": "Il tuo indirizzo email non è verificato."
+            "unverified": "Il tuo indirizzo email non è verificato.",
+            "exportTitle": "Scarica i tuoi dati",
+            "exportDescription": "Un file JSON con profilo, organizzazioni, sessioni e app collegate. Password e segreti 2FA non sono mai inclusi.",
+            "exportDownload": "Scarica JSON"
         },
         "security": {
             "addPasskey": "Aggiungi passkey",

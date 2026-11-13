@@ -237,7 +237,10 @@
             "linkSent": "A new verification link has been sent to your email address.",
             "resend": "Click here to resend the verification email.",
             "title": "Profile information",
-            "unverified": "Your email address is unverified."
+            "unverified": "Your email address is unverified.",
+            "exportTitle": "Download your data",
+            "exportDescription": "A JSON file with your profile, organisations, sessions and connected apps. Passwords and two-factor secrets are never included.",
+            "exportDownload": "Download JSON"
         },
         "security": {
             "addPasskey": "Add passkey",
