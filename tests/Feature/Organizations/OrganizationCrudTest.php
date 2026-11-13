@@ -107,7 +107,7 @@ test('an owner updates and deletes the organisation', function () {
             'name' => 'New Name',
             'slug' => 'new-name',
         ])
-        ->assertRedirect(route('organizations.show', 'new-name'));
+        ->assertRedirect(route('organizations.settings', 'new-name'));
 
     expect($organization->fresh()->name)->toBe('New Name');
     expect($organization->fresh()->slug)->toBe('new-name');

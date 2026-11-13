@@ -1,9 +1,11 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
 import { SettingsFormActions } from '@/components/settings-form-actions';
+import { Button } from '@/components/ui/button';
 import {
     Field,
     FieldError,
@@ -14,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { edit } from '@/routes/profile';
+import { edit, exportMethod } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import type { BreadcrumbItem } from '@/types';
 
@@ -221,6 +223,27 @@ export default function Profile({
                                 </>
                             )}
                         </Form>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-4">
+                        <Heading
+                            variant="small"
+                            title={t('settings.profile.exportTitle')}
+                            description={t(
+                                'settings.profile.exportDescription',
+                            )}
+                        />
+                        <Button asChild variant="outline" className="w-fit">
+                            <a
+                                href={exportMethod.url()}
+                                data-test="download-account-export"
+                            >
+                                <Download className="size-4" aria-hidden />
+                                {t('settings.profile.exportDownload')}
+                            </a>
+                        </Button>
                     </div>
 
                     <Separator />

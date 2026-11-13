@@ -78,6 +78,8 @@ Always emitted on the `id_token` from methods recorded at login (`Authentication
 | `swk` | Passkey without a hardware transport (platform / hybrid)                                              |
 | `mfa` | Two or more of the concrete factors above were used in the same authentication                        |
 
+A remember-me **recaller** login (session restored from the cookie, `Auth::viaRemember()`) does **not** record a fresh `pwd`: the user did not type a password on that request. Interactive password login with the "remember me" checkbox still records `pwd` as usual. When the recaller leaves the session without recorded methods, `amr` falls back to `pwd` as for any other unsigned method list.
+
 #### `acr` (OIDC Core §2 / §5.1)
 
 Emitted **only** when the authorization request includes a non-empty `acr_values` parameter or a `claims` JSON object that asks for `id_token.acr`. Discovery lists `acr_values_supported`. Values (Decision 2026-11-13):

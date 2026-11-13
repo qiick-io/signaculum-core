@@ -97,6 +97,12 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute((int) config('oidc.rate_limits.organization_invitations_per_minute', 10))
                 ->by((string) $identifier);
         });
+
+        RateLimiter::for('account-export', function (Request $request) {
+            $identifier = $request->user()?->getAuthIdentifier() ?? $request->ip();
+
+            return Limit::perMinute(6)->by((string) $identifier);
+        });
     }
 
     /**

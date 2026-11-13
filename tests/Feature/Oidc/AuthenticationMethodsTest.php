@@ -6,6 +6,7 @@ use App\Enums\AuthenticationMethodEnum;
 use App\Models\User;
 use App\Services\AuthenticationContextService;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
@@ -166,4 +167,37 @@ test('logout clears recorded authentication methods', function () {
     $this->post('/logout')->assertRedirect();
 
     expect(app(AuthenticationContextService::class)->methods())->toBe([]);
+});
+
+test('interactive password login with remember still records pwd', function () {
+    $this->post('/login', [
+        'email' => 'ada@example.test',
+        'password' => 'password',
+        'remember' => true,
+    ])->assertRedirect();
+
+    expect(Auth::guard('web')->viaRemember())->toBeFalse()
+        ->and(app(AuthenticationContextService::class)->methods())
+        ->toBe([AuthenticationMethodEnum::Password->value]);
+});
+
+test('remember-me recaller login does not record pwd', function () {
+    $rememberToken = 'recaller-amr-token';
+    $this->user->forceFill(['remember_token' => $rememberToken])->save();
+
+    $guard = Auth::guard('web');
+    $recallerValue = implode('|', [
+        (string) $this->user->getAuthIdentifier(),
+        $rememberToken,
+        $guard->hashPasswordForCookie($this->user->getAuthPassword()),
+    ]);
+
+    $this->withCookie($guard->getRecallerName(), $recallerValue)
+        ->get(route('dashboard'))
+        ->assertOk();
+
+    $this->assertAuthenticatedAs($this->user);
+
+    expect(Auth::guard('web')->viaRemember())->toBeTrue()
+        ->and(app(AuthenticationContextService::class)->methods())->toBe([]);
 });
