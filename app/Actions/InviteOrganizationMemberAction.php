@@ -62,7 +62,11 @@ final class InviteOrganizationMemberAction
             $acceptUrl = route('invitations.accept', ['token' => $plainToken]);
 
             Notification::route('mail', $normalizedEmail)
-                ->notify(new OrganizationInvitationNotification($organization, $acceptUrl));
+                ->notify(new OrganizationInvitationNotification(
+                    $organization,
+                    $acceptUrl,
+                    $invitedBy->locale,
+                ));
 
             return $invitation;
         });

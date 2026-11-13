@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\LogsApplicationActivityTrait;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -42,7 +43,7 @@ use Spatie\Activitylog\Support\LogOptions;
  */
 #[Fillable(['first_name', 'last_name', 'email', 'locale', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable implements MustVerifyEmail, OAuthenticatable, PasskeyUser
+class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail, OAuthenticatable, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasUuids, LogsApplicationActivityTrait, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
@@ -60,6 +61,14 @@ class User extends Authenticatable implements MustVerifyEmail, OAuthenticatable,
     public function getNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    /**
+     * Preferred locale for queued mail (verification, password reset) and UI.
+     */
+    public function preferredLocale(): ?string
+    {
+        return $this->locale;
     }
 
     /**
