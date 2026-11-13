@@ -25,25 +25,38 @@ final class ApplicationResource extends JsonResource
      *     redirect_uris: list<string>,
      *     is_confidential: bool,
      *     is_first_party: bool,
+     *     discovery_url: string,
+     *     configure_command: string,
      *     created_at: string|null,
      *     updated_at: string|null,
-     *     can_update: bool
+     *     can_update: bool,
+     *     can_delete: bool
      * }
      */
     public function toArray(Request $request): array
     {
         /** @var Client $application */
         $application = $this->resource;
+        $issuer = rtrim((string) config('oidc.issuer'), '/');
+        $discoveryUrl = $issuer.'/.well-known/openid-configuration';
+        $clientId = (string) $application->getKey();
 
         return [
-            'id' => $application->getKey(),
+            'id' => $clientId,
             'name' => $application->name,
             'redirect_uris' => $application->redirect_uris ?? [],
             'is_confidential' => $application->confidential(),
             'is_first_party' => (bool) $application->is_first_party,
+            'discovery_url' => $discoveryUrl,
+            'configure_command' => sprintf(
+                'php artisan oidc:configure %s --client-id=%s',
+                $issuer,
+                $clientId,
+            ),
             'created_at' => $application->created_at?->toIso8601String(),
             'updated_at' => $application->updated_at?->toIso8601String(),
             'can_update' => Gate::allows('update', $application),
+            'can_delete' => Gate::allows('delete', $application),
         ];
     }
 }

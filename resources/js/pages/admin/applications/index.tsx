@@ -20,10 +20,13 @@ import { PageEmptyState } from '@/components/admin/page-empty-state';
 import { TruncatedText } from '@/components/admin/truncated-text';
 import { EmptyStatus } from '@/components/empty-status';
 import { PageLayout } from '@/components/layout/page-layout';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Drawer } from '@/components/ui/drawer';
+import { Input } from '@/components/ui/input';
+import { useClipboard } from '@/hooks/use-clipboard';
 import {
     Select,
     SelectContent,
@@ -65,15 +68,18 @@ type Filters = {
 export default function AdminApplicationsIndex({
     applications: applicationsProp,
     filters = {},
+    plainTextSecret = null,
 }: {
     applications:
         | LaravelPaginated<AdminApplicationRow>
         | Paginated<AdminApplicationRow>;
     filters?: Filters;
+    plainTextSecret?: string | null;
 }) {
     const applications = normalizePaginated(applicationsProp);
     const { t } = useTranslation();
     const { canManageApplications } = usePage().props.auth;
+    const [, copy] = useClipboard();
 
     const applicationSortFields: {
         value: ApplicationSortField;
@@ -353,6 +359,37 @@ export default function AdminApplicationsIndex({
                         )
                     }
                 >
+                    {plainTextSecret ? (
+                        <Alert className="mb-4">
+                            <AlertTitle>
+                                {t('admin.applications.secretBanner.title')}
+                            </AlertTitle>
+                            <AlertDescription className="grid gap-3">
+                                <p>
+                                    {t(
+                                        'admin.applications.secretBanner.description',
+                                    )}
+                                </p>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={plainTextSecret}
+                                        readOnly
+                                        aria-label={t(
+                                            'admin.applications.secretBanner.title',
+                                        )}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => copy(plainTextSecret)}
+                                    >
+                                        {t('common.copy')}
+                                    </Button>
+                                </div>
+                            </AlertDescription>
+                        </Alert>
+                    ) : null}
+
                     {isListEmpty ? (
                         <PageEmptyState
                             icon={hasActiveFilters ? SearchX : AppWindow}
