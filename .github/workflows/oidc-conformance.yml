@@ -1,0 +1,340 @@
+# OpenID Foundation conformance suite (S7 / #33).
+# Own commit on purpose: workflow changes stay reviewable alone.
+# Required-check name for Luca to add (do not change branch protection from this PR):
+#   oidc-conformance
+name: oidc-conformance
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oidc-conformance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CONFORMANCE_SUITE_REF: release-v5.1.43
+  CONFORMANCE_ALIAS: signaculum-${{ github.run_id }}
+  SIGNACULUM_BASE_URL: https://signaculum-proxy:8443
+  CONFORMANCE_SUITE_PUBLIC_URL: https://nginx:8443
+  CONFORMANCE_BACKCHANNEL_BASE_URL: https://localhost:8443
+  OIDC_TEST_USER: conformance@signaculum.test
+  OIDC_TEST_PASSWORD: ConformanceTest-Password-1
+  OIDC_CLIENT_ID_1: 11111111-1111-4111-8111-111111111111
+  OIDC_CLIENT_SECRET_1: signaculum-conformance-basic-secret-00001
+  OIDC_CLIENT_ID_2: 22222222-2222-4222-8222-222222222222
+  OIDC_CLIENT_SECRET_2: signaculum-conformance-basic-secret-00002
+  OIDC_LOGOUT_CLIENT_ID: 33333333-3333-4333-8333-333333333333
+  OIDC_LOGOUT_CLIENT_SECRET: signaculum-conformance-logout-secret-00001
+  OIDC_BACKCHANNEL_CLIENT_ID: 44444444-4444-4444-8444-444444444444
+  OIDC_BACKCHANNEL_CLIENT_SECRET: signaculum-conformance-backchannel-secret-00001
+
+jobs:
+  oidc-conformance:
+    name: oidc-conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Signaculum
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: signaculum-core
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+          extensions: bcmath, intl, pcntl, pdo_sqlite, zip
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Setup Java
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install and build Signaculum
+        working-directory: signaculum-core
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env
+          php artisan key:generate --force
+          mkdir -p database
+          touch database/database.sqlite
+          {
+            echo 'APP_ENV=local'
+            echo 'APP_DEBUG=true'
+            echo 'APP_URL=https://signaculum-proxy:8443'
+            echo 'OIDC_ISSUER=https://signaculum-proxy:8443'
+            echo 'OIDC_REQUIRE_PKCE=false'
+            echo 'OIDC_REQUIRE_NONCE=false'
+            echo 'TRUSTED_PROXIES=*'
+            echo 'DB_CONNECTION=sqlite'
+            echo 'DB_DATABASE='"$(pwd)/database/database.sqlite"
+            echo 'QUEUE_CONNECTION=sync'
+            echo 'SESSION_DRIVER=file'
+            echo 'CACHE_STORE=file'
+            echo 'MAIL_MAILER=array'
+          } >> .env
+          php artisan migrate --force --no-interaction
+          php artisan passport:keys --force
+          npm ci
+          npm run build
+
+      - name: Seed conformance user and clients
+        working-directory: signaculum-core
+        run: php conformance/seed.php
+
+      - name: Start Signaculum
+        working-directory: signaculum-core
+        run: |
+          php artisan serve --host=0.0.0.0 --port=8080 > ../signaculum-server.log 2>&1 &
+          echo $! > ../signaculum-server.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8080/health/live > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat ../signaculum-server.log
+          exit 1
+
+      - name: Checkout OpenID conformance suite
+        run: |
+          git clone --depth 1 --branch "${CONFORMANCE_SUITE_REF}" --single-branch \
+            https://gitlab.com/openid/conformance-suite.git conformance-suite
+          echo "Using OpenID conformance suite ${CONFORMANCE_SUITE_REF} at $(git -C conformance-suite rev-parse HEAD)"
+
+      - name: Build and start OpenID conformance suite
+        env:
+          SIGNACULUM_CONFORMANCE_DIR: ${{ github.workspace }}/signaculum-core/conformance
+        run: |
+          sudo sh -c 'echo "127.0.0.1 nginx" >> /etc/hosts'
+          sudo sh -c 'echo "127.0.0.1 signaculum-proxy" >> /etc/hosts'
+          sudo sh -c 'echo "127.0.0.1 chrome" >> /etc/hosts'
+          cd conformance-suite
+          mvn -B -DskipTests package
+          docker compose \
+            -f docker-compose-localtest.yml \
+            -f "${SIGNACULUM_CONFORMANCE_DIR}/docker-compose.ci.yml" \
+            up -d --build mongodb nginx server chrome signaculum-proxy
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:4444/status > /dev/null 2>&1; then
+              echo "Chrome/Selenium is ready"
+              break
+            fi
+            sleep 2
+          done
+          for attempt in $(seq 1 60); do
+            if curl --insecure --fail --silent https://127.0.0.1:8443/api/runner/available > /dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose \
+            -f docker-compose-localtest.yml \
+            -f "${SIGNACULUM_CONFORMANCE_DIR}/docker-compose.ci.yml" \
+            logs server nginx chrome signaculum-proxy
+          exit 1
+
+      - name: Trust suite TLS certificate for back-channel logout
+        working-directory: signaculum-core
+        run: |
+          set -euo pipefail
+          : > ../conformance-tls.log
+          rm -f /tmp/openid-conformance-*.crt /tmp/openid-conformance-chain.pem
+          for attempt in $(seq 1 30); do
+            openssl s_client \
+              -connect 127.0.0.1:8443 \
+              -servername localhost \
+              -showcerts </dev/null 2>> ../conformance-tls.log \
+              | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
+              > /tmp/openid-conformance-chain.pem || true
+            if grep -q -- '-----BEGIN CERTIFICATE-----' /tmp/openid-conformance-chain.pem; then
+              break
+            fi
+            echo "Waiting for conformance-suite TLS endpoint (${attempt}/30)" | tee -a ../conformance-tls.log
+            sleep 2
+          done
+          test -s /tmp/openid-conformance-chain.pem
+          awk '
+            /-----BEGIN CERTIFICATE-----/ {
+              certificate_index++;
+              certificate_path=sprintf("/tmp/openid-conformance-%02d.crt", certificate_index);
+              in_certificate=1
+            }
+            in_certificate { print > certificate_path }
+            /-----END CERTIFICATE-----/ {
+              in_certificate=0;
+              close(certificate_path)
+            }
+          ' /tmp/openid-conformance-chain.pem
+          sudo cp /tmp/openid-conformance-*.crt /usr/local/share/ca-certificates/
+          sudo update-ca-certificates 2>&1 | tee -a ../conformance-tls.log
+
+      - name: Install conformance runner dependencies
+        run: python3 -m pip install --user httpx selenium
+
+      - name: Write conformance plan configs
+        run: |
+          mkdir -p conformance-results conformance-config
+          python3 signaculum-core/conformance/write-config.py \
+            signaculum-core/conformance/configs/basic.json \
+            conformance-config/basic.json
+          python3 signaculum-core/conformance/write-config.py \
+            signaculum-core/conformance/configs/logout.json \
+            conformance-config/logout.json
+          python3 signaculum-core/conformance/write-config.py \
+            signaculum-core/conformance/configs/backchannel.json \
+            conformance-config/backchannel.json
+          python3 -m json.tool conformance-config/basic.json > /dev/null
+          python3 -m json.tool conformance-config/logout.json > /dev/null
+          python3 -m json.tool conformance-config/backchannel.json > /dev/null
+
+      - name: Run OIDC conformance plans
+        env:
+          CONFORMANCE_DEV_MODE: 1
+          CONFORMANCE_SERVER: https://nginx:8443/
+          CONFORMANCE_SERVER_MTLS: https://nginx:8444/
+          SELENIUM_REMOTE_URL: http://127.0.0.1:4444/wd/hub
+          CONFORMANCE_BROWSER_VISIT_TIMEOUT: 90
+          CONFORMANCE_BROWSER_LOGIN_REDIRECT_TIMEOUT: 60
+          SIGNACULUM_CONFORMANCE_DIR: ${{ github.workspace }}/signaculum-core/conformance
+        run: |
+          cd conformance-suite
+          : > ../conformance-runner.log
+          test_plan_status=0
+          missing_export_status=0
+
+          run_conformance_plan() {
+            local plan_invocation="$1"
+            local config_path="$2"
+            local export_pattern="$3"
+            local plan_status=0
+
+            echo "::group::Run ${plan_invocation}"
+            set +e
+            python3 scripts/run-test-plan.py \
+              --export-dir ../conformance-results \
+              --verbose \
+              "${plan_invocation}" \
+              "${config_path}" 2>&1 | tee -a ../conformance-runner.log
+            plan_status=${PIPESTATUS[0]}
+            set -e
+            echo "::endgroup::"
+
+            if [ "${plan_status}" -ne 0 ]; then
+              test_plan_status="${plan_status}"
+            fi
+
+            if ! compgen -G "${export_pattern}" > /dev/null; then
+              echo "Missing expected conformance export matching ${export_pattern}" >&2
+              missing_export_status=1
+              if [ "${test_plan_status}" -eq 0 ]; then
+                test_plan_status=1
+              fi
+            fi
+          }
+
+          : > ../conformance-browser.log
+          PYTHONUNBUFFERED=1 python3 ../signaculum-core/conformance/browser-runner.py \
+            >> ../conformance-browser.log 2>&1 &
+          browser_runner_pid=$!
+          tail -n +1 -f ../conformance-browser.log &
+          browser_log_tail_pid=$!
+          cleanup_browser_runner() {
+            kill "${browser_runner_pid}" 2>/dev/null || true
+            kill "${browser_log_tail_pid}" 2>/dev/null || true
+            wait "${browser_runner_pid}" 2>/dev/null || true
+            wait "${browser_log_tail_pid}" 2>/dev/null || true
+          }
+          trap cleanup_browser_runner EXIT
+
+          run_conformance_plan \
+            "oidcc-basic-certification-test-plan[server_metadata=discovery][client_registration=static_client]" \
+            ../conformance-config/basic.json \
+            "../conformance-results/oidcc-basic-certification-test-plan-*.zip"
+
+          run_conformance_plan \
+            "oidcc-rp-initiated-logout-certification-test-plan[response_type=code][client_registration=static_client]" \
+            ../conformance-config/logout.json \
+            "../conformance-results/oidcc-rp-initiated-logout-certification-test-plan-*.zip"
+
+          run_conformance_plan \
+            "oidcc-backchannel-rp-initiated-logout-certification-test-plan[response_type=code][client_registration=static_client]" \
+            ../conformance-config/backchannel.json \
+            "../conformance-results/oidcc-backchannel-rp-initiated-logout-certification-test-plan-*.zip"
+
+          cleanup_browser_runner
+          trap - EXIT
+
+          echo "::group::Failing modules (if any)"
+          python3 ../signaculum-core/conformance/check-results.py \
+            --results-dir ../conformance-results || true
+          echo "::endgroup::"
+
+          set +e
+          python3 ../signaculum-core/conformance/check-results.py \
+            --results-dir ../conformance-results
+          blocking_status=$?
+          set -e
+
+          if [ "${blocking_status}" -ne 0 ]; then
+            if [ "${test_plan_status}" -ne 0 ]; then
+              exit "${test_plan_status}"
+            fi
+            exit "${blocking_status}"
+          fi
+
+          if [ "${missing_export_status}" -ne 0 ]; then
+            exit "${test_plan_status}"
+          fi
+
+          if [ "${test_plan_status}" -ne 0 ]; then
+            echo "Conformance suite exited with ${test_plan_status}, but exported results contain only non-blocking WARNING/REVIEW outcomes."
+          fi
+
+      - name: Collect conformance diagnostics
+        if: always()
+        env:
+          SIGNACULUM_CONFORMANCE_DIR: ${{ github.workspace }}/signaculum-core/conformance
+        run: |
+          if [ -d conformance-suite ]; then
+            (
+              cd conformance-suite
+              docker compose \
+                -f docker-compose-localtest.yml \
+                -f "${SIGNACULUM_CONFORMANCE_DIR}/docker-compose.ci.yml" \
+                logs --no-color server nginx chrome signaculum-proxy
+            ) > conformance-suite.log 2>&1 || true
+          fi
+          if [ -f signaculum-server.pid ]; then
+            kill "$(cat signaculum-server.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload conformance results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: oidc-conformance-results
+          path: |
+            conformance-results
+            conformance-runner.log
+            conformance-browser.log
+            conformance-tls.log
+            conformance-suite.log
+            signaculum-server.log
+          if-no-files-found: warn
