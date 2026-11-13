@@ -142,5 +142,10 @@ class FortifyServiceProvider extends ServiceProvider
                 ($request->input('credential.id') ?: $request->session()->getId()).'|'.$request->ip(),
             );
         });
+
+        RateLimiter::for('password-reset', function (Request $request) {
+            return Limit::perMinute((int) config('oidc.rate_limits.password_reset_per_minute', 5))
+                ->by((string) $request->ip());
+        });
     }
 }
