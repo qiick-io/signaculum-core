@@ -23,8 +23,10 @@ Route::get('branding/{asset}', [BrandingController::class, 'show'])
  * browser session. CSRF is exempt for the endpoint itself so RPs can POST.
  */
 Route::match(['get', 'post'], 'oauth/end-session', EndSessionController::class)
+    ->middleware('throttle:oidc-end-session')
     ->name('oidc.end-session');
 Route::post('oauth/end-session/confirm', [EndSessionController::class, 'confirm'])
+    ->middleware('throttle:oidc-end-session')
     ->name('oidc.end-session.confirm');
 
 Route::middleware(['auth', 'verified'])->group(function () {
