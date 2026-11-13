@@ -25,6 +25,7 @@ final class PendingAuthorizationService
 
     public function __construct(
         private readonly OidcSessionService $oidcSessionService,
+        private readonly AuthenticationContextService $authenticationContextService,
     ) {}
 
     public function remember(string $clientId, ?string $nonce): void
@@ -46,7 +47,12 @@ final class PendingAuthorizationService
     public function pull(string $clientId): AuthorizationContextData
     {
         if (! request()->hasSession()) {
-            return new AuthorizationContextData(nonce: null, authTime: null, oidcSessionId: null);
+            return new AuthorizationContextData(
+                nonce: null,
+                authTime: null,
+                oidcSessionId: null,
+                authenticationMethods: $this->authenticationContextService->amrValues(),
+            );
         }
 
         /** @var array{client_id?: string, nonce?: string|null}|null $pendingAuthorization */
@@ -64,6 +70,7 @@ final class PendingAuthorizationService
             nonce: $isSameClient ? ($pendingAuthorization['nonce'] ?? null) : null,
             authTime: is_int($authTime) ? $authTime : null,
             oidcSessionId: $oidcSessionId,
+            authenticationMethods: $this->authenticationContextService->amrValues(),
         );
     }
 
