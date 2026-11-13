@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function (): void {
             Route::middleware('api')->group(base_path('routes/oidc.php'));
+
+            require base_path('routes/health.php');
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

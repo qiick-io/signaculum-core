@@ -1,6 +1,6 @@
 # qiick checks, from qiick-io/app-ui at the pinned release (docs/new-product.md).
 # Bump the ref together with "ref" in qiick-standards.json and the @qiick URL in components.json.
-# distribution-smoke waits for signaculum:install / signaculum:upgrade (S8).
+# distribution-smoke calls app-ui app-distribution-smoke.yml (signaculum:install / upgrade).
 name: qiick
 
 on:
@@ -31,3 +31,10 @@ jobs:
 
   migrations-frozen:
     uses: qiick-io/app-ui/.github/workflows/migrations-frozen.yml@v0.6.1
+
+  # Check name for required checks: distribution-smoke / smoke
+  distribution-smoke:
+    uses: qiick-io/app-ui/.github/workflows/app-distribution-smoke.yml@v0.6.1
+    with:
+      package: qiick/signaculum-core
+      command: signaculum
