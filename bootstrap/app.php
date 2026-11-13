@@ -4,6 +4,8 @@ use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocaleMiddleware;
+use App\Http\Middleware\SetSecurityHeadersMiddleware;
+use App\Http\Responses\RenderHttpErrorResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -11,6 +13,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -32,6 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsureTwoFactorIsEnabledMiddleware::class,
+            // Last so defense headers apply to the final HTML (app-ui security-headers.md).
+            SetSecurityHeadersMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -48,5 +53,9 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()
                 ->json(['error' => 'invalid_token'], 401)
                 ->header('WWW-Authenticate', 'Bearer error="invalid_token"');
+        });
+
+        $exceptions->render(function (HttpExceptionInterface $exception, Request $request) {
+            return RenderHttpErrorResponse::render($exception, $request);
         });
     })->create();

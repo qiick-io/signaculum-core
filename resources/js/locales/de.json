@@ -42,7 +42,8 @@
         "copy": "Kopieren",
         "clearFilters": "Filter zurücksetzen",
         "sortAscending": "Aufsteigend sortieren",
-        "sortDescending": "Absteigend sortieren"
+        "sortDescending": "Absteigend sortieren",
+        "back": "Zurück"
     },
     "confirmDestructive": {
         "typeToConfirm": "Tippe „{{name}}“ zur Bestätigung"
@@ -396,6 +397,36 @@
                 "filteredDescription": "Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.",
                 "cta": "Neue Anwendung"
             }
+        }
+    },
+    "errors": {
+        "forbidden": {
+            "head": "Nicht erlaubt",
+            "title": "Keine Berechtigung",
+            "description": "Für diese Seite ist eine andere Rolle oder Berechtigung nötig. Bitten Sie einen Instanz-Admin um Zugang.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
+        },
+        "notFound": {
+            "head": "Nicht gefunden",
+            "title": "Seite nicht gefunden",
+            "description": "Diese Adresse gehört zu keiner Seite. Prüfen Sie die URL oder gehen Sie zurück.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
+        },
+        "serverError": {
+            "head": "Etwas ist schiefgelaufen",
+            "title": "Etwas ist schiefgelaufen",
+            "description": "Es ist ein unerwarteter Fehler aufgetreten. Versuchen Sie es gleich erneut.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
+        },
+        "serviceUnavailable": {
+            "head": "Nicht verfügbar",
+            "title": "Vorübergehend nicht verfügbar",
+            "description": "Signaculum ist kurz nicht erreichbar. Bitte versuchen Sie es bald erneut.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
         }
     }
 }
