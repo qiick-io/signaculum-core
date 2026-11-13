@@ -31,9 +31,12 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `code_challenge_methods_supported`: `S256`
 - `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, plus user claims below
 - `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false`
+- `authorization_response_iss_parameter_supported`: `true` (RFC 9207)
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
 - No front-channel logout fields
+
+Authorization redirects from `/oauth/authorize` (success and error) include `iss` equal to the configured issuer (RFC 9207 §2), via `AddIssuerToAuthorizationResponseMiddleware`.
 
 ## PKCE and nonce
 

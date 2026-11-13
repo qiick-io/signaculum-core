@@ -21,6 +21,7 @@ test('discovery publishes the qiick protocol profile', function () {
             'code_challenge_methods_supported' => ['S256'],
             'scopes_supported' => ['openid', 'profile', 'email'],
             'end_session_endpoint' => 'https://id.example.test/oauth/end-session',
+            'authorization_response_iss_parameter_supported' => true,
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,
         ]);

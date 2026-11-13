@@ -44,6 +44,7 @@ final class DiscoveryDocumentService
             'claims_parameter_supported' => false,
             'request_parameter_supported' => false,
             'request_uri_parameter_supported' => false,
+            'authorization_response_iss_parameter_supported' => true,
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,
         ];

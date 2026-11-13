@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -40,6 +41,8 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsureTwoFactorIsEnabledMiddleware::class,
+            // After the authorize action so Location can gain RFC 9207 `iss`.
+            AddIssuerToAuthorizationResponseMiddleware::class,
             // Last so defense headers apply to the final HTML (app-ui security-headers.md).
             SetSecurityHeadersMiddleware::class,
         ]);
