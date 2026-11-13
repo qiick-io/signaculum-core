@@ -35,6 +35,9 @@ export type ThemeCssPayload = {
 export type ProjectAppearance = {
     themePreset: ThemePresetSlug;
     themeCss: ThemeCssPayload;
+    /** Present when login/consent resolved an organisation branding context (#67). */
+    organizationSlug?: string | null;
+    organizationName?: string | null;
 } & BrandingUrls;
 
 /** Uploaded logo, dark logo and favicon (SettingsRepositoryService::brandingUrls()). */

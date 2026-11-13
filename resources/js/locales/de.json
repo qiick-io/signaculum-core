@@ -590,7 +590,14 @@
         "settings": {
             "head": "Einstellungen — {{name}}",
             "title": "Einstellungen",
-            "description": "Name, Slug und Löschung der Organisation."
+            "description": "Name, Slug, Branding und Löschung der Organisation.",
+            "brandingTitle": "Branding",
+            "brandingDescription": "Logo und Farben auf Login und Zustimmung, wenn diese Organisation im Kontext ist.",
+            "brandColor": "Markenfarbe",
+            "brandColorDark": "Markenfarbe (dunkel)",
+            "logo": "Logo",
+            "logoDark": "Logo (dunkel)",
+            "saveBranding": "Branding speichern"
         },
         "accept": {
             "head": "Organisationseinladung",

@@ -6,8 +6,8 @@ use App\Models\Client;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\ImpersonationService;
+use App\Services\OrganizationBrandingService;
 use App\Services\SettingsRepositoryService;
-use App\Services\ThemePresetService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Spatie\Activitylog\Models\Activity;
@@ -50,16 +50,8 @@ class HandleInertiaRequests extends Middleware
             'locale' => app()->getLocale(),
             'availableLocales' => config('i18n.available_locales'),
             'instanceSettings' => ['reportBugUrl' => $settings->reportBugUrl()],
-            // The saved theme, so the Appearance live preview can restore it when leaving the page.
-            'projectAppearance' => function (): array {
-                $theme = app(ThemePresetService::class)->current();
-
-                return [
-                    'themePreset' => $theme['themePreset'],
-                    ...app(SettingsRepositoryService::class)->brandingUrls(),
-                    'themeCss' => array_intersect_key($theme, array_flip(['light', 'dark', 'brandPrimary', 'brandPrimaryDark', 'brandPrimaryForeground', 'brandPrimaryDarkForeground'])),
-                ];
-            },
+            // Instance theme, with organisation logo/colour overrides when an org context is known.
+            'projectAppearance' => fn (): array => app(OrganizationBrandingService::class)->effectiveAppearance($request),
             'auth' => [
                 'user' => $request->user(),
                 // Only hides UI: the server still checks every request (policies).
