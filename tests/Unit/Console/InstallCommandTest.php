@@ -256,3 +256,28 @@ test('install env helpers escape values and apply mysql credentials', function (
         ->and($isValid->invoke($command, ''))->toBeFalse()
         ->and($apply->invoke($command, $env, 'sqlite', []))->toBe($env);
 });
+
+test('install helpers escape empty values and detect a missing production env', function () {
+    $command = app(InstallCommand::class);
+    $escape = new ReflectionMethod(InstallCommand::class, 'escapeEnvValue');
+    $looksLikeProduction = new ReflectionMethod(InstallCommand::class, 'looksLikeProduction');
+    $environmentValue = new ReflectionMethod(InstallCommand::class, 'environmentValue');
+
+    $escape->setAccessible(true);
+    $looksLikeProduction->setAccessible(true);
+    $environmentValue->setAccessible(true);
+
+    $path = base_path('.env');
+    $backup = File::exists($path) ? File::get($path) : null;
+    File::delete($path);
+
+    try {
+        expect($escape->invoke($command, ''))->toBe('""')
+            ->and($escape->invoke($command, 'plain'))->toBe('plain')
+            ->and($escape->invoke($command, 'hash#tag'))->toBe('"hash#tag"')
+            ->and($looksLikeProduction->invoke($command))->toBeFalse()
+            ->and($environmentValue->invoke($command, 'SIGNACULUM_MISSING_KEY', 'fallback'))->toBe('fallback');
+    } finally {
+        restoreInstallEnv($path, $backup);
+    }
+});
