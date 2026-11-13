@@ -28,6 +28,7 @@ final class DiscoveryDocumentService
             'authorization_endpoint' => $issuer.'/oauth/authorize',
             'token_endpoint' => $issuer.'/oauth/token',
             'userinfo_endpoint' => $issuer.'/oauth/userinfo',
+            'revocation_endpoint' => $issuer.'/oauth/revoke',
             'end_session_endpoint' => $issuer.'/oauth/end-session',
             'jwks_uri' => $issuer.'/.well-known/jwks.json',
             'scopes_supported' => array_map(fn (OidcScopeEnum $scope): string => $scope->value, OidcScopeEnum::cases()),
@@ -37,6 +38,7 @@ final class DiscoveryDocumentService
             'subject_types_supported' => ['public'],
             'id_token_signing_alg_values_supported' => [SigningKeyService::ALGORITHM],
             'token_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post', 'none'],
+            'revocation_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post', 'none'],
             'code_challenge_methods_supported' => ['S256'],
             'claims_supported' => [
                 'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce', 'azp', 'sid', 'amr', 'acr',
