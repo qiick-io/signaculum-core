@@ -129,6 +129,34 @@ test('max_age older than auth_time with prompt=none returns login_required', fun
         ->and($query['iss'])->toBe('https://id.example.test');
 });
 
+test('prompt=none login_required preserves an existing query string on the redirect URI', function () {
+    $redirectUriWithQuery = TEST_REDIRECT_URI.'?app=1';
+    $this->client->forceFill(['redirect_uris' => [$redirectUriWithQuery]])->save();
+
+    Date::setTestNow('2026-11-05 10:00:00');
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+
+    Date::setTestNow('2026-11-05 10:10:00');
+
+    $response = $this->get(authorizeUrl($this->client, $this->pkce['challenge'], [
+        'max_age' => '60',
+        'prompt' => 'none',
+        'redirect_uri' => $redirectUriWithQuery,
+    ]));
+
+    $location = $response->headers->get('Location');
+
+    expect($location)->toStartWith($redirectUriWithQuery.'&')
+        ->and($location)->not->toContain('?app=1?');
+
+    $query = redirectQuery($location);
+
+    expect($query['app'])->toBe('1')
+        ->and($query['error'])->toBe('login_required')
+        ->and($query['state'])->toBe('state-123')
+        ->and($query['iss'])->toBe('https://id.example.test');
+});
+
 test('max_age with prompt=none keeps the Signaculum session and does not fan out logout', function () {
     Queue::fake();
 
