@@ -21,6 +21,8 @@ use LogicException;
  * `aud` is the client id and `azp` repeats it; `nonce`, `auth_time` and `sid` come from
  * the authorization request / browser session and are only present when known.
  * `amr` is always present (RFC 8176) from the recorded authentication methods.
+ * `acr` is present only when the authorization request asked for it (`acr_values`
+ * or `claims`), as `urn:qiick:loa:pwd` or `urn:qiick:loa:mfa`.
  */
 final class IdTokenService
 {
@@ -28,6 +30,7 @@ final class IdTokenService
         private readonly SigningKeyService $signingKeyService,
         private readonly OidcClaimsService $oidcClaimsService,
         private readonly RecordClientSessionAction $recordClientSessionAction,
+        private readonly AuthenticationContextService $authenticationContextService,
     ) {}
 
     public function issue(IdTokenRequestData $idTokenRequest): string
@@ -57,6 +60,15 @@ final class IdTokenService
             ->expiresAt($issuedAt->modify('+'.(int) config('oidc.id_token_ttl').' seconds'))
             ->withClaim('azp', $idTokenRequest->clientId)
             ->withClaim('amr', $authenticationMethods);
+
+        if ($idTokenRequest->context->isAcrRequested) {
+            $tokenBuilder = $tokenBuilder->withClaim(
+                'acr',
+                $this->authenticationContextService
+                    ->authenticationContextClass($authenticationMethods)
+                    ->value,
+            );
+        }
 
         if ($idTokenRequest->context->authTime !== null) {
             $tokenBuilder = $tokenBuilder->withClaim('auth_time', $idTokenRequest->context->authTime);

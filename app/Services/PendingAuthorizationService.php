@@ -30,7 +30,7 @@ final class PendingAuthorizationService
         private readonly AuthenticationContextService $authenticationContextService,
     ) {}
 
-    public function remember(string $clientId, ?string $nonce): void
+    public function remember(string $clientId, ?string $nonce, bool $isAcrRequested = false): void
     {
         if (! request()->hasSession()) {
             return;
@@ -39,6 +39,7 @@ final class PendingAuthorizationService
         request()->session()->put(self::PENDING_SESSION_KEY, [
             'client_id' => $clientId,
             'nonce' => $nonce,
+            'is_acr_requested' => $isAcrRequested,
         ]);
     }
 
@@ -83,10 +84,11 @@ final class PendingAuthorizationService
                 authTime: null,
                 oidcSessionId: null,
                 authenticationMethods: $this->authenticationContextService->amrValues(),
+                isAcrRequested: false,
             );
         }
 
-        /** @var array{client_id?: string, nonce?: string|null}|null $pendingAuthorization */
+        /** @var array{client_id?: string, nonce?: string|null, is_acr_requested?: bool}|null $pendingAuthorization */
         $pendingAuthorization = request()->session()->pull(self::PENDING_SESSION_KEY);
         $isSameClient = ($pendingAuthorization['client_id'] ?? null) === $clientId;
         $isMaxAgeRequested = (bool) request()->session()->pull(self::MAX_AGE_REQUESTED_SESSION_KEY, false);
@@ -107,6 +109,7 @@ final class PendingAuthorizationService
             authTime: $authTime,
             oidcSessionId: $oidcSessionId,
             authenticationMethods: $this->authenticationContextService->amrValues(),
+            isAcrRequested: $isSameClient && (bool) ($pendingAuthorization['is_acr_requested'] ?? false),
         );
     }
 

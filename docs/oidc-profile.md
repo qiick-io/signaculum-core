@@ -29,7 +29,8 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `id_token_signing_alg_values_supported`: `RS256`
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `none`
 - `code_challenge_methods_supported`: `S256`
-- `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, `amr`, plus user claims below
+- `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, `amr`, `acr`, plus user claims below
+- `acr_values_supported`: `urn:qiick:loa:pwd`, `urn:qiick:loa:mfa`
 - `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false`
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
@@ -63,7 +64,7 @@ User claims come from `OidcClaimsService` (same values in `id_token` and userinf
 | `profile`  | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
 | `email`    | `email`, `email_verified`                                                                                                                                     |
 
-**Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, `auth_time` when known (and **always** when the authorization request carried `max_age`), **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login), **`amr`** (always present; RFC 8176).
+**Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, `auth_time` when known (and **always** when the authorization request carried `max_age`), **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login), **`amr`** (always present; RFC 8176), optional **`acr`** (only when requested).
 
 #### `amr` (RFC 8176)
 
@@ -79,13 +80,20 @@ Always emitted on the `id_token` from methods recorded at login (`Authentication
 
 A remember-me **recaller** login (session restored from the cookie, `Auth::viaRemember()`) does **not** record a fresh `pwd`: the user did not type a password on that request. Interactive password login with the "remember me" checkbox still records `pwd` as usual. When the recaller leaves the session without recorded methods, `amr` falls back to `pwd` as for any other unsigned method list.
 
-`acr` is out of scope for this slice (emit only when requested; see #69).
+#### `acr` (OIDC Core §2 / §5.1)
+
+Emitted **only** when the authorization request includes a non-empty `acr_values` parameter or a `claims` JSON object that asks for `id_token.acr`. Discovery lists `acr_values_supported`. Values (Decision 2026-11-13):
+
+| Value               | When                                               |
+| ------------------- | -------------------------------------------------- |
+| `urn:qiick:loa:pwd` | Password-only authentication (`amr` without `mfa`) |
+| `urn:qiick:loa:mfa` | MFA satisfied (`amr` includes `mfa`)               |
 
 Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_name` / `last_name` columns use `given_name` / `family_name` when present (`PersonNameData` in `qiick/laravel-oidc`).
 
 ### Still planned (not on this branch)
 
-- `preferred_username`, `picture`, `acr` (S2 remainder / #69)
+- `preferred_username`, `picture`
 - Scope `qiick.orgs` with `orgs`: `[{ id, slug, roles }]` and roles `owner` / `admin` / `member` / `billing` (S5)
 
 ## Token response
