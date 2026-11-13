@@ -3,13 +3,22 @@ import { Head, router, usePage } from '@inertiajs/react';
 import {
     ArrowDownAZ,
     ArrowUpAZ,
+    KeyRound,
     Pencil,
     SearchX,
+    Shield,
+    ShieldOff,
+    UserCheck,
     UserPlus,
+    UserX,
     Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+    ActionsOverflow,
+    type OverflowActionDefinition,
+} from '@/components/admin/actions-overflow';
 import { DataTable } from '@/components/admin/data-table';
 import type { DataTableSort } from '@/components/admin/data-table';
 import { DataTableColumnHeader } from '@/components/admin/data-table-column-header';
@@ -19,6 +28,7 @@ import { PageEmptyState } from '@/components/admin/page-empty-state';
 import { TruncatedText } from '@/components/admin/truncated-text';
 import { UserAvatar } from '@/components/admin/user-avatar';
 import { UserFormDrawer } from '@/components/admin/user-form-drawer';
+import { ConfirmDestructiveDialog } from '@/components/confirm-destructive-dialog';
 import { EmptyStatus } from '@/components/empty-status';
 import { PageLayout } from '@/components/layout/page-layout';
 import { Badge } from '@/components/ui/badge';
@@ -38,8 +48,17 @@ import AppLayout from '@/layouts/app-layout';
 import { listPerPageQuery } from '@/lib/list-per-page';
 import { normalizePaginated } from '@/lib/pagination';
 import type { LaravelPaginated } from '@/lib/pagination';
+import { update as updateActivation } from '@/routes/admin/users/activation';
+import { update as updateInstanceAdmin } from '@/routes/admin/users/instance-admin';
+import { destroy as destroyTwoFactor } from '@/routes/admin/users/two-factor';
 import { index as usersIndex } from '@/routes/admin/users';
 import type { AdminUserRow, BreadcrumbItem, Paginated } from '@/types';
+
+type PendingUserAction =
+    | { type: 'deactivate'; user: AdminUserRow }
+    | { type: 'resetTwoFactor'; user: AdminUserRow }
+    | { type: 'revokeInstanceAdmin'; user: AdminUserRow }
+    | null;
 
 type UserSortField = 'name' | 'email' | 'created_at' | 'updated_at';
 type UserSortDirection = 'asc' | 'desc';
@@ -98,6 +117,8 @@ export default function AdminUsersIndex({
     );
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editing, setEditing] = useState<AdminUserRow | null>(null);
+    const [pendingAction, setPendingAction] = useState<PendingUserAction>(null);
+    const [isConfirming, setIsConfirming] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = useMemo(
         () => [{ title: t('admin.users.title'), href: usersIndex.url() }],
@@ -184,6 +205,135 @@ export default function AdminUsersIndex({
         visit({ sort: nextSort.id, direction: nextSort.direction });
     };
 
+    const rowActionsFor = useCallback(
+        (user: AdminUserRow): OverflowActionDefinition[] => {
+            if (!user.can_update) {
+                return [];
+            }
+
+            const actions: OverflowActionDefinition[] = [
+                user.is_active
+                    ? {
+                          key: 'deactivate',
+                          label: t('admin.users.actions.deactivate'),
+                          icon: UserX,
+                          destructive: true,
+                      }
+                    : {
+                          key: 'reactivate',
+                          label: t('admin.users.actions.reactivate'),
+                          icon: UserCheck,
+                      },
+            ];
+
+            if (user.has_two_factor) {
+                actions.push({
+                    key: 'resetTwoFactor',
+                    label: t('admin.users.actions.resetTwoFactor'),
+                    icon: KeyRound,
+                    destructive: true,
+                });
+            }
+
+            actions.push(
+                user.is_instance_admin
+                    ? {
+                          key: 'revokeInstanceAdmin',
+                          label: t('admin.users.actions.revokeInstanceAdmin'),
+                          icon: ShieldOff,
+                          destructive: true,
+                      }
+                    : {
+                          key: 'grantInstanceAdmin',
+                          label: t('admin.users.actions.grantInstanceAdmin'),
+                          icon: Shield,
+                      },
+            );
+
+            return actions;
+        },
+        [t],
+    );
+
+    const handleRowAction = useCallback(
+        (user: AdminUserRow, key: string): void => {
+            if (key === 'deactivate') {
+                setPendingAction({ type: 'deactivate', user });
+
+                return;
+            }
+
+            if (key === 'reactivate') {
+                router.put(
+                    updateActivation.url(user.id),
+                    { is_active: true },
+                    { preserveScroll: true },
+                );
+
+                return;
+            }
+
+            if (key === 'resetTwoFactor') {
+                setPendingAction({ type: 'resetTwoFactor', user });
+
+                return;
+            }
+
+            if (key === 'grantInstanceAdmin') {
+                router.put(
+                    updateInstanceAdmin.url(user.id),
+                    { is_instance_admin: true },
+                    { preserveScroll: true },
+                );
+
+                return;
+            }
+
+            if (key === 'revokeInstanceAdmin') {
+                setPendingAction({ type: 'revokeInstanceAdmin', user });
+            }
+        },
+        [],
+    );
+
+    const confirmPendingAction = (): void => {
+        if (pendingAction === null) {
+            return;
+        }
+
+        setIsConfirming(true);
+
+        const finish = {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsConfirming(false);
+                setPendingAction(null);
+            },
+        };
+
+        if (pendingAction.type === 'deactivate') {
+            router.put(
+                updateActivation.url(pendingAction.user.id),
+                { is_active: false },
+                finish,
+            );
+
+            return;
+        }
+
+        if (pendingAction.type === 'resetTwoFactor') {
+            router.delete(destroyTwoFactor.url(pendingAction.user.id), finish);
+
+            return;
+        }
+
+        router.put(
+            updateInstanceAdmin.url(pendingAction.user.id),
+            { is_instance_admin: false },
+            finish,
+        );
+    };
+
     const columns: ColumnDef<AdminUserRow>[] = [
         {
             accessorKey: 'name',
@@ -264,6 +414,13 @@ export default function AdminUsersIndex({
                         >
                             <Pencil className="size-3.5" />
                         </HeaderIconButton>
+                        <ActionsOverflow
+                            iconOnly
+                            actions={rowActionsFor(row.original)}
+                            onAction={(key) =>
+                                handleRowAction(row.original, key)
+                            }
+                        />
                     </ButtonGroup>
                 ) : null,
         },
@@ -450,6 +607,56 @@ export default function AdminUsersIndex({
                     }}
                 />
             </Drawer>
+
+            <ConfirmDestructiveDialog
+                open={pendingAction?.type === 'deactivate'}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setPendingAction(null);
+                    }
+                }}
+                title={t('admin.users.confirm.deactivateTitle', {
+                    name: pendingAction?.user.name ?? '',
+                })}
+                description={t('admin.users.confirm.deactivateDescription')}
+                confirmLabel={t('admin.users.actions.deactivate')}
+                confirming={isConfirming}
+                onConfirm={confirmPendingAction}
+            />
+
+            <ConfirmDestructiveDialog
+                open={pendingAction?.type === 'resetTwoFactor'}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setPendingAction(null);
+                    }
+                }}
+                title={t('admin.users.confirm.resetTwoFactorTitle', {
+                    name: pendingAction?.user.name ?? '',
+                })}
+                description={t('admin.users.confirm.resetTwoFactorDescription')}
+                confirmLabel={t('admin.users.actions.resetTwoFactor')}
+                confirming={isConfirming}
+                onConfirm={confirmPendingAction}
+            />
+
+            <ConfirmDestructiveDialog
+                open={pendingAction?.type === 'revokeInstanceAdmin'}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setPendingAction(null);
+                    }
+                }}
+                title={t('admin.users.confirm.revokeInstanceAdminTitle', {
+                    name: pendingAction?.user.name ?? '',
+                })}
+                description={t(
+                    'admin.users.confirm.revokeInstanceAdminDescription',
+                )}
+                confirmLabel={t('admin.users.actions.revokeInstanceAdmin')}
+                confirming={isConfirming}
+                onConfirm={confirmPendingAction}
+            />
         </AppLayout>
     );
 }
