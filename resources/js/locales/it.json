@@ -514,7 +514,7 @@
         "create": "Crea organizzazione",
         "emptyTitle": "Nessuna organizzazione",
         "emptyDescription": "Crea un’organizzazione per raggruppare membri e ruoli per il claim qiick.orgs.",
-        "showDescription": "Impostazioni e membri dell’organizzazione.",
+        "showDescription": "Membri di questa organizzazione.",
         "members": {
             "title": "Membri",
             "description": "Ogni membro può avere uno o più ruoli. Un’organizzazione mantiene sempre almeno un owner.",
@@ -534,6 +534,41 @@
             "description": "Elimina l’organizzazione e tutte le membership. L’azione non è reversibile.",
             "confirmTitle": "Eliminare questa organizzazione?",
             "confirmDescription": "Digita il nome dell’organizzazione per confermare l’eliminazione permanente."
+        },
+        "viewsLabel": "Viste organizzazione",
+        "views": {
+            "members": "Membri",
+            "invitations": "Inviti",
+            "settings": "Impostazioni"
+        },
+        "invitations": {
+            "head": "Inviti — {{name}}",
+            "title": "Inviti",
+            "description": "Invita persone via email. Ricevono un link con scadenza; puoi reinviare o revocare.",
+            "send": "Invia invito",
+            "resend": "Reinvia",
+            "revoke": "Revoca",
+            "empty": "Nessun invito in sospeso.",
+            "expires": "Scade",
+            "expired": "Scaduto"
+        },
+        "settings": {
+            "head": "Impostazioni — {{name}}",
+            "title": "Impostazioni",
+            "description": "Nome, slug e eliminazione dell’organizzazione."
+        },
+        "accept": {
+            "head": "Accetta invito",
+            "title": "Invito all’organizzazione",
+            "description": "Unisciti all’organizzazione con l’email invitata.",
+            "invitedTo": "Sei invitato a {{organization}} come {{email}}.",
+            "roles": "Ruoli: {{roles}}",
+            "expires": "Scade {{date}}",
+            "submit": "Accetta invito",
+            "signInFirst": "Accedi o registrati con l’email invitata per accettare.",
+            "wrongAccount": "Hai effettuato l’accesso con un’email diversa. Cambia account per accettare.",
+            "login": "Accedi",
+            "register": "Registrati"
         }
     }
 }

@@ -514,7 +514,7 @@
         "create": "Create organisation",
         "emptyTitle": "No organisations yet",
         "emptyDescription": "Create an organisation to group members and roles for the qiick.orgs claim.",
-        "showDescription": "Organisation settings and members.",
+        "showDescription": "Members of this organisation.",
         "members": {
             "title": "Members",
             "description": "Each member may hold one or more roles. An organisation always keeps at least one owner.",
@@ -534,6 +534,41 @@
             "description": "Deletes the organisation and every membership. This cannot be undone.",
             "confirmTitle": "Delete this organisation?",
             "confirmDescription": "Type the organisation name to confirm permanent deletion."
+        },
+        "viewsLabel": "Organisation views",
+        "views": {
+            "members": "Members",
+            "invitations": "Invitations",
+            "settings": "Settings"
+        },
+        "invitations": {
+            "head": "Invitations — {{name}}",
+            "title": "Invitations",
+            "description": "Invite people by email. They receive a link that expires; you can resend or revoke.",
+            "send": "Send invitation",
+            "resend": "Resend",
+            "revoke": "Revoke",
+            "empty": "No pending invitations.",
+            "expires": "Expires",
+            "expired": "Expired"
+        },
+        "settings": {
+            "head": "Settings — {{name}}",
+            "title": "Settings",
+            "description": "Organisation name, slug and deletion."
+        },
+        "accept": {
+            "head": "Accept invitation",
+            "title": "Organisation invitation",
+            "description": "Join the organisation with the invited email address.",
+            "invitedTo": "You are invited to {{organization}} as {{email}}.",
+            "roles": "Roles: {{roles}}",
+            "expires": "Expires {{date}}",
+            "submit": "Accept invitation",
+            "signInFirst": "Sign in or register with the invited email to accept.",
+            "wrongAccount": "You are signed in with a different email. Switch account to accept.",
+            "login": "Log in",
+            "register": "Register"
         }
     }
 }

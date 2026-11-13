@@ -66,6 +66,7 @@ final class OrganizationController extends Controller
         $organization->load(['memberships.user:id,first_name,last_name,email']);
 
         return Inertia::render('organizations/show', [
+            'view' => 'members',
             'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,
@@ -82,8 +83,6 @@ final class OrganizationController extends Controller
                 ];
             })->values(),
             'can' => [
-                'update' => $request->user()?->can('update', $organization) ?? false,
-                'delete' => $request->user()?->can('delete', $organization) ?? false,
                 'manageMembers' => $request->user()?->can('manageMembers', $organization) ?? false,
             ],
         ]);
@@ -98,7 +97,7 @@ final class OrganizationController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Organisation updated.')]);
 
-        return to_route('organizations.show', $organization);
+        return to_route('organizations.settings', $organization);
     }
 
     public function destroy(Organization $organization, DeleteOrganizationAction $deleteOrganizationAction): RedirectResponse

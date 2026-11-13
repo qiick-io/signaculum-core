@@ -514,7 +514,7 @@
         "create": "Organisation erstellen",
         "emptyTitle": "Noch keine Organisationen",
         "emptyDescription": "Erstellen Sie eine Organisation, um Mitglieder und Rollen für den Claim qiick.orgs zu gruppieren.",
-        "showDescription": "Organisationseinstellungen und Mitglieder.",
+        "showDescription": "Mitglieder dieser Organisation.",
         "members": {
             "title": "Mitglieder",
             "description": "Jedes Mitglied kann eine oder mehrere Rollen haben. Eine Organisation behält immer mindestens einen Owner.",
@@ -534,6 +534,41 @@
             "description": "Löscht die Organisation und alle Mitgliedschaften. Dies kann nicht rückgängig gemacht werden.",
             "confirmTitle": "Diese Organisation löschen?",
             "confirmDescription": "Geben Sie den Organisationsnamen ein, um die endgültige Löschung zu bestätigen."
+        },
+        "viewsLabel": "Organisationsansichten",
+        "views": {
+            "members": "Mitglieder",
+            "invitations": "Einladungen",
+            "settings": "Einstellungen"
+        },
+        "invitations": {
+            "head": "Einladungen — {{name}}",
+            "title": "Einladungen",
+            "description": "Laden Sie Personen per E-Mail ein. Der Link läuft ab; Sie können erneut senden oder widerrufen.",
+            "send": "Einladung senden",
+            "resend": "Erneut senden",
+            "revoke": "Widerrufen",
+            "empty": "Keine ausstehenden Einladungen.",
+            "expires": "Läuft ab",
+            "expired": "Abgelaufen"
+        },
+        "settings": {
+            "head": "Einstellungen — {{name}}",
+            "title": "Einstellungen",
+            "description": "Name, Slug und Löschung der Organisation."
+        },
+        "accept": {
+            "head": "Einladung annehmen",
+            "title": "Organisationseinladung",
+            "description": "Treten Sie der Organisation mit der eingeladenen E-Mail bei.",
+            "invitedTo": "Sie sind zu {{organization}} als {{email}} eingeladen.",
+            "roles": "Rollen: {{roles}}",
+            "expires": "Läuft ab {{date}}",
+            "submit": "Einladung annehmen",
+            "signInFirst": "Melden Sie sich mit der eingeladenen E-Mail an oder registrieren Sie sich.",
+            "wrongAccount": "Sie sind mit einer anderen E-Mail angemeldet. Wechseln Sie das Konto.",
+            "login": "Anmelden",
+            "register": "Registrieren"
         }
     }
 }
