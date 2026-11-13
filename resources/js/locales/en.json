@@ -85,7 +85,8 @@
         "repository": "Repository",
         "settings": "Settings",
         "admin": "Admin",
-        "users": "Users"
+        "users": "Users",
+        "applications": "Applications"
     },
     "realtime": {
         "connected": "Realtime connected",
@@ -334,6 +335,50 @@
                 "filteredTitle": "No users match",
                 "filteredDescription": "Try another search or clear the filters.",
                 "cta": "New user"
+            }
+        },
+        "applications": {
+            "head": "Applications",
+            "title": "Applications",
+            "newApplication": "New application",
+            "searchPlaceholder": "Search applications…",
+            "sortBy": "Sort by",
+            "redirectUriCount": "{{count}} redirect URIs",
+            "columns": {
+                "created": "Created",
+                "updated": "Updated",
+                "name": "Name",
+                "type": "Type",
+                "redirectUris": "Redirect URIs",
+                "actions": "Actions"
+            },
+            "actions": {
+                "edit": "Edit application"
+            },
+            "type": {
+                "confidential": "Confidential",
+                "public": "Public",
+                "firstParty": "First-party"
+            },
+            "form": {
+                "editTitle": "Edit application",
+                "editDescription": "Update the OIDC client name, redirect URIs and flags.",
+                "createDescription": "Register an OIDC client for a relying party. The client secret is generated for confidential apps.",
+                "requiredHint": "Fields marked with * are required.",
+                "nameRequired": "Name *",
+                "redirectUrisRequired": "Redirect URIs *",
+                "redirectUrisHint": "One absolute URL per line. Exact match at runtime.",
+                "confidential": "Confidential client",
+                "confidentialHint": "Uses a client secret at the token endpoint. Turn off for public SPAs.",
+                "firstParty": "First-party qiick app",
+                "firstPartyHint": "Skips the consent screen for signed-in users."
+            },
+            "empty": {
+                "title": "No applications yet",
+                "description": "Register the first OIDC client for this Signaculum instance.",
+                "filteredTitle": "No applications match",
+                "filteredDescription": "Try another search or clear the filters.",
+                "cta": "New application"
             }
         }
     }

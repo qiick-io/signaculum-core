@@ -1,5 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, House, Settings, Users } from 'lucide-react';
+import {
+    AppWindow,
+    BookOpen,
+    FolderGit2,
+    House,
+    Settings,
+    Users,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLogo from '@/components/app-logo';
 import { AppNavUser } from '@/components/app-user-menu';
@@ -16,6 +23,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as adminApplicationsIndex } from '@/routes/admin/applications';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
@@ -26,7 +34,7 @@ import type { NavItem } from '@/types';
  */
 export function AppSidebar() {
     const { t } = useTranslation();
-    const { canManageUsers } = usePage().props.auth;
+    const { canManageUsers, canManageApplications } = usePage().props.auth;
 
     const platformNavItems: MainNavItem[] = [
         {
@@ -42,17 +50,28 @@ export function AppSidebar() {
         },
     ];
 
-    const adminNavItems: MainNavItem[] = canManageUsers
-        ? [
-              {
-                  title: t('nav.users'),
-                  href: adminUsersIndex(),
-                  icon: Users,
-                  activePrefix: '/admin/users',
-              },
-          ]
-        : [];
-
+    const adminNavItems: MainNavItem[] = [
+        ...(canManageUsers
+            ? [
+                  {
+                      title: t('nav.users'),
+                      href: adminUsersIndex(),
+                      icon: Users,
+                      activePrefix: '/admin/users',
+                  } satisfies MainNavItem,
+              ]
+            : []),
+        ...(canManageApplications
+            ? [
+                  {
+                      title: t('nav.applications'),
+                      href: adminApplicationsIndex(),
+                      icon: AppWindow,
+                      activePrefix: '/admin/applications',
+                  } satisfies MainNavItem,
+              ]
+            : []),
+    ];
     const footerNavItems: NavItem[] = [
         {
             title: t('nav.repository'),
