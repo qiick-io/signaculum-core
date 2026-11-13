@@ -13,7 +13,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Settings → Authentication & security: password policy, login attempts per minute,
+ * Settings → Authentication & security: password policy, login rate limit, lockout,
  * self-registration and required two-factor authentication. Excubia's SSO section is left out:
  * Signaculum is the identity provider and has no upstream IdP in v1. Instance admins only
  * (SettingPolicy).
@@ -30,6 +30,8 @@ final class InstanceSecuritySettingsController extends Controller
             'instance' => $this->settings->forEditOnly([
                 'password_policy',
                 'login_max_attempts',
+                'login_lockout_threshold',
+                'login_lockout_minutes',
                 'registration_enabled',
                 'two_factor_required',
             ]),

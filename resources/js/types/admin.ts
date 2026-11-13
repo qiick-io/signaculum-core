@@ -17,6 +17,7 @@ export type AdminUserRow = {
     name: string;
     email: string;
     is_active: boolean;
+    is_locked: boolean;
     is_instance_admin: boolean;
     has_two_factor: boolean;
     email_verified_at: string | null;
