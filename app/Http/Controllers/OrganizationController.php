@@ -93,7 +93,7 @@ final class OrganizationController extends Controller
         Organization $organization,
         UpdateOrganizationAction $updateOrganizationAction,
     ): RedirectResponse {
-        $updateOrganizationAction->execute($organization, $request->toData());
+        $updateOrganizationAction->execute($organization, $request->toData(), $request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Organisation updated.')]);
 

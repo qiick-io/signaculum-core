@@ -8,6 +8,7 @@
 
 ### Added
 
+- Per-organisation MFA requirement: owners/admins can require members to enroll TOTP or a passkey before finishing OAuth authorization; `amr` / `acr` stay truthful; audited in the activity log (#120).
 - Instance-admin editable email templates (verification, password reset, organisation invitation) with en/it/de defaults, preview and fallback to packaged copy.
 - RFC 7662 token introspection at `POST /oauth/introspect` (confidential clients), advertised as `introspection_endpoint` in discovery; inactive / revoked / expired tokens return `{ "active": false }`.
 - OAuth 2.0 `client_credentials` for confidential applications that opt in (Admin → Applications): machine access tokens without `id_token`; discovery `grant_types_supported` includes `client_credentials`.
@@ -31,6 +32,7 @@
 
 ### Upgrade notes
 
+- New migration adds `organizations.is_mfa_required` (default false). Run `php artisan signaculum:upgrade` (or `migrate --force`).
 - `composer create-project` no longer migrates. Run `php artisan signaculum:install` (or `php artisan migrate --force` on a tree that was already installed before this change).
 - Later updates: put the new code in place, install dependencies, then `php artisan signaculum:upgrade`. Do not run `create-project` again.
 - New dependency: `spatie/laravel-activitylog`. Run `composer update` and migrate so the `activity_log` table exists.

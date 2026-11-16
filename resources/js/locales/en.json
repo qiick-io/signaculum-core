@@ -590,7 +590,9 @@
         "settings": {
             "head": "Settings — {{name}}",
             "title": "Settings",
-            "description": "Organisation name, slug, branding and deletion.",
+            "description": "Organisation name, slug, MFA policy, branding and deletion.",
+            "requireMfa": "Members must use two-factor authentication",
+            "requireMfaHint": "Members without TOTP or a passkey are sent to Security before they can authorize an application. Signaculum never claims MFA in amr or acr unless the user actually used a second factor.",
             "brandingTitle": "Branding",
             "brandingDescription": "Logo and colours shown on login and consent when this organisation is in context.",
             "brandColor": "Brand colour",
