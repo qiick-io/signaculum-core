@@ -2,7 +2,7 @@
 
 Signaculum runs the self-hosted OpenID Foundation conformance suite in CI against a disposable instance. Details and local steps live in [`conformance/README.md`](../conformance/README.md).
 
-## What Luca must add as a required check
+## What the maintainer must add as a required check
 
 After the workflow’s first green (or accepted) run, add this check name to branch protection on `develop` and `main` (identical lists):
 
