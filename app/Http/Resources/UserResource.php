@@ -30,7 +30,8 @@ final class UserResource extends JsonResource
      *     email_verified_at: string|null,
      *     created_at: string|null,
      *     updated_at: string|null,
-     *     can_update: bool
+     *     can_update: bool,
+     *     can_impersonate: bool
      * }
      */
     public function toArray(Request $request): array
@@ -52,6 +53,7 @@ final class UserResource extends JsonResource
             'created_at' => $user->created_at?->toIso8601String(),
             'updated_at' => $user->updated_at?->toIso8601String(),
             'can_update' => Gate::allows('update', $user),
+            'can_impersonate' => Gate::allows('impersonate', $user),
         ];
     }
 }

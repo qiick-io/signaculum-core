@@ -19,6 +19,11 @@
         "fabTitle": "Nuova chat",
         "openFullPage": "Apri a schermo intero"
     },
+    "impersonation": {
+        "bannerTitle": "Impersonazione in corso",
+        "bannerDescription": "Stai vedendo l’app con questo account. Quando interrompi torni come {{name}}.",
+        "stop": "Interrompi impersonazione"
+    },
     "common": {
         "actions": "Azioni",
         "cancel": "Annulla",
@@ -363,7 +368,8 @@
                 "resetTwoFactor": "Reimposta il 2FA",
                 "grantInstanceAdmin": "Rendi admin dell'istanza",
                 "revokeInstanceAdmin": "Togli admin dell'istanza",
-                "unlock": "Sblocca accesso"
+                "unlock": "Sblocca accesso",
+                "impersonate": "Impersona"
             },
             "confirm": {
                 "deactivateTitle": "Disattivare {{name}}?",
@@ -492,7 +498,10 @@
             "settings_updated": "Impostazioni aggiornate",
             "consent_granted": "Consenso concesso",
             "token_revoked": "Accesso revocato",
-            "secret_rotated": "Segreto ruotato"
+            "secret_rotated": "Segreto ruotato",
+            "user_impersonation_started": "Impersonazione avviata",
+            "user_impersonation_stopped": "Impersonazione interrotta",
+            "user_impersonation_expired": "Impersonazione scaduta"
         },
         "logs": {
             "default": "Applicazione",
@@ -581,7 +590,14 @@
         "settings": {
             "head": "Impostazioni — {{name}}",
             "title": "Impostazioni",
-            "description": "Nome, slug ed eliminazione dell'organizzazione."
+            "description": "Nome, slug, branding ed eliminazione dell'organizzazione.",
+            "brandingTitle": "Branding",
+            "brandingDescription": "Logo e colori mostrati al login e al consenso quando questa organizzazione è nel contesto.",
+            "brandColor": "Colore brand",
+            "brandColorDark": "Colore brand (scuro)",
+            "logo": "Logo",
+            "logoDark": "Logo (scuro)",
+            "saveBranding": "Salva branding"
         },
         "accept": {
             "head": "Invito all'organizzazione",

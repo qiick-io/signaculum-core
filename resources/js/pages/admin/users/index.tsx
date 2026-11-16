@@ -11,6 +11,7 @@ import {
     ShieldOff,
     UserCheck,
     UserPlus,
+    UserRoundSearch,
     UserX,
     Users,
 } from 'lucide-react';
@@ -50,6 +51,7 @@ import { listPerPageQuery } from '@/lib/list-per-page';
 import { normalizePaginated } from '@/lib/pagination';
 import type { LaravelPaginated } from '@/lib/pagination';
 import { update as updateActivation } from '@/routes/admin/users/activation';
+import { store as storeImpersonation } from '@/routes/admin/users/impersonation';
 import { update as updateInstanceAdmin } from '@/routes/admin/users/instance-admin';
 import { destroy as destroyLockout } from '@/routes/admin/users/lockout';
 import { destroy as destroyTwoFactor } from '@/routes/admin/users/two-factor';
@@ -260,6 +262,14 @@ export default function AdminUsersIndex({
                       },
             );
 
+            if (user.can_impersonate) {
+                actions.push({
+                    key: 'impersonate',
+                    label: t('admin.users.actions.impersonate'),
+                    icon: UserRoundSearch,
+                });
+            }
+
             return actions;
         },
         [t],
@@ -309,6 +319,12 @@ export default function AdminUsersIndex({
 
             if (key === 'revokeInstanceAdmin') {
                 setPendingAction({ type: 'revokeInstanceAdmin', user });
+
+                return;
+            }
+
+            if (key === 'impersonate') {
+                router.post(storeImpersonation.url(user.id));
             }
         },
         [],

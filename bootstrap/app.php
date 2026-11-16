@@ -1,16 +1,20 @@
 <?php
 
+use App\Http\Middleware\CaptureOrganizationBrandingMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
 use App\Http\Middleware\EnsureUserIsActiveMiddleware;
+use App\Http\Middleware\ExpireImpersonationMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocaleMiddleware;
 use App\Http\Middleware\SetSecurityHeadersMiddleware;
+use App\Http\Middleware\VerifyCsrfTokenMiddleware;
 use App\Http\Responses\RenderHttpErrorResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -31,11 +35,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'locale', 'accessibility_high_contrast', 'accessibility_reduce_motion']);
 
         // RPs POST to end-session without a Signaculum CSRF cookie (OIDC RP-Initiated Logout §2).
+        // Authorization-request POST exemption lives in VerifyCsrfTokenMiddleware (not a path
+        // blanket: consent approve on the same URI must keep CSRF).
         $middleware->validateCsrfTokens(except: [
             'oauth/end-session',
         ]);
 
-        $middleware->web(append: [
+        $middleware->web(replace: [
+            PreventRequestForgery::class => VerifyCsrfTokenMiddleware::class,
+        ], append: [
+            CaptureOrganizationBrandingMiddleware::class,
+            // Before EnsureUserIsActive so an expired target restores the actor first.
+            ExpireImpersonationMiddleware::class,
             EnsureUserIsActiveMiddleware::class,
             SetLocaleMiddleware::class,
             HandleAppearance::class,

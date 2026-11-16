@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ApplicationSecretController;
 use App\Http\Controllers\Admin\InstanceAdminController;
 use App\Http\Controllers\Admin\UserActivationController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\UserImpersonationController;
 use App\Http\Controllers\Admin\UserLockoutController;
 use App\Http\Controllers\Admin\UserTwoFactorController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::delete('users/{user}/lockout', [UserLockoutController::class, 'destroy'])->name('users.lockout.destroy');
     Route::delete('users/{user}/two-factor', [UserTwoFactorController::class, 'destroy'])->name('users.two-factor.destroy');
     Route::put('users/{user}/instance-admin', [InstanceAdminController::class, 'update'])->name('users.instance-admin.update');
+    Route::post('users/{user}/impersonation', [UserImpersonationController::class, 'store'])->name('users.impersonation.store');
 
     Route::get('applications', [ApplicationController::class, 'index'])->name('applications.index');
     Route::post('applications', [ApplicationController::class, 'store'])->name('applications.store');
