@@ -194,6 +194,16 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(6)->by((string) $identifier);
         });
+
+        RateLimiter::for('api', function (Request $request) {
+            $apiKey = $request->attributes->get('apiKey');
+            $identifier = is_object($apiKey) && method_exists($apiKey, 'getKey')
+                ? 'api-key:'.$apiKey->getKey()
+                : (string) $request->ip();
+
+            return Limit::perMinute((int) config('api.default_rate_limit_per_minute', 60))
+                ->by($identifier);
+        });
     }
 
     /**
