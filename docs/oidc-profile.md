@@ -98,6 +98,10 @@ Always emitted on the `id_token` from methods recorded at login (`Authentication
 
 A remember-me **recaller** login (session restored from the cookie, `Auth::viaRemember()`) does **not** record a fresh `pwd`: the user did not type a password on that request. Interactive password login with the "remember me" checkbox still records `pwd` as usual. When the recaller leaves the session without recorded methods, `amr` falls back to `pwd` as for any other unsigned method list.
 
+#### Organisation MFA requirement
+
+An organisation owner/admin may set **Members must use two-factor authentication** (`organizations.is_mfa_required`). Members of such an organisation who have not enrolled TOTP or a passkey are redirected to Settings → Security **before** `/oauth/authorize` can complete (intended URL preserved). This does **not** invent `mfa` in `amr` or raise `acr`: those claims stay truthful to the factors used in the session. Instance-wide `two_factor_required` remains a separate setting.
+
 #### `acr` (OIDC Core §2 / §5.1)
 
 Emitted **only** when the authorization request includes a non-empty `acr_values` parameter or a `claims` JSON object that asks for `id_token.acr`. Discovery lists `acr_values_supported`. Values (Decision 2026-11-13):
