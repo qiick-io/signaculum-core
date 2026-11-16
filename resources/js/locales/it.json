@@ -48,7 +48,10 @@
         "clearFilters": "Cancella filtri",
         "sortAscending": "Ordine crescente",
         "sortDescending": "Ordine decrescente",
-        "back": "Indietro"
+        "back": "Indietro",
+        "continue": "Continua",
+        "close": "Chiudi",
+        "confirm": "Conferma"
     },
     "confirmDestructive": {
         "typeToConfirm": "Digita \"{{name}}\" per confermare"
@@ -309,6 +312,42 @@
             "signOutOthers": "Esci da tutti gli altri browser",
             "thisDevice": "Questo dispositivo",
             "title": "Browser connessi"
+        },
+        "deleteAccount": {
+            "title": "Elimina account",
+            "description": "Elimina il tuo account e tutte le sue risorse",
+            "warningTitle": "Attenzione",
+            "warningDescription": "Procedi con cautela: l’operazione non può essere annullata.",
+            "confirmTitle": "Vuoi davvero eliminare il tuo account?",
+            "confirmDescription": "Una volta eliminato l’account, anche tutte le sue risorse e i suoi dati verranno eliminati definitivamente. Inserisci la password per confermare che vuoi eliminare definitivamente il tuo account."
+        },
+        "twoFactor": {
+            "title": "Autenticazione a due fattori",
+            "description": "Gestisci le impostazioni dell’autenticazione a due fattori",
+            "enabledDescription": "All’accesso ti verrà chiesto un PIN sicuro e casuale, che puoi leggere nell’app compatibile TOTP sul tuo telefono.",
+            "disabledDescription": "Quando attivi l’autenticazione a due fattori, all’accesso ti verrà chiesto un PIN sicuro. Puoi leggere il PIN in un’app compatibile TOTP sul tuo telefono.",
+            "enable": "Attiva 2FA",
+            "disable": "Disattiva 2FA",
+            "continueSetup": "Continua la configurazione",
+            "recoveryCodes": {
+                "title": "Codici di recupero 2FA",
+                "description": "I codici di recupero ti permettono di riottenere l’accesso se perdi il dispositivo 2FA. Conservali in un password manager sicuro.",
+                "view": "Mostra i codici di recupero",
+                "hide": "Nascondi i codici di recupero",
+                "regenerate": "Rigenera i codici",
+                "listLabel": "Codici di recupero",
+                "loading": "Caricamento dei codici di recupero",
+                "regenerateHint": "Ogni codice di recupero può essere usato una sola volta per accedere al tuo account e viene poi rimosso. Se te ne servono altri, fai clic su <bold>Rigenera i codici</bold> qui sopra."
+            },
+            "setup": {
+                "manualEntry": "oppure inserisci il codice manualmente",
+                "enabledTitle": "Autenticazione a due fattori attivata",
+                "enabledDescription": "L’autenticazione a due fattori ora è attiva. Scansiona il codice QR o inserisci la chiave di configurazione nella tua app di autenticazione.",
+                "verifyTitle": "Verifica il codice di autenticazione",
+                "verifyDescription": "Inserisci il codice a 6 cifre della tua app di autenticazione",
+                "enableTitle": "Attiva l’autenticazione a due fattori",
+                "enableDescription": "Per completare l’attivazione dell’autenticazione a due fattori, scansiona il codice QR o inserisci la chiave di configurazione nella tua app di autenticazione"
+            }
         }
     },
     "userMenu": {
@@ -344,7 +383,70 @@
     },
     "auth": {
         "firstName": "Nome",
-        "lastName": "Cognome"
+        "lastName": "Cognome",
+        "login": {
+            "title": "Accedi al tuo account",
+            "description": "Inserisci email e password per accedere",
+            "head": "Accedi",
+            "forgotPassword": "Password dimenticata?",
+            "rememberMe": "Ricordami",
+            "submit": "Accedi",
+            "passkey": "Accedi con una passkey",
+            "authenticating": "Autenticazione in corso...",
+            "orContinueWithEmail": "Oppure continua con email",
+            "noAccount": "Non hai un account?",
+            "signUp": "Registrati"
+        },
+        "register": {
+            "title": "Crea un account",
+            "description": "Inserisci i tuoi dati per creare l’account",
+            "head": "Registrati",
+            "submit": "Crea account",
+            "hasAccount": "Hai già un account?",
+            "logIn": "Accedi"
+        },
+        "forgotPassword": {
+            "title": "Password dimenticata",
+            "description": "Inserisci la tua email per ricevere il link di reset",
+            "head": "Password dimenticata",
+            "submit": "Invia link di reset",
+            "orReturn": "Oppure torna a",
+            "logIn": "accedi"
+        },
+        "resetPassword": {
+            "title": "Reimposta password",
+            "description": "Inserisci la nuova password qui sotto",
+            "head": "Reimposta password",
+            "submit": "Reimposta password"
+        },
+        "confirmPassword": {
+            "title": "Conferma password",
+            "description": "Questa è un’area protetta dell’applicazione. Conferma la password per continuare.",
+            "head": "Conferma password",
+            "submit": "Conferma password",
+            "passkey": "Conferma con passkey",
+            "confirming": "Conferma in corso...",
+            "orConfirmWithPassword": "Oppure conferma con password"
+        },
+        "verifyEmail": {
+            "title": "Verifica email",
+            "description": "Verifica il tuo indirizzo email cliccando sul link che ti abbiamo appena inviato.",
+            "head": "Verifica email",
+            "linkSent": "Un nuovo link di verifica è stato inviato all’indirizzo email fornito in fase di registrazione.",
+            "resend": "Reinvia email di verifica",
+            "logOut": "Esci"
+        },
+        "twoFactorChallenge": {
+            "head": "Autenticazione a due fattori",
+            "recoveryTitle": "Codice di recupero",
+            "recoveryDescription": "Conferma l’accesso al tuo account inserendo uno dei codici di recupero di emergenza.",
+            "recoveryToggle": "accedere con un codice di autenticazione",
+            "authTitle": "Codice di autenticazione",
+            "authDescription": "Inserisci il codice fornito dalla tua app di autenticazione.",
+            "authToggle": "accedere con un codice di recupero",
+            "recoveryPlaceholder": "Inserisci il codice di recupero",
+            "orYouCan": "oppure puoi "
+        }
     },
     "admin": {
         "users": {
