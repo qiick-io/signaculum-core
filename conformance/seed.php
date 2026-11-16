@@ -26,20 +26,18 @@ $backchannelBaseUrl = rtrim(getenv('CONFORMANCE_BACKCHANNEL_BASE_URL') ?: 'https
 $email = getenv('OIDC_TEST_USER') ?: 'conformance@signaculum.test';
 $password = getenv('OIDC_TEST_PASSWORD') ?: 'ConformanceTest-Password-1';
 
-$user = User::query()->updateOrCreate(
-    ['email' => $email],
-    [
-        'first_name' => 'Conformance',
-        'last_name' => 'Tester',
-        'password' => $password,
-        'email_verified_at' => now(),
-        'is_active' => true,
-        'is_instance_admin' => false,
-        'locale' => 'en',
-        'failed_login_attempts' => 0,
-        'locked_until' => null,
-    ],
-);
+$user = User::query()->firstOrNew(['email' => $email]);
+$user->forceFill([
+    'first_name' => 'Conformance',
+    'last_name' => 'Tester',
+    'password' => $password,
+    'email_verified_at' => now(),
+    'is_active' => true,
+    'is_instance_admin' => false,
+    'locale' => 'en',
+    'failed_login_attempts' => 0,
+    'locked_until' => null,
+])->save();
 
 /**
  * @param  list<string>  $postLogoutRedirectUris

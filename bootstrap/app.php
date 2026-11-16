@@ -44,7 +44,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'oauth/end-session',
         ]);
 
-        $trustedProxies = config('app.trusted_proxies');
+        // env() here on purpose: withMiddleware runs during package:discover before
+        // the config repository is bound, so config('app.trusted_proxies') would throw.
+        // Omit HEADER_X_FORWARDED_AWS_ELB so X-Forwarded-Proto/Host/Port are trusted
+        // cleanly behind the conformance TLS nginx proxy.
+        $trustedProxies = env('TRUSTED_PROXIES');
 
         if (is_string($trustedProxies) && $trustedProxies !== '') {
             $middleware->trustProxies(
@@ -54,6 +58,10 @@ return Application::configure(basePath: dirname(__DIR__))
                         static fn (string $proxy): string => trim($proxy),
                         explode(',', $trustedProxies),
                     ))),
+                headers: Request::HEADER_X_FORWARDED_FOR
+                    | Request::HEADER_X_FORWARDED_HOST
+                    | Request::HEADER_X_FORWARDED_PORT
+                    | Request::HEADER_X_FORWARDED_PROTO,
             );
         }
 
