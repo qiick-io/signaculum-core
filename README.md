@@ -20,12 +20,12 @@
 
 Every qiick app keeps working standalone with local login. Signaculum is one standard IdP among others (Keycloak, Zitadel, Authentik, Entra ID, …). On the app side, the generic client [`qiick/laravel-oidc`](https://github.com/qiick-io/laravel-oidc) works with any of them.
 
-| | |
-| --- | --- |
-| **Install** | `composer create-project qiick/signaculum-core` · [Install](./docs/install.md) · [Upgrade](./docs/upgrade.md) |
-| **OIDC** | [Protocol profile](./docs/oidc-profile.md) · [Clients](./docs/clients.md) · [Organisations](./docs/organizations.md) · [Keys & backup](./docs/key-rotation-and-backup.md) |
-| **Security** | [SECURITY.md](./SECURITY.md) · [Password policy](./docs/password-policy.md) |
-| **Issues** | [GitHub Issues](https://github.com/qiick-io/signaculum-core/issues) |
+|              |                                                                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Install**  | `composer create-project qiick/signaculum-core` · [Install](./docs/install.md) · [Upgrade](./docs/upgrade.md)                                                             |
+| **OIDC**     | [Protocol profile](./docs/oidc-profile.md) · [Clients](./docs/clients.md) · [Organisations](./docs/organizations.md) · [Keys & backup](./docs/key-rotation-and-backup.md) |
+| **Security** | [SECURITY.md](./SECURITY.md) · [Password policy](./docs/password-policy.md)                                                                                               |
+| **Issues**   | [GitHub Issues](https://github.com/qiick-io/signaculum-core/issues)                                                                                                       |
 
 ## What you get
 
@@ -49,12 +49,12 @@ Password rules are configured under Settings → Authentication & security (leng
 
 ## Requirements
 
-| Requirement | Notes |
-| --- | --- |
-| **PHP 8.4+** | `.php-version` / `composer.json` |
-| **Composer 2** | |
-| **Node.js 24** | `.nvmrc` |
-| **Database** | SQLite (default); MySQL 8 or PostgreSQL 17 supported |
+| Requirement      | Notes                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **PHP 8.4+**     | `.php-version` / `composer.json`                                                                                   |
+| **Composer 2**   |                                                                                                                    |
+| **Node.js 24**   | `.nvmrc`                                                                                                           |
+| **Database**     | SQLite (default); MySQL 8 or PostgreSQL 17 supported                                                               |
 | **Queue worker** | Required for outbound webhooks, email (verification, reset, invitations, email-code login) and back-channel logout |
 
 ## Quick start

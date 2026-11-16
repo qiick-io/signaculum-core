@@ -4,13 +4,13 @@ How to bring up a new Signaculum instance. Updates use [Upgrade](./upgrade.md) â
 
 ## Requirements
 
-| Requirement | Notes |
-| --- | --- |
-| **PHP 8.4+** | Pinned in `.php-version` / `composer.json` (`^8.4`). |
-| **Composer 2** | PHP dependencies. |
-| **Node.js 24** | Pinned in `.nvmrc` and `package.json` `engines`. |
-| **Database** | **SQLite** (default for install, tests and CI); **MySQL 8** or **PostgreSQL 17** for production if you prefer. |
-| **HTTPS** | Required in production for cookies, passkeys and OIDC redirects. Local: [Laravel Herd](https://herd.laravel.com) with `herd secure`. |
+| Requirement      | Notes                                                                                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **PHP 8.4+**     | Pinned in `.php-version` / `composer.json` (`^8.4`).                                                                                                         |
+| **Composer 2**   | PHP dependencies.                                                                                                                                            |
+| **Node.js 24**   | Pinned in `.nvmrc` and `package.json` `engines`.                                                                                                             |
+| **Database**     | **SQLite** (default for install, tests and CI); **MySQL 8** or **PostgreSQL 17** for production if you prefer.                                               |
+| **HTTPS**        | Required in production for cookies, passkeys and OIDC redirects. Local: [Laravel Herd](https://herd.laravel.com) with `herd secure`.                         |
 | **Queue worker** | Needed for mail (verification, password reset, organisation invitations, email-code login), outbound [webhooks](./webhooks.md) and back-channel logout jobs. |
 
 Queue, cache and session default to the `database` driver. Redis is optional (Horizon when Redis is configured).

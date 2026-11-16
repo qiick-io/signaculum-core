@@ -6,15 +6,15 @@ Instance admins register relying parties under **Admin → Applications**. Each 
 
 In the Applications drawer set:
 
-| Field | Meaning |
-| --- | --- |
-| **Name** | Shown on the consent screen. |
-| **Redirect URIs** | One per line. Exact match at runtime (no wildcards). `https` required except localhost. No fragments. |
-| **Post-logout redirect URIs** | Exact match for RP-initiated logout (`post_logout_redirect_uri`). |
-| **Back-channel logout URI** | Absolute URL that accepts `POST` with `logout_token` (optional). |
-| **Confidential / public** | Confidential clients have a secret; public clients use PKCE only (`token_endpoint_auth_methods_supported` includes `none`). |
-| **First-party** | Skips the consent screen for this instance's own apps. |
-| **Allow client credentials** | Opt-in for confidential clients only: machine tokens without a user (`grant_type=client_credentials`). No `id_token`, no refresh token. |
+| Field                         | Meaning                                                                                                                                 |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**                      | Shown on the consent screen.                                                                                                            |
+| **Redirect URIs**             | One per line. Exact match at runtime (no wildcards). `https` required except localhost. No fragments.                                   |
+| **Post-logout redirect URIs** | Exact match for RP-initiated logout (`post_logout_redirect_uri`).                                                                       |
+| **Back-channel logout URI**   | Absolute URL that accepts `POST` with `logout_token` (optional).                                                                        |
+| **Confidential / public**     | Confidential clients have a secret; public clients use PKCE only (`token_endpoint_auth_methods_supported` includes `none`).             |
+| **First-party**               | Skips the consent screen for this instance's own apps.                                                                                  |
+| **Allow client credentials**  | Opt-in for confidential clients only: machine tokens without a user (`grant_type=client_credentials`). No `id_token`, no refresh token. |
 
 On create, Signaculum shows the **client id** and **client secret** once. Store the secret offline; regenerate from the UI if it is lost (confirm dialog). Delete requires typed confirmation.
 
@@ -46,11 +46,11 @@ php artisan oidc:configure \
 
 Typical URIs for the package defaults:
 
-| Purpose | URI |
-| --- | --- |
-| Redirect | `{APP_URL}/auth/oidc/callback` |
-| Post-logout | `{APP_URL}/` (or `oidc.post_logout_redirect_uri`) |
-| Back-channel | `{APP_URL}/auth/oidc/backchannel-logout` |
+| Purpose      | URI                                               |
+| ------------ | ------------------------------------------------- |
+| Redirect     | `{APP_URL}/auth/oidc/callback`                    |
+| Post-logout  | `{APP_URL}/` (or `oidc.post_logout_redirect_uri`) |
+| Back-channel | `{APP_URL}/auth/oidc/backchannel-logout`          |
 
 ## Machine clients
 

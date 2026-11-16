@@ -7,23 +7,23 @@ How to move an existing Signaculum install to a newer release. **Do not** run `c
 1. Put the new code in place (git merge / checkout of a release tag, image pull, or `signaculum:upgrade --sync-upstream=vX.Y.Z`).
 2. Install dependencies and rebuild the frontend:
 
-   ```bash
-   composer install --no-dev --optimize-autoloader
-   npm ci
-   npm run build
-   ```
+    ```bash
+    composer install --no-dev --optimize-autoloader
+    npm ci
+    npm run build
+    ```
 
 3. Run the upgrade command:
 
-   ```bash
-   php artisan signaculum:upgrade
-   ```
+    ```bash
+    php artisan signaculum:upgrade
+    ```
 
-   In production:
+    In production:
 
-   ```bash
-   php artisan signaculum:upgrade --force
-   ```
+    ```bash
+    php artisan signaculum:upgrade --force
+    ```
 
 `signaculum:upgrade` migrates (unless `--no-migrate`), runs any version-specific data steps, and clears caches. It does **not** run Composer or npm.
 

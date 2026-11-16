@@ -2,9 +2,9 @@
 
 ## Supported versions
 
-| Version | Supported |
-| --- | --- |
-| `1.0.0-beta.x` | Security fixes on the latest beta tag only |
+| Version          | Supported                                                  |
+| ---------------- | ---------------------------------------------------------- |
+| `1.0.0-beta.x`   | Security fixes on the latest beta tag only                 |
 | `< 1.0.0-beta.1` | No — pre-tag `develop` snapshots are not a support channel |
 
 Signaculum `v1.0.0-beta.1` is a **beta** identity provider: suitable for evaluation and qiick-suite integration testing, **not** a substitute for a production IdP hardening review. An **external security review is planned before 1.0.0**, not for this beta.

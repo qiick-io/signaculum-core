@@ -4,12 +4,12 @@ Signaculum uses two key sets. Losing either breaks token issuance or verificatio
 
 ## What to back up
 
-| Material | Where | Notes |
-| --- | --- | --- |
-| **APP_KEY** | `.env` | Encrypts signing-key private material at rest and other Laravel encrypted casts. Losing it makes stored private keys unreadable. |
-| **Passport keys** | `storage/oauth-private.key`, `storage/oauth-public.key` | Access / refresh token cryptography (League OAuth2 / Passport). Created by `passport:keys` during `signaculum:install`. |
-| **Database** | Your DB volume / dump | Includes `signing_keys` (id_token JWKS), `oauth_*`, users, organisations, activity log. |
-| **`.env`** | Secure secret store | Issuer URL (`APP_URL` / `OIDC_ISSUER`), DB credentials, mail, etc. Never commit it. |
+| Material          | Where                                                   | Notes                                                                                                                            |
+| ----------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **APP_KEY**       | `.env`                                                  | Encrypts signing-key private material at rest and other Laravel encrypted casts. Losing it makes stored private keys unreadable. |
+| **Passport keys** | `storage/oauth-private.key`, `storage/oauth-public.key` | Access / refresh token cryptography (League OAuth2 / Passport). Created by `passport:keys` during `signaculum:install`.          |
+| **Database**      | Your DB volume / dump                                   | Includes `signing_keys` (id_token JWKS), `oauth_*`, users, organisations, activity log.                                          |
+| **`.env`**        | Secure secret store                                     | Issuer URL (`APP_URL` / `OIDC_ISSUER`), DB credentials, mail, etc. Never commit it.                                              |
 
 Do **not** commit private keys or `.env`. Signing keys are generated on the server and stay there.
 

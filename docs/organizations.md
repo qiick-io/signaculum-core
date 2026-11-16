@@ -4,11 +4,11 @@ Signaculum organisations group people for SSO apps. Membership roles appear on t
 
 ## Model
 
-| Field | Notes |
-| --- | --- |
-| **id** | UUID (stable on the wire). |
-| **slug** | Unique, URL-safe; also on the claim. |
-| **name** | Display name in the UI. |
+| Field               | Notes                                                                                                                                                                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **id**              | UUID (stable on the wire).                                                                                                                                                                                                                                |
+| **slug**            | Unique, URL-safe; also on the claim.                                                                                                                                                                                                                      |
+| **name**            | Display name in the UI.                                                                                                                                                                                                                                   |
 | **is_mfa_required** | When true, members must enroll TOTP or a passkey before finishing OAuth authorization (`amr` / `acr` stay truthful to the session). Follow-up: [#131](https://github.com/qiick-io/signaculum-core/issues/131) (check session `amr`, not enrolment alone). |
 
 Members may hold one or more of: `owner`, `admin`, `member`, `billing` (Decision 2026-11-13). Every organisation must keep **at least one `owner`**.
