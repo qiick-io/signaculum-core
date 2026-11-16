@@ -32,8 +32,11 @@ it('exposes branded default templates for every type and locale', function () {
             $template = $service->defaultFor($type, $locale);
 
             expect($template->subject)->not->toBeEmpty()
-                ->and($template->body)->toContain('{{app_name}}')
-                ->and($template->actionLabel)->not->toBeEmpty();
+                ->and($template->body)->toContain('{{app_name}}');
+
+            if ($type !== EmailTemplateTypeEnum::EmailLoginCode) {
+                expect($template->actionLabel)->not->toBeEmpty();
+            }
         }
     }
 
@@ -138,6 +141,11 @@ it('saves email template overrides', function () {
                     'de' => ['subject' => '', 'body' => '', 'action_label' => ''],
                 ],
                 'invitation' => [
+                    'en' => ['subject' => '', 'body' => '', 'action_label' => ''],
+                    'it' => ['subject' => '', 'body' => '', 'action_label' => ''],
+                    'de' => ['subject' => '', 'body' => '', 'action_label' => ''],
+                ],
+                'email_login_code' => [
                     'en' => ['subject' => '', 'body' => '', 'action_label' => ''],
                     'it' => ['subject' => '', 'body' => '', 'action_label' => ''],
                     'de' => ['subject' => '', 'body' => '', 'action_label' => ''],

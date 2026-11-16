@@ -10,7 +10,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Update organisation name and slug.
+ * Update organisation name, slug and MFA requirement.
  */
 final class UpdateOrganizationRequest extends FormRequest
 {
@@ -39,6 +39,7 @@ final class UpdateOrganizationRequest extends FormRequest
                 'alpha_dash',
                 Rule::unique('organizations', 'slug')->ignore($organization->getKey()),
             ],
+            'is_mfa_required' => ['required', 'boolean'],
         ];
     }
 
@@ -47,6 +48,7 @@ final class UpdateOrganizationRequest extends FormRequest
         return new OrganizationData(
             name: (string) $this->validated('name'),
             slug: (string) $this->validated('slug'),
+            isMfaRequired: $this->boolean('is_mfa_required'),
         );
     }
 }

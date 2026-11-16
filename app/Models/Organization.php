@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $id
  * @property string $name
  * @property string $slug
+ * @property bool $is_mfa_required
  * @property string|null $logo_path
  * @property string|null $logo_dark_path
  * @property string|null $brand_color
@@ -36,11 +37,22 @@ class Organization extends Model
     protected $fillable = [
         'name',
         'slug',
+        'is_mfa_required',
         'logo_path',
         'logo_dark_path',
         'brand_color',
         'brand_color_dark',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_mfa_required' => 'boolean',
+        ];
+    }
 
     public function getRouteKeyName(): string
     {
