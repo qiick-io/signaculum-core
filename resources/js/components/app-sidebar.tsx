@@ -5,6 +5,7 @@ import {
     Building2,
     FolderGit2,
     House,
+    KeyRound,
     ScrollText,
     Settings,
     Users,
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as adminActivityLogsIndex } from '@/routes/admin/activity-logs';
+import { index as adminApiKeysIndex } from '@/routes/admin/api-keys';
 import { index as adminApplicationsIndex } from '@/routes/admin/applications';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { index as organizationsIndex } from '@/routes/organizations';
@@ -38,8 +40,12 @@ import type { NavItem } from '@/types';
  */
 export function AppSidebar() {
     const { t } = useTranslation();
-    const { canManageUsers, canManageApplications, canShowActivityLogs } =
-        usePage().props.auth;
+    const {
+        canManageUsers,
+        canManageApplications,
+        canShowActivityLogs,
+        canManageSettings,
+    } = usePage().props.auth;
 
     const platformNavItems: MainNavItem[] = [
         {
@@ -89,6 +95,16 @@ export function AppSidebar() {
                       href: adminActivityLogsIndex(),
                       icon: ScrollText,
                       activePrefix: '/admin/activity-logs',
+                  } satisfies MainNavItem,
+              ]
+            : []),
+        ...(canManageSettings
+            ? [
+                  {
+                      title: t('nav.apiKeys'),
+                      href: adminApiKeysIndex(),
+                      icon: KeyRound,
+                      activePrefix: '/admin/api-keys',
                   } satisfies MainNavItem,
               ]
             : []),

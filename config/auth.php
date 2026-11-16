@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\User;
 
 return [
@@ -119,5 +121,16 @@ return [
     */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Email login code (passwordless)
+    |--------------------------------------------------------------------------
+    |
+    | Minutes until a one-time email sign-in code expires (#121).
+    |
+    */
+
+    'email_login_code_expire_minutes' => (int) env('AUTH_EMAIL_LOGIN_CODE_EXPIRE_MINUTES', 10),
 
 ];

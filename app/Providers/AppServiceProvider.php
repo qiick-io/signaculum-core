@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use App\Enums\EmailTemplateTypeEnum;
 use App\Enums\OidcScopeEnum;
+use App\Enums\WebhookEventEnum;
 use App\Http\Controllers\Oidc\AuthorizationEndpointPostController;
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
@@ -18,6 +21,7 @@ use App\Policies\ApplicationPolicy;
 use App\Services\EmailTemplateService;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
+use App\Services\WebhookDispatcherService;
 use Carbon\CarbonImmutable;
 use DateInterval;
 use Illuminate\Auth\Events\Failed;
@@ -47,6 +51,10 @@ use Spatie\Activitylog\Facades\Activity;
 use Spatie\Activitylog\Models\Activity as ActivityModel;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Boots Signaculum application defaults: Passport OIDC wiring, rate limits,
+ * activity logging, transactional mail templates, and shared auth listeners.
+ */
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -187,6 +195,20 @@ class AppServiceProvider extends ServiceProvider
             $identifier = $request->user()?->getAuthIdentifier() ?? $request->ip();
 
             return Limit::perMinute(6)->by((string) $identifier);
+        });
+
+        RateLimiter::for('api', function (Request $request) {
+            $apiKey = $request->attributes->get('apiKey');
+            $identifier = is_object($apiKey) && method_exists($apiKey, 'getKey')
+                ? 'api-key:'.$apiKey->getKey()
+                : (string) $request->ip();
+
+            return Limit::perMinute((int) config('api.default_rate_limit_per_minute', 60))
+                ->by($identifier);
+        });
+
+        RateLimiter::for('email-login-code', function (Request $request) {
+            return Limit::perMinute(5)->by(strtolower((string) $request->input('email', '')).'|'.$request->ip());
         });
     }
 
@@ -426,6 +448,11 @@ class AppServiceProvider extends ServiceProvider
                 ->useLog('auth')
                 ->event('login')
                 ->log('User logged in');
+
+            app(WebhookDispatcherService::class)->dispatch(WebhookEventEnum::UserSignedIn, [
+                'id' => $event->user->subject,
+                'email' => $event->user->email,
+            ]);
         });
 
         Event::listen(Logout::class, function (Logout $event): void {

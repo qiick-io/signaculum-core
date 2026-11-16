@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import i18n from 'i18next';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
@@ -14,12 +15,15 @@ type Props = {
     passwordRules: string;
 };
 
+/**
+ * Guest auth: create an account when self-registration is enabled.
+ */
 export default function Register({ passwordRules }: Props) {
     const { t } = useTranslation();
 
     return (
         <>
-            <Head title="Register" />
+            <Head title={t('auth.register.head')} />
             <Form
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
@@ -62,7 +66,9 @@ export default function Register({ passwordRules }: Props) {
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="email">
+                                    {t('common.emailAddress')}
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -76,14 +82,16 @@ export default function Register({ passwordRules }: Props) {
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="password">Password</Label>
+                                <Label htmlFor="password">
+                                    {t('common.password')}
+                                </Label>
                                 <PasswordInput
                                     id="password"
                                     required
                                     tabIndex={3}
                                     autoComplete="new-password"
                                     name="password"
-                                    placeholder="Password"
+                                    placeholder={t('common.password')}
                                     passwordrules={passwordRules}
                                 />
                                 <InputError message={errors.password} />
@@ -91,7 +99,7 @@ export default function Register({ passwordRules }: Props) {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="password_confirmation">
-                                    Confirm password
+                                    {t('common.confirmPassword')}
                                 </Label>
                                 <PasswordInput
                                     id="password_confirmation"
@@ -99,7 +107,7 @@ export default function Register({ passwordRules }: Props) {
                                     tabIndex={4}
                                     autoComplete="new-password"
                                     name="password_confirmation"
-                                    placeholder="Confirm password"
+                                    placeholder={t('common.confirmPassword')}
                                     passwordrules={passwordRules}
                                 />
                                 <InputError
@@ -114,14 +122,14 @@ export default function Register({ passwordRules }: Props) {
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
-                                Create account
+                                {t('auth.register.submit')}
                             </Button>
                         </div>
 
                         <div className="text-center text-sm text-muted-foreground">
-                            Already have an account?{' '}
+                            {t('auth.register.hasAccount')}{' '}
                             <TextLink href={login()} tabIndex={6}>
-                                Log in
+                                {t('auth.register.logIn')}
                             </TextLink>
                         </div>
                     </>
@@ -132,6 +140,10 @@ export default function Register({ passwordRules }: Props) {
 }
 
 Register.layout = {
-    title: 'Create an account',
-    description: 'Enter your details below to create your account',
+    get title(): string {
+        return i18n.t('auth.register.title');
+    },
+    get description(): string {
+        return i18n.t('auth.register.description');
+    },
 };

@@ -65,7 +65,9 @@ export function DataTableToolbar({
                     <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         value={search}
-                        onChange={(e) => onSearchChange(e.target.value)}
+                        onChange={(event) =>
+                            onSearchChange(event.target.value)
+                        }
                         placeholder={searchPlaceholder}
                         aria-label={searchPlaceholder}
                         maxLength={searchMaxLength}

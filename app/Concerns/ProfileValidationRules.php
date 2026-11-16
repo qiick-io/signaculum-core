@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Concerns;
 
 use App\Models\User;
@@ -7,6 +9,10 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
+/**
+ * Shared name and email validation rules for profile forms (Fortify and Settings).
+ * Lives under Concerns to keep the starter-kit trait name and location.
+ */
 trait ProfileValidationRules
 {
     /**
