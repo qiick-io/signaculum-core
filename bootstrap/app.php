@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CaptureOrganizationBrandingMiddleware;
+use App\Http\Middleware\EnsureOrganizationMfaIsSatisfiedMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
 use App\Http\Middleware\EnsureUserIsActiveMiddleware;
 use App\Http\Middleware\ExpireImpersonationMiddleware;
@@ -53,6 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsureTwoFactorIsEnabledMiddleware::class,
+            EnsureOrganizationMfaIsSatisfiedMiddleware::class,
             // Last so defense headers apply to the final HTML (app-ui security-headers.md).
             SetSecurityHeadersMiddleware::class,
         ]);

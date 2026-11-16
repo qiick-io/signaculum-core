@@ -19,26 +19,26 @@ export function TruncatedText({ text, className }: TruncatedTextProps) {
     const [truncated, setTruncated] = useState(false);
 
     const measure = useCallback(() => {
-        const el = ref.current;
+        const element = ref.current;
 
-        if (!el) {
+        if (!element) {
             return;
         }
 
-        setTruncated(el.scrollWidth > el.clientWidth + 1);
+        setTruncated(element.scrollWidth > element.clientWidth + 1);
     }, []);
 
     useLayoutEffect(() => {
         measure();
 
-        const el = ref.current;
+        const element = ref.current;
 
-        if (!el || typeof ResizeObserver === 'undefined') {
+        if (!element || typeof ResizeObserver === 'undefined') {
             return;
         }
 
         const observer = new ResizeObserver(() => measure());
-        observer.observe(el);
+        observer.observe(element);
 
         return () => observer.disconnect();
     }, [measure, text]);

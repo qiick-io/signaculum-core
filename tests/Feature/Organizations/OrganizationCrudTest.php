@@ -106,6 +106,7 @@ test('an owner updates and deletes the organisation', function () {
         ->put(route('organizations.update', $organization), [
             'name' => 'New Name',
             'slug' => 'new-name',
+            'is_mfa_required' => '0',
         ])
         ->assertRedirect(route('organizations.settings', 'new-name'));
 
@@ -134,6 +135,7 @@ test('a member without manage rights cannot update the organisation', function (
         ->put(route('organizations.update', $organization), [
             'name' => 'Hacked',
             'slug' => 'locked',
+            'is_mfa_required' => '1',
         ])
         ->assertForbidden();
 });

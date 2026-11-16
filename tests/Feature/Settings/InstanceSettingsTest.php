@@ -34,7 +34,11 @@ function generalSettingsPayload(array $overrides = []): array
 function securitySettingsPayload(array $overrides = []): array
 {
     return [
-        'password_policy' => 'medium',
+        'password_min_length' => 8,
+        'password_require_mixed_case' => '1',
+        'password_require_numbers' => '1',
+        'password_require_symbols' => '0',
+        'password_reject_compromised' => '0',
         'login_max_attempts' => 3,
         'login_lockout_threshold' => 5,
         'login_lockout_minutes' => 15,
@@ -96,12 +100,16 @@ it('shows the defaults until a value is saved', function () {
 
     $this->actingAs($admin)->get(route('instance.security.edit'))
         ->assertInertia(fn (Assert $page) => $page
+            ->where('instance.password_min_length', 8)
+            ->where('instance.password_require_mixed_case', false)
+            ->where('instance.password_require_numbers', false)
+            ->where('instance.password_require_symbols', false)
+            ->where('instance.password_reject_compromised', false)
             ->where('instance.login_max_attempts', 5)
             ->where('instance.login_lockout_threshold', 5)
             ->where('instance.login_lockout_minutes', 15)
             ->where('instance.registration_enabled', false)
-            ->where('instance.two_factor_required', false)
-            ->where('passwordPolicies', SettingsRepositoryService::PASSWORD_POLICIES));
+            ->where('instance.two_factor_required', false));
 });
 
 it('saves the general settings and the app uses them', function () {
@@ -147,7 +155,11 @@ it('saves the authentication and security settings and the app uses them', funct
 
     $settings = app(SettingsRepositoryService::class);
 
-    expect($settings->passwordPolicy())->toBe('medium')
+    expect($settings->passwordMinLength())->toBe(8)
+        ->and($settings->requiresPasswordMixedCase())->toBeTrue()
+        ->and($settings->requiresPasswordNumbers())->toBeTrue()
+        ->and($settings->requiresPasswordSymbols())->toBeFalse()
+        ->and($settings->rejectsCompromisedPasswords())->toBeFalse()
         ->and($settings->loginMaxAttempts())->toBe(3)
         ->and($settings->isRegistrationEnabled())->toBeFalse()
         ->and($settings->isTwoFactorRequired())->toBeFalse();
@@ -173,7 +185,8 @@ it('turns self-registration on from authentication and security settings', funct
 it('validates the authentication and security settings', function () {
     $this->actingAs(instanceAdmin())
         ->put(route('instance.security.update'), securitySettingsPayload([
-            'password_policy' => 'none',
+            'password_min_length' => 2,
+            'password_require_mixed_case' => 'maybe',
             'login_max_attempts' => 0,
             'login_lockout_threshold' => 0,
             'login_lockout_minutes' => 0,
@@ -181,7 +194,8 @@ it('validates the authentication and security settings', function () {
             'two_factor_required' => 'maybe',
         ]))
         ->assertSessionHasErrors([
-            'password_policy',
+            'password_min_length',
+            'password_require_mixed_case',
             'login_max_attempts',
             'login_lockout_threshold',
             'login_lockout_minutes',

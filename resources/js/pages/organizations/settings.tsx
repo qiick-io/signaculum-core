@@ -12,8 +12,10 @@ import {
 } from '@/components/organizations/organization-view-tabs';
 import { BrandingFileField } from '@/components/settings/branding-file-field';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
+    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -31,6 +33,7 @@ type OrganizationSettingsProps = {
         id: string;
         name: string;
         slug: string;
+        is_mfa_required: boolean;
         brand_color: string | null;
         brand_color_dark: string | null;
         logo_url: string | null;
@@ -44,7 +47,7 @@ type OrganizationSettingsProps = {
 };
 
 /**
- * Organisation → Settings view: name/slug, branding and delete.
+ * Organisation → Settings view: name/slug, MFA requirement, branding and delete.
  */
 export default function OrganizationSettings({
     organization,
@@ -54,6 +57,9 @@ export default function OrganizationSettings({
     const { t } = useTranslation();
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isMfaRequired, setIsMfaRequired] = useState(
+        organization.is_mfa_required,
+    );
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -117,6 +123,12 @@ export default function OrganizationSettings({
                         >
                             {({ processing, errors }) => (
                                 <FieldGroup className="gap-4">
+                                    <input
+                                        type="hidden"
+                                        name="is_mfa_required"
+                                        value={isMfaRequired ? '1' : '0'}
+                                    />
+
                                     <Field
                                         data-invalid={
                                             errors.name ? true : undefined
@@ -149,6 +161,43 @@ export default function OrganizationSettings({
                                             required
                                         />
                                         <FieldError>{errors.slug}</FieldError>
+                                    </Field>
+
+                                    <Field
+                                        data-invalid={
+                                            errors.is_mfa_required
+                                                ? true
+                                                : undefined
+                                        }
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Checkbox
+                                                id="is_mfa_required"
+                                                checked={isMfaRequired}
+                                                onCheckedChange={(checked) =>
+                                                    setIsMfaRequired(
+                                                        checked === true,
+                                                    )
+                                                }
+                                                aria-describedby="is-mfa-required-hint"
+                                            />
+                                            <FieldLabel htmlFor="is_mfa_required">
+                                                {t(
+                                                    'organizations.settings.requireMfa',
+                                                )}
+                                            </FieldLabel>
+                                        </div>
+                                        <FieldDescription
+                                            id="is-mfa-required-hint"
+                                            className="pl-8"
+                                        >
+                                            {t(
+                                                'organizations.settings.requireMfaHint',
+                                            )}
+                                        </FieldDescription>
+                                        <FieldError>
+                                            {errors.is_mfa_required}
+                                        </FieldError>
                                     </Field>
 
                                     <Button

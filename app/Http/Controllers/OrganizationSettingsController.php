@@ -30,6 +30,7 @@ final class OrganizationSettingsController extends Controller
                 'id' => $organization->id,
                 'name' => $organization->name,
                 'slug' => $organization->slug,
+                'is_mfa_required' => (bool) $organization->is_mfa_required,
                 'brand_color' => $organization->brand_color,
                 'brand_color_dark' => $organization->brand_color_dark,
                 'logo_url' => $brandingUrls['logoUrl'],

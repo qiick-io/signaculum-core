@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
@@ -7,6 +9,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 
+/**
+ * Fortify action that validates and stores a new password after a reset link.
+ * Keeps the upstream Fortify class name; wiring lives in FortifyServiceProvider.
+ */
 class ResetUserPassword implements ResetsUserPasswords
 {
     use PasswordValidationRules;

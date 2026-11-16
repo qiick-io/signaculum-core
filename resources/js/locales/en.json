@@ -179,20 +179,12 @@
             },
             "loginMaxAttempts": "Max login attempts per minute",
             "name": "Name",
-            "passwordPolicies": {
-                "medium": {
-                    "description": "Minimum 8 characters, with mixed case letters and at least one number.",
-                    "label": "Medium"
-                },
-                "strong": {
-                    "description": "Minimum 12 characters, mixed case, letters, numbers, symbols, and not found in known data breaches.",
-                    "label": "Strong"
-                },
-                "weak": {
-                    "description": "Minimum 6 characters. No mixed case, numbers, or symbols required.",
-                    "label": "Weak"
-                }
-            },
+            "passwordMinLength": "Minimum password length",
+            "passwordRequireMixedCase": "Require upper and lower case letters",
+            "passwordRequireNumbers": "Require at least one number",
+            "passwordRequireSymbols": "Require at least one symbol",
+            "passwordRejectCompromised": "Reject passwords found in known data breaches",
+            "passwordRejectCompromisedHint": "Off by default. When enabled, Signaculum sends only a short SHA-1 hash prefix of the password to Have I Been Pwned (k-anonymity API). The password itself never leaves this server. See docs/password-policy.md.",
             "passwordPolicy": "Password security",
             "reportBugUrl": "Report bug URL",
             "reportBugUrlHint": "Leave empty to use the Signaculum issue tracker.",
@@ -603,7 +595,9 @@
         "settings": {
             "head": "Settings — {{name}}",
             "title": "Settings",
-            "description": "Organisation name, slug, branding and deletion.",
+            "description": "Organisation name, slug, MFA policy, branding and deletion.",
+            "requireMfa": "Members must use two-factor authentication",
+            "requireMfaHint": "Members without TOTP or a passkey are sent to Security before they can authorize an application. Signaculum never claims MFA in amr or acr unless the user actually used a second factor.",
             "brandingTitle": "Branding",
             "brandingDescription": "Logo and colours shown on login and consent when this organisation is in context.",
             "brandColor": "Brand colour",
