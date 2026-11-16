@@ -13,6 +13,7 @@ First tagged beta of Signaculum: self-hosted OpenID Connect IdP for the qiick su
 
 ### Added
 
+- OpenID Foundation conformance suite in CI (Basic OP, RP-Initiated Logout, Back-Channel Logout): `conformance/` helpers and `.github/workflows/oidc-conformance.yml`; relaxes `OIDC_REQUIRE_PKCE` / `OIDC_REQUIRE_NONCE` only in that job (#107).
 - Admin REST API under `/api/v1` with hashed Bearer API keys, scopes, hand-written OpenAPI at `/api/v1/openapi.json`, and the same `*Action` write path as the UI (#128).
 - Outbound signed webhooks for domain events (Settings → Webhooks), queued delivery with retries, and SSRF validation of delivery URLs (#127).
 - Optional passwordless sign-in with a six-digit email code (off by default): queued mail, editable template, hashed at rest, rate limited, lockout-aware; `amr` = `otp` only (#126).

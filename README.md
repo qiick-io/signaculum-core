@@ -37,6 +37,7 @@ Every qiick app keeps working standalone with local login. Signaculum is one sta
 - Admin UI for users, OIDC applications, activity log, email templates, API keys and instance settings
 - Admin REST API (`/api/v1`) with scoped Bearer API keys and OpenAPI — [Admin API](./docs/admin-api.md)
 - Outbound signed webhooks for domain events (SSRF-guarded delivery URLs) — [Webhooks](./docs/webhooks.md)
+- Tested against the OpenID Foundation conformance suite (Basic OP, RP-initiated and back-channel logout) — [Conformance](./docs/oidc-conformance.md)
 - Self-registration **off by default** (closed IdP); instance admins enable it under Settings → Authentication & security
 
 Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social logins, front-channel logout.
@@ -108,12 +109,13 @@ Local site: [Laravel Herd](https://herd.laravel.com) at `https://signaculum-core
 
 ### Required checks (maintainer)
 
-The list Luca should set on `develop` and `main` is in [docs/required-checks.md](./docs/required-checks.md) (`ci`, `pr-title / commitlint`, `app-ui-drift / standards`, `php-quality / php-quality`, `ui-quality / ui-quality`, `migrations-frozen / migrations-frozen`, `distribution-smoke / smoke`).
+The list the maintainer sets on `develop` and `main` is in [docs/required-checks.md](./docs/required-checks.md) (`ci`, `oidc-conformance`, `pr-title / commitlint`, `app-ui-drift / standards`, `php-quality / php-quality`, `ui-quality / ui-quality`, `migrations-frozen / migrations-frozen`, `distribution-smoke / smoke`).
 
 ## Docs
 
 - [Install](docs/install.md) · [Upgrade](docs/upgrade.md)
 - [OIDC profile](docs/oidc-profile.md) — implemented wire contract
+- [OIDC conformance](docs/oidc-conformance.md) — OpenID Foundation suite in CI and locally ([`conformance/`](conformance/README.md))
 - [OIDC clients](docs/clients.md) · [Organisations](docs/organizations.md) · [Key rotation and backup](docs/key-rotation-and-backup.md)
 - [Admin REST API](docs/admin-api.md) — Bearer API keys, scopes, OpenAPI at `/api/v1/openapi.json`
 - [Outbound webhooks](docs/webhooks.md) — signed domain events with SSRF guard

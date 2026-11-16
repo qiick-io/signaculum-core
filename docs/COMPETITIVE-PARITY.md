@@ -123,7 +123,7 @@ Design v1 explicitly excludes SAML, SCIM, social logins, IdP-initiated login and
 
 Already in the design or checklist: OIDC core (code+PKCE, discovery, JWKS rotation, userinfo, refresh), RP-initiated + back-channel logout, `amr`/`acr`/`prompt`/`max_age`, local accounts with TOTP/passkeys/recovery/email verify/password policy/sessions/self-service, admin users/clients/orgs/invitations, activity log, rate limits, Docker/health/upgrade, conformance CI.
 
-**New proposals** (issues labelled `needs-decision`, `priority:P2` until Luca confirms):
+**New proposals** (issues labelled `needs-decision`, `priority:P2` until the maintainer confirms):
 
 | Gap                                             | Issue | Why parity needs it                                                                                                              |
 | ----------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -134,7 +134,7 @@ Already in the design or checklist: OIDC core (code+PKCE, discovery, JWKS rotati
 | Editable email templates                        | #53   | **Shipped:** Settings → Email templates (verification / reset / invitation), en/it/de defaults, preview, fallback.               |
 | Account data export                             | #54   | GDPR portability; Auth0/Clerk treat export as table stakes for account self-service.                                             |
 
-### Later (milestone `Later`, not beta without Luca’s OK)
+### Later (milestone `Later`, not beta without the maintainer’s OK)
 
 | Gap                          | Issue     | Why later                                                                            |
 | ---------------------------- | --------- | ------------------------------------------------------------------------------------ |

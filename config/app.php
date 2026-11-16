@@ -58,6 +58,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Trusted Proxies
+    |--------------------------------------------------------------------------
+    |
+    | Comma-separated addresses, or `*` behind a TLS terminator such as the
+    | OpenID Foundation conformance proxy. Empty keeps Laravel's default
+    | (no forwarded headers). Never set `*` on a public edge without a
+    | trusted reverse proxy in front.
+    |
+    */
+
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
