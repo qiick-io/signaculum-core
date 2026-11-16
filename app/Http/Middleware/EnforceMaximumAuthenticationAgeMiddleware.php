@@ -38,7 +38,7 @@ final class EnforceMaximumAuthenticationAgeMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->routeIs('passport.authorizations.authorize') || ! $request->isMethod('GET')) {
+        if (! $this->isAuthorizationEndpointEntry($request)) {
             return $next($request);
         }
 
@@ -57,7 +57,7 @@ final class EnforceMaximumAuthenticationAgeMiddleware
             throw new AuthenticationException(guards: ['web']);
         }
 
-        $maxAgeParameter = $request->query('max_age');
+        $maxAgeParameter = $request->input('max_age');
 
         if (! is_string($maxAgeParameter) || $maxAgeParameter === '' || ! ctype_digit($maxAgeParameter)) {
             return $next($request);
@@ -89,13 +89,39 @@ final class EnforceMaximumAuthenticationAgeMiddleware
     }
 
     /**
+     * Authorization request entry (GET or form POST), not consent approve/deny.
+     *
+     * Consent POST carries `auth_token` and must not re-run max_age / prompt=login.
+     */
+    private function isAuthorizationEndpointEntry(Request $request): bool
+    {
+        if ($request->routeIs('passport.authorizations.authorize') && $request->isMethod('GET')) {
+            return true;
+        }
+
+        if (! $request->routeIs('passport.authorizations.approve') || ! $request->isMethod('POST')) {
+            return false;
+        }
+
+        $authToken = $request->input('auth_token');
+
+        if (is_string($authToken) && $authToken !== '') {
+            return false;
+        }
+
+        $responseType = $request->input('response_type');
+
+        return is_string($responseType) && $responseType !== '';
+    }
+
+    /**
      * @return list<string>
      */
     private function promptValues(Request $request): array
     {
         return array_values(array_filter(array_map(
             trim(...),
-            explode(' ', (string) $request->query('prompt', '')),
+            explode(' ', (string) $request->input('prompt', '')),
         )));
     }
 
@@ -116,7 +142,25 @@ final class EnforceMaximumAuthenticationAgeMiddleware
 
         // So Passport does not run its own logout again after the user returns.
         $request->session()->put('promptedForLogin', true);
-        $request->session()->put('url.intended', $request->fullUrl());
+        $request->session()->put('url.intended', $this->authorizationRequestUrl($request));
+    }
+
+    /**
+     * Intended URL after re-authentication: always a GET authorize URL so a later
+     * browser redirect does not depend on a replayed form POST body.
+     */
+    private function authorizationRequestUrl(Request $request): string
+    {
+        $parameters = array_filter(
+            $request->input(),
+            fn (mixed $value, string|int $key): bool => is_string($key)
+                && $key !== '_token'
+                && $key !== 'auth_token'
+                && (is_string($value) || is_numeric($value)),
+            ARRAY_FILTER_USE_BOTH,
+        );
+
+        return url('/oauth/authorize').'?'.http_build_query($parameters, '', '&', PHP_QUERY_RFC3986);
     }
 
     /**
@@ -126,8 +170,8 @@ final class EnforceMaximumAuthenticationAgeMiddleware
      */
     private function loginRequiredRedirect(Request $request): RedirectResponse|Response
     {
-        $clientId = $request->query('client_id');
-        $redirectUri = $request->query('redirect_uri');
+        $clientId = $request->input('client_id');
+        $redirectUri = $request->input('redirect_uri');
 
         if (! is_string($clientId) || $clientId === '' || ! is_string($redirectUri) || $redirectUri === '') {
             abort(401);
@@ -144,7 +188,7 @@ final class EnforceMaximumAuthenticationAgeMiddleware
             'iss' => (string) config('oidc.issuer'),
         ];
 
-        $state = $request->query('state');
+        $state = $request->input('state');
 
         if (is_string($state) && $state !== '') {
             $query['state'] = $state;

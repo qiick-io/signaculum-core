@@ -29,7 +29,8 @@ final class RejectUnsupportedRequestObjectMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->routeIs('passport.authorizations.authorize')) {
+        // GET authorize and form POST authorize (approve route when `response_type` is set).
+        if (! $request->is('oauth/authorize') || $this->isConsentApproval($request)) {
             return $next($request);
         }
 
@@ -44,6 +45,16 @@ final class RejectUnsupportedRequestObjectMiddleware
         $error = $hasRequest ? 'request_not_supported' : 'request_uri_not_supported';
 
         return $this->unsupportedRequestRedirect($request, $error);
+    }
+
+    /**
+     * Passport consent approve/deny carries `auth_token`; leave those alone.
+     */
+    private function isConsentApproval(Request $request): bool
+    {
+        $authToken = $request->input('auth_token');
+
+        return is_string($authToken) && $authToken !== '';
     }
 
     private function hasNonEmptyParameter(Request $request, string $parameter): bool

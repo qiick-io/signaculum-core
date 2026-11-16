@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\EmailTemplateTypeEnum;
 use App\Enums\OidcScopeEnum;
+use App\Http\Controllers\Oidc\AuthorizationEndpointPostController;
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
 use App\Http\Middleware\RejectUnsupportedRequestObjectMiddleware;
@@ -75,6 +76,7 @@ class AppServiceProvider extends ServiceProvider
         $this->attachAuthorizationResponseIssuerMiddleware();
         $this->attachMaximumAuthenticationAgeMiddleware();
         $this->attachUnsupportedRequestObjectMiddleware();
+        $this->configureAuthorizationEndpointPost();
     }
 
     /**
@@ -245,7 +247,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * OIDC Core §3.1.2.1 `max_age` / `prompt=login` only on the authorize endpoint.
+     * OIDC Core §3.1.2.1 `max_age` / `prompt=login` on authorize GET and form POST.
      *
      * Must run before Passport's AuthorizationController so re-authentication does not
      * rely on Passport's own logout (which would fan out back-channel logout).
@@ -254,7 +256,12 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->booted(function (): void {
             foreach (Route::getRoutes()->getRoutes() as $route) {
-                if ($route->getName() === 'passport.authorizations.authorize') {
+                $routeName = $route->getName();
+
+                if (in_array($routeName, [
+                    'passport.authorizations.authorize',
+                    'passport.authorizations.approve',
+                ], true)) {
                     $route->middleware(EnforceMaximumAuthenticationAgeMiddleware::class);
                 }
             }
@@ -265,15 +272,60 @@ class AppServiceProvider extends ServiceProvider
      * OIDC Core §6.1 / §3.1.2.6: reject `request` / `request_uri` when unsupported.
      *
      * Must run before Passport validates the authorization request so a Request Object
-     * never produces a code that ignored `state` / `nonce` from the JWT.
+     * never produces a code that ignored `state` / `nonce` from the JWT. Also on the
+     * approve route name: form POST authorization requests share that path.
      */
     protected function attachUnsupportedRequestObjectMiddleware(): void
     {
         $this->app->booted(function (): void {
             foreach (Route::getRoutes()->getRoutes() as $route) {
-                if ($route->getName() === 'passport.authorizations.authorize') {
+                $routeName = $route->getName();
+
+                if (in_array($routeName, [
+                    'passport.authorizations.authorize',
+                    'passport.authorizations.approve',
+                ], true)) {
                     $route->middleware(RejectUnsupportedRequestObjectMiddleware::class);
                 }
+            }
+        });
+    }
+
+    /**
+     * OIDC Core §3.1.2.1: accept form-serialized POST authorization requests.
+     *
+     * Passport maps POST `/oauth/authorize` to consent approval only (and wraps it in
+     * `auth`). Replace the action with {@see AuthorizationEndpointPostController} and
+     * drop the route-level `auth` middleware so guests can POST an authorization
+     * request and be sent to login, matching GET. Consent still requires a session.
+     */
+    protected function configureAuthorizationEndpointPost(): void
+    {
+        $this->app->booted(function (): void {
+            foreach (Route::getRoutes()->getRoutes() as $route) {
+                if ($route->getName() !== 'passport.authorizations.approve') {
+                    continue;
+                }
+
+                $route->action['uses'] = AuthorizationEndpointPostController::class.'@__invoke';
+                $route->action['controller'] = AuthorizationEndpointPostController::class.'@__invoke';
+
+                $middleware = $route->action['middleware'] ?? [];
+
+                if (! is_array($middleware)) {
+                    continue;
+                }
+
+                $route->action['middleware'] = array_values(array_filter(
+                    $middleware,
+                    function (mixed $name): bool {
+                        if (! is_string($name)) {
+                            return true;
+                        }
+
+                        return $name !== 'auth' && ! str_starts_with($name, 'auth:');
+                    },
+                ));
             }
         });
     }
