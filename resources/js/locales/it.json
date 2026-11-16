@@ -49,6 +49,9 @@
         "sortAscending": "Ordine crescente",
         "sortDescending": "Ordine decrescente",
         "back": "Indietro",
+        "continue": "Continua",
+        "close": "Chiudi",
+        "confirm": "Conferma",
         "edit": "Modifica"
     },
     "confirmDestructive": {
@@ -181,12 +184,20 @@
             },
             "loginMaxAttempts": "Tentativi di login massimi al minuto",
             "name": "Nome",
-            "passwordMinLength": "Lunghezza minima della password",
-            "passwordRequireMixedCase": "Richiedi lettere maiuscole e minuscole",
-            "passwordRequireNumbers": "Richiedi almeno un numero",
-            "passwordRequireSymbols": "Richiedi almeno un simbolo",
-            "passwordRejectCompromised": "Rifiuta password presenti in breach note",
-            "passwordRejectCompromisedHint": "Disattivato di default. Se attivo, Signaculum invia solo un breve prefisso SHA-1 della password a Have I Been Pwned (API k-anonymity). La password non lascia mai questo server. Vedi docs/password-policy.md.",
+            "passwordPolicies": {
+                "medium": {
+                    "description": "Minimo 8 caratteri, con maiuscole e minuscole e almeno un numero.",
+                    "label": "Media"
+                },
+                "strong": {
+                    "description": "Minimo 12 caratteri, maiuscole/minuscole, lettere, numeri, simboli e non presente in breach note.",
+                    "label": "Forte"
+                },
+                "weak": {
+                    "description": "Minimo 6 caratteri. Nessun requisito di maiuscole/minuscole, numeri o simboli.",
+                    "label": "Debole"
+                }
+            },
             "passwordPolicy": "Sicurezza password",
             "reportBugUrl": "URL segnalazione bug",
             "reportBugUrlHint": "Lascia vuoto per usare il tracker delle issue di Signaculum.",
@@ -204,8 +215,6 @@
             "securityTitle": "Sicurezza",
             "twoFactorRequired": "Richiedi autenticazione a due fattori per tutti gli utenti",
             "twoFactorRequiredHint": "Se attiva, gli utenti devono abilitare la 2FA TOTP o registrare una passkey nella pagina Sicurezza prima di usare l'app.",
-            "emailCodeLoginEnabled": "Consenti accesso senza password con codice email",
-            "emailCodeLoginEnabledHint": "Disattivato di default. Gli ospiti possono richiedere un codice a sei cifre via email. Il solo codice registra amr otp e non conta mai come MFA da solo.",
             "retentionTitle": "Conservazione dati",
             "retentionDescription": "Per quanto tempo Signaculum conserva il registro attività. Le voci più vecchie vengono eliminate ogni giorno.",
             "activityRetentionDays": "Registro attività (giorni)",
@@ -234,7 +243,15 @@
                     "invitation": "Invito",
                     "email_login_code": "Codice di accesso email"
                 }
-            }
+            },
+            "passwordMinLength": "Lunghezza minima della password",
+            "passwordRequireMixedCase": "Richiedi lettere maiuscole e minuscole",
+            "passwordRequireNumbers": "Richiedi almeno un numero",
+            "passwordRequireSymbols": "Richiedi almeno un simbolo",
+            "passwordRejectCompromised": "Rifiuta password presenti in breach note",
+            "passwordRejectCompromisedHint": "Disattivato di default. Se attivo, Signaculum invia solo un breve prefisso SHA-1 della password a Have I Been Pwned (API k-anonymity). La password non lascia mai questo server. Vedi docs/password-policy.md.",
+            "emailCodeLoginEnabled": "Consenti accesso senza password con codice email",
+            "emailCodeLoginEnabledHint": "Disattivato di default. Gli ospiti possono richiedere un codice a sei cifre via email. Il solo codice registra amr otp e non conta mai come MFA da solo."
         },
         "layout": {
             "appearance": "Aspetto",
@@ -308,6 +325,42 @@
             "thisDevice": "Questo dispositivo",
             "title": "Browser connessi"
         },
+        "deleteAccount": {
+            "title": "Elimina account",
+            "description": "Elimina il tuo account e tutte le sue risorse",
+            "warningTitle": "Attenzione",
+            "warningDescription": "Procedi con cautela: l’operazione non può essere annullata.",
+            "confirmTitle": "Vuoi davvero eliminare il tuo account?",
+            "confirmDescription": "Una volta eliminato l’account, anche tutte le sue risorse e i suoi dati verranno eliminati definitivamente. Inserisci la password per confermare che vuoi eliminare definitivamente il tuo account."
+        },
+        "twoFactor": {
+            "title": "Autenticazione a due fattori",
+            "description": "Gestisci le impostazioni dell’autenticazione a due fattori",
+            "enabledDescription": "All’accesso ti verrà chiesto un PIN sicuro e casuale, che puoi leggere nell’app compatibile TOTP sul tuo telefono.",
+            "disabledDescription": "Quando attivi l’autenticazione a due fattori, all’accesso ti verrà chiesto un PIN sicuro. Puoi leggere il PIN in un’app compatibile TOTP sul tuo telefono.",
+            "enable": "Attiva 2FA",
+            "disable": "Disattiva 2FA",
+            "continueSetup": "Continua la configurazione",
+            "recoveryCodes": {
+                "title": "Codici di recupero 2FA",
+                "description": "I codici di recupero ti permettono di riottenere l’accesso se perdi il dispositivo 2FA. Conservali in un password manager sicuro.",
+                "view": "Mostra i codici di recupero",
+                "hide": "Nascondi i codici di recupero",
+                "regenerate": "Rigenera i codici",
+                "listLabel": "Codici di recupero",
+                "loading": "Caricamento dei codici di recupero",
+                "regenerateHint": "Ogni codice di recupero può essere usato una sola volta per accedere al tuo account e viene poi rimosso. Se te ne servono altri, fai clic su <bold>Rigenera i codici</bold> qui sopra."
+            },
+            "setup": {
+                "manualEntry": "oppure inserisci il codice manualmente",
+                "enabledTitle": "Autenticazione a due fattori attivata",
+                "enabledDescription": "L’autenticazione a due fattori ora è attiva. Scansiona il codice QR o inserisci la chiave di configurazione nella tua app di autenticazione.",
+                "verifyTitle": "Verifica il codice di autenticazione",
+                "verifyDescription": "Inserisci il codice a 6 cifre della tua app di autenticazione",
+                "enableTitle": "Attiva l’autenticazione a due fattori",
+                "enableDescription": "Per completare l’attivazione dell’autenticazione a due fattori, scansiona il codice QR o inserisci la chiave di configurazione nella tua app di autenticazione"
+            }
+        },
         "webhooks": {
             "head": "Webhook",
             "title": "Webhook",
@@ -362,6 +415,69 @@
     "auth": {
         "firstName": "Nome",
         "lastName": "Cognome",
+        "login": {
+            "title": "Accedi al tuo account",
+            "description": "Inserisci email e password per accedere",
+            "head": "Accedi",
+            "forgotPassword": "Password dimenticata?",
+            "rememberMe": "Ricordami",
+            "submit": "Accedi",
+            "passkey": "Accedi con una passkey",
+            "authenticating": "Autenticazione in corso...",
+            "orContinueWithEmail": "Oppure continua con email",
+            "noAccount": "Non hai un account?",
+            "signUp": "Registrati"
+        },
+        "register": {
+            "title": "Crea un account",
+            "description": "Inserisci i tuoi dati per creare l’account",
+            "head": "Registrati",
+            "submit": "Crea account",
+            "hasAccount": "Hai già un account?",
+            "logIn": "Accedi"
+        },
+        "forgotPassword": {
+            "title": "Password dimenticata",
+            "description": "Inserisci la tua email per ricevere il link di reset",
+            "head": "Password dimenticata",
+            "submit": "Invia link di reset",
+            "orReturn": "Oppure torna a",
+            "logIn": "accedi"
+        },
+        "resetPassword": {
+            "title": "Reimposta password",
+            "description": "Inserisci la nuova password qui sotto",
+            "head": "Reimposta password",
+            "submit": "Reimposta password"
+        },
+        "confirmPassword": {
+            "title": "Conferma password",
+            "description": "Questa è un’area protetta dell’applicazione. Conferma la password per continuare.",
+            "head": "Conferma password",
+            "submit": "Conferma password",
+            "passkey": "Conferma con passkey",
+            "confirming": "Conferma in corso...",
+            "orConfirmWithPassword": "Oppure conferma con password"
+        },
+        "verifyEmail": {
+            "title": "Verifica email",
+            "description": "Verifica il tuo indirizzo email cliccando sul link che ti abbiamo appena inviato.",
+            "head": "Verifica email",
+            "linkSent": "Un nuovo link di verifica è stato inviato all’indirizzo email fornito in fase di registrazione.",
+            "resend": "Reinvia email di verifica",
+            "logOut": "Esci"
+        },
+        "twoFactorChallenge": {
+            "head": "Autenticazione a due fattori",
+            "recoveryTitle": "Codice di recupero",
+            "recoveryDescription": "Conferma l’accesso al tuo account inserendo uno dei codici di recupero di emergenza.",
+            "recoveryToggle": "accedere con un codice di autenticazione",
+            "authTitle": "Codice di autenticazione",
+            "authDescription": "Inserisci il codice fornito dalla tua app di autenticazione.",
+            "authToggle": "accedere con un codice di recupero",
+            "recoveryPlaceholder": "Inserisci il codice di recupero",
+            "orYouCan": "oppure puoi "
+        },
         "emailCode": {
             "head": "Accedi con codice email",
             "orUseCode": "Oppure accedi con un codice monouso via email",
@@ -631,16 +747,16 @@
         "settings": {
             "head": "Impostazioni — {{name}}",
             "title": "Impostazioni",
-            "description": "Nome, slug, policy MFA, branding ed eliminazione dell'organizzazione.",
-            "requireMfa": "I membri devono usare l'autenticazione a due fattori",
-            "requireMfaHint": "I membri senza TOTP o passkey vengono inviati a Sicurezza prima di autorizzare un'applicazione. Signaculum non dichiara mai MFA in amr o acr se l'utente non ha usato un secondo fattore.",
+            "description": "Nome, slug, branding ed eliminazione dell'organizzazione.",
             "brandingTitle": "Branding",
             "brandingDescription": "Logo e colori mostrati al login e al consenso quando questa organizzazione è nel contesto.",
             "brandColor": "Colore brand",
             "brandColorDark": "Colore brand (scuro)",
             "logo": "Logo",
             "logoDark": "Logo (scuro)",
-            "saveBranding": "Salva branding"
+            "saveBranding": "Salva branding",
+            "requireMfa": "I membri devono usare l'autenticazione a due fattori",
+            "requireMfaHint": "I membri senza TOTP o passkey vengono inviati a Sicurezza prima di autorizzare un'applicazione. Signaculum non dichiara mai MFA in amr o acr se l'utente non ha usato un secondo fattore."
         },
         "accept": {
             "head": "Invito all'organizzazione",

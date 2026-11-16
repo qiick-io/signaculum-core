@@ -49,6 +49,9 @@
         "sortAscending": "Sort ascending",
         "sortDescending": "Sort descending",
         "back": "Back",
+        "continue": "Continue",
+        "close": "Close",
+        "confirm": "Confirm",
         "edit": "Edit"
     },
     "confirmDestructive": {
@@ -181,12 +184,20 @@
             },
             "loginMaxAttempts": "Max login attempts per minute",
             "name": "Name",
-            "passwordMinLength": "Minimum password length",
-            "passwordRequireMixedCase": "Require upper and lower case letters",
-            "passwordRequireNumbers": "Require at least one number",
-            "passwordRequireSymbols": "Require at least one symbol",
-            "passwordRejectCompromised": "Reject passwords found in known data breaches",
-            "passwordRejectCompromisedHint": "Off by default. When enabled, Signaculum sends only a short SHA-1 hash prefix of the password to Have I Been Pwned (k-anonymity API). The password itself never leaves this server. See docs/password-policy.md.",
+            "passwordPolicies": {
+                "medium": {
+                    "description": "Minimum 8 characters, with mixed case letters and at least one number.",
+                    "label": "Medium"
+                },
+                "strong": {
+                    "description": "Minimum 12 characters, mixed case, letters, numbers, symbols, and not found in known data breaches.",
+                    "label": "Strong"
+                },
+                "weak": {
+                    "description": "Minimum 6 characters. No mixed case, numbers, or symbols required.",
+                    "label": "Weak"
+                }
+            },
             "passwordPolicy": "Password security",
             "reportBugUrl": "Report bug URL",
             "reportBugUrlHint": "Leave empty to use the Signaculum issue tracker.",
@@ -204,8 +215,6 @@
             "securityTitle": "Security",
             "twoFactorRequired": "Require two-factor authentication for all users",
             "twoFactorRequiredHint": "When enabled, users must enable TOTP 2FA or register a passkey on the Security page before using the app.",
-            "emailCodeLoginEnabled": "Allow passwordless sign-in with an email code",
-            "emailCodeLoginEnabledHint": "Off by default. Guests can request a six-digit code by email. The code alone records amr otp and never counts as MFA by itself.",
             "retentionTitle": "Data retention",
             "retentionDescription": "How long Signaculum keeps the activity log. Older entries are deleted daily.",
             "activityRetentionDays": "Activity log (days)",
@@ -234,7 +243,15 @@
                     "invitation": "Invitation",
                     "email_login_code": "Email sign-in code"
                 }
-            }
+            },
+            "passwordMinLength": "Minimum password length",
+            "passwordRequireMixedCase": "Require upper and lower case letters",
+            "passwordRequireNumbers": "Require at least one number",
+            "passwordRequireSymbols": "Require at least one symbol",
+            "passwordRejectCompromised": "Reject passwords found in known data breaches",
+            "passwordRejectCompromisedHint": "Off by default. When enabled, Signaculum sends only a short SHA-1 hash prefix of the password to Have I Been Pwned (k-anonymity API). The password itself never leaves this server. See docs/password-policy.md.",
+            "emailCodeLoginEnabled": "Allow passwordless sign-in with an email code",
+            "emailCodeLoginEnabledHint": "Off by default. Guests can request a six-digit code by email. The code alone records amr otp and never counts as MFA by itself."
         },
         "layout": {
             "appearance": "Appearance",
@@ -308,6 +325,42 @@
             "thisDevice": "This device",
             "title": "Signed-in browsers"
         },
+        "deleteAccount": {
+            "title": "Delete account",
+            "description": "Delete your account and all of its resources",
+            "warningTitle": "Warning",
+            "warningDescription": "Please proceed with caution, this cannot be undone.",
+            "confirmTitle": "Are you sure you want to delete your account?",
+            "confirmDescription": "Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to confirm you would like to permanently delete your account."
+        },
+        "twoFactor": {
+            "title": "Two-factor authentication",
+            "description": "Manage your two-factor authentication settings",
+            "enabledDescription": "You will be prompted for a secure, random pin during login, which you can retrieve from the TOTP-supported application on your phone.",
+            "disabledDescription": "When you enable two-factor authentication, you will be prompted for a secure pin during login. This pin can be retrieved from a TOTP-supported application on your phone.",
+            "enable": "Enable 2FA",
+            "disable": "Disable 2FA",
+            "continueSetup": "Continue setup",
+            "recoveryCodes": {
+                "title": "2FA recovery codes",
+                "description": "Recovery codes let you regain access if you lose your 2FA device. Store them in a secure password manager.",
+                "view": "View recovery codes",
+                "hide": "Hide recovery codes",
+                "regenerate": "Regenerate codes",
+                "listLabel": "Recovery codes",
+                "loading": "Loading recovery codes",
+                "regenerateHint": "Each recovery code can be used once to access your account and will be removed after use. If you need more, click <bold>Regenerate codes</bold> above."
+            },
+            "setup": {
+                "manualEntry": "or, enter the code manually",
+                "enabledTitle": "Two-factor authentication enabled",
+                "enabledDescription": "Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.",
+                "verifyTitle": "Verify authentication code",
+                "verifyDescription": "Enter the 6-digit code from your authenticator app",
+                "enableTitle": "Enable two-factor authentication",
+                "enableDescription": "To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app"
+            }
+        },
         "webhooks": {
             "head": "Webhooks",
             "title": "Webhooks",
@@ -362,6 +415,69 @@
     "auth": {
         "firstName": "First name",
         "lastName": "Last name",
+        "login": {
+            "title": "Log in to your account",
+            "description": "Enter your email and password below to log in",
+            "head": "Log in",
+            "forgotPassword": "Forgot your password?",
+            "rememberMe": "Remember me",
+            "submit": "Log in",
+            "passkey": "Sign in with a passkey",
+            "authenticating": "Authenticating...",
+            "orContinueWithEmail": "Or continue with email",
+            "noAccount": "Don't have an account?",
+            "signUp": "Sign up"
+        },
+        "register": {
+            "title": "Create an account",
+            "description": "Enter your details below to create your account",
+            "head": "Register",
+            "submit": "Create account",
+            "hasAccount": "Already have an account?",
+            "logIn": "Log in"
+        },
+        "forgotPassword": {
+            "title": "Forgot password",
+            "description": "Enter your email to receive a password reset link",
+            "head": "Forgot password",
+            "submit": "Email password reset link",
+            "orReturn": "Or, return to",
+            "logIn": "log in"
+        },
+        "resetPassword": {
+            "title": "Reset password",
+            "description": "Please enter your new password below",
+            "head": "Reset password",
+            "submit": "Reset password"
+        },
+        "confirmPassword": {
+            "title": "Confirm password",
+            "description": "This is a secure area of the application. Please confirm your password before continuing.",
+            "head": "Confirm password",
+            "submit": "Confirm password",
+            "passkey": "Confirm with passkey",
+            "confirming": "Confirming...",
+            "orConfirmWithPassword": "Or confirm with password"
+        },
+        "verifyEmail": {
+            "title": "Email verification",
+            "description": "Please verify your email address by clicking on the link we just emailed to you.",
+            "head": "Email verification",
+            "linkSent": "A new verification link has been sent to the email address you provided during registration.",
+            "resend": "Resend verification email",
+            "logOut": "Log out"
+        },
+        "twoFactorChallenge": {
+            "head": "Two-factor authentication",
+            "recoveryTitle": "Recovery code",
+            "recoveryDescription": "Please confirm access to your account by entering one of your emergency recovery codes.",
+            "recoveryToggle": "login using an authentication code",
+            "authTitle": "Authentication code",
+            "authDescription": "Enter the authentication code provided by your authenticator application.",
+            "authToggle": "login using a recovery code",
+            "recoveryPlaceholder": "Enter recovery code",
+            "orYouCan": "or you can "
+        },
         "emailCode": {
             "head": "Sign in with email code",
             "orUseCode": "Or sign in with a one-time email code",
@@ -631,16 +747,16 @@
         "settings": {
             "head": "Settings — {{name}}",
             "title": "Settings",
-            "description": "Organisation name, slug, MFA policy, branding and deletion.",
-            "requireMfa": "Members must use two-factor authentication",
-            "requireMfaHint": "Members without TOTP or a passkey are sent to Security before they can authorize an application. Signaculum never claims MFA in amr or acr unless the user actually used a second factor.",
+            "description": "Organisation name, slug, branding and deletion.",
             "brandingTitle": "Branding",
             "brandingDescription": "Logo and colours shown on login and consent when this organisation is in context.",
             "brandColor": "Brand colour",
             "brandColorDark": "Brand colour (dark)",
             "logo": "Logo",
             "logoDark": "Logo (dark)",
-            "saveBranding": "Save branding"
+            "saveBranding": "Save branding",
+            "requireMfa": "Members must use two-factor authentication",
+            "requireMfaHint": "Members without TOTP or a passkey are sent to Security before they can authorize an application. Signaculum never claims MFA in amr or acr unless the user actually used a second factor."
         },
         "accept": {
             "head": "Organisation invitation",
