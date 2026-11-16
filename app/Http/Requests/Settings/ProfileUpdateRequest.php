@@ -1,11 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Settings;
 
 use App\Concerns\ProfileValidationRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Validates profile name and email updates for the signed-in user.
+ */
 class ProfileUpdateRequest extends FormRequest
 {
     use ProfileValidationRules;

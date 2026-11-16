@@ -30,15 +30,7 @@ return [
 
     'ignoring' => [
         'strict types' => [
-            // Laravel starter-kit files keep their upstream form.
-            'App\Actions\Fortify',
-            'App\Concerns',
-            'App\Http\Controllers\Controller',
-            'App\Http\Controllers\Settings',
-            'App\Http\Middleware',
-            'App\Http\Requests\Settings',
-            'App\Models\User',
-            'App\Providers',
+            // Emptied: starter-kit files we own now declare strict_types (#115).
         ],
         'Http\Middleware' => [
             // Starter-kit middleware, never renamed.

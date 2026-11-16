@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
@@ -12,6 +14,9 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Account settings → Profile: show, update, and delete the signed-in user's profile.
+ */
 class ProfileController extends Controller
 {
     /**

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use App\Models\Client;
@@ -12,6 +14,10 @@ use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Spatie\Activitylog\Models\Activity;
 
+/**
+ * Shares Inertia props every page needs (auth user, branding, locale, flash)
+ * so React layouts stay free of per-page bootstrap fetches.
+ */
 class HandleInertiaRequests extends Middleware
 {
     /**

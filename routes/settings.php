@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Controllers\Settings\AccountExportController;
 use App\Http\Controllers\Settings\AppearanceSettingsController;
 use App\Http\Controllers\Settings\BrowserSessionController;
