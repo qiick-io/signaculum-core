@@ -14,6 +14,19 @@ Hybrid, implicit, front-channel and session-management plans stay out of scope (
 
 ## Local run
 
+### Running locally (Docker-only)
+
+On hosts that cannot edit `/etc/hosts`, install host Java/Maven, or bind Signaculum on the host, use the Compose overlay `docker-compose.local.yml` together with the suite’s `docker-compose-localtest.yml` and `docker-compose.ci.yml`:
+
+- Build the suite JAR **inside** a Maven container with a **named** volume for `~/.m2` (never the host home directory).
+- Run Signaculum in a PHP container on the same Compose network (`dunglas/frankenphp:1-php8.4-alpine` or similar); `signaculum-proxy.local.conf` points at that service.
+- Run `browser-runner.py` and `scripts/run-test-plan.py` in a `python:3.12-slim` service on that network so `nginx`, `signaculum-proxy` and `chrome` resolve via Compose DNS.
+- Trust the suite TLS certificate **inside** those containers only. Never change the host trust store.
+
+The browser runner drives Inertia login/consent over HTTP (headless Chromium is unreliable on those forms), confirms RP-initiated logout from the Inertia `data-page` payload, and uploads PNG screenshots to suite REVIEW placeholders (`/api/log/{id}/images/{upload}`).
+
+### Classic host run
+
 Requirements: Docker Compose, PHP 8.4, Composer, Node 24, Java 21 (suite build), Python 3 with `httpx` and `selenium`.
 
 1. Install and build the app (`composer setup`, or `composer install` + `npm ci` + `npm run build`).
