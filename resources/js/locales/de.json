@@ -179,20 +179,12 @@
             },
             "loginMaxAttempts": "Max. Login-Versuche pro Minute",
             "name": "Name",
-            "passwordPolicies": {
-                "medium": {
-                    "description": "Mindestens 8 Zeichen, mit Groß- und Kleinbuchstaben sowie mindestens einer Zahl.",
-                    "label": "Mittel"
-                },
-                "strong": {
-                    "description": "Mindestens 12 Zeichen, Groß-/Kleinbuchstaben, Buchstaben, Zahlen, Sonderzeichen und nicht in bekannten Datenlecks.",
-                    "label": "Stark"
-                },
-                "weak": {
-                    "description": "Mindestens 6 Zeichen. Keine Groß-/Kleinschreibung, Zahlen oder Sonderzeichen erforderlich.",
-                    "label": "Schwach"
-                }
-            },
+            "passwordMinLength": "Mindestlänge des Passworts",
+            "passwordRequireMixedCase": "Groß- und Kleinbuchstaben erforderlich",
+            "passwordRequireNumbers": "Mindestens eine Zahl erforderlich",
+            "passwordRequireSymbols": "Mindestens ein Sonderzeichen erforderlich",
+            "passwordRejectCompromised": "In bekannten Datenlecks gefundene Passwörter ablehnen",
+            "passwordRejectCompromisedHint": "Standardmäßig aus. Wenn aktiviert, sendet Signaculum nur ein kurzes SHA-1-Hash-Präfix des Passworts an Have I Been Pwned (k-Anonymity-API). Das Passwort selbst verlässt diesen Server nie. Siehe docs/password-policy.md.",
             "passwordPolicy": "Passwortsicherheit",
             "reportBugUrl": "URL für Bug melden",
             "reportBugUrlHint": "Leer lassen, um den Issue-Tracker von Signaculum zu verwenden.",
