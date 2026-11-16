@@ -55,15 +55,16 @@ final class DeliverWebhookJob implements ShouldQueue
         }
 
         $attempt = $this->attempts();
+        $authorized = $urlGuard->authorizeOutbound($webhook->url);
 
-        if ($refusal = $urlGuard->validate($webhook->url)) {
-            $this->recordDelivery($webhook, WebhookDelivery::STATUS_REFUSED, null, $refusal, $attempt);
+        if (! $authorized['ok']) {
+            $this->recordDelivery($webhook, WebhookDelivery::STATUS_REFUSED, null, $authorized['reason'], $attempt);
 
             Log::warning('Webhook delivery refused: SSRF guard', [
                 'webhook_id' => $webhook->uuid,
                 'event_id' => $this->eventId,
                 'event_type' => $this->eventType,
-                'reason' => $refusal,
+                'reason' => $authorized['reason'],
             ]);
 
             return;
@@ -87,7 +88,7 @@ final class DeliverWebhookJob implements ShouldQueue
         $timestamp = (string) now()->timestamp;
         $signature = 'sha256='.hash_hmac('sha256', $timestamp.'.'.$payload, $secret);
 
-        $response = Http::timeout(5)
+        $pendingRequest = Http::timeout(5)
             ->connectTimeout(3)
             ->withoutRedirecting()
             ->withHeaders([
@@ -97,8 +98,17 @@ final class DeliverWebhookJob implements ShouldQueue
                 'X-Signaculum-Event' => $this->eventType,
                 'User-Agent' => 'Signaculum-Webhooks/1.0',
             ])
-            ->withBody($payload, 'application/json')
-            ->post($webhook->url);
+            ->withBody($payload, 'application/json');
+
+        if ($authorized['curl_resolve'] !== []) {
+            $pendingRequest = $pendingRequest->withOptions([
+                'curl' => [
+                    CURLOPT_RESOLVE => $authorized['curl_resolve'],
+                ],
+            ]);
+        }
+
+        $response = $pendingRequest->post($webhook->url);
 
         if (! $response->successful()) {
             $this->recordDelivery(

@@ -13,6 +13,10 @@ use Symfony\Component\HttpFoundation\IpUtils;
  * Refuses credentials in the URL, non-http(s) schemes, and private / loopback /
  * link-local / CGNAT / metadata addresses unless the instance setting
  * `webhooks_allow_private_urls` is on. Metadata hosts stay blocked even then.
+ *
+ * Hostnames are resolved for both A and AAAA; if any address is disallowed the
+ * URL is refused. Delivery pins one validated address via CURLOPT_RESOLVE so a
+ * later DNS rebinding answer cannot redirect the HTTP connection.
  */
 final class WebhookUrlGuardService
 {
@@ -65,66 +69,92 @@ final class WebhookUrlGuardService
      */
     public function validate(string $url): ?string
     {
+        $authorized = $this->authorizeOutbound($url);
+
+        return $authorized['ok'] ? null : $authorized['reason'];
+    }
+
+    /**
+     * Validate the URL once and return CURLOPT_RESOLVE entries that pin the checked IP.
+     *
+     * @return array{ok: true, curl_resolve: list<string>}|array{ok: false, reason: string}
+     */
+    public function authorizeOutbound(string $url): array
+    {
         $trimmed = trim($url);
 
         if ($trimmed === '') {
-            return 'URL is required.';
+            return ['ok' => false, 'reason' => 'URL is required.'];
         }
 
         if (strlen($trimmed) > 2048) {
-            return 'URL is too long.';
+            return ['ok' => false, 'reason' => 'URL is too long.'];
         }
 
         $parts = parse_url($trimmed);
 
         if ($parts === false || ! isset($parts['scheme'], $parts['host'])) {
-            return 'Invalid URL.';
+            return ['ok' => false, 'reason' => 'Invalid URL.'];
         }
 
         if (isset($parts['user']) || isset($parts['pass'])) {
-            return 'URL must not contain credentials.';
+            return ['ok' => false, 'reason' => 'URL must not contain credentials.'];
         }
 
         $scheme = strtolower((string) $parts['scheme']);
 
         if (! in_array($scheme, ['https', 'http'], true)) {
-            return 'Only http and https URLs are allowed.';
+            return ['ok' => false, 'reason' => 'Only http and https URLs are allowed.'];
         }
 
         $host = strtolower((string) $parts['host']);
+        $port = isset($parts['port'])
+            ? (int) $parts['port']
+            : ($scheme === 'https' ? 443 : 80);
         $isPrivateAllowed = $this->settings->areWebhookPrivateUrlsAllowed();
 
         if (in_array($host, self::METADATA_HOSTS, true)) {
-            return 'Host is not allowed.';
+            return ['ok' => false, 'reason' => 'Host is not allowed.'];
         }
 
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             if (! $isPrivateAllowed && $this->isBlockedAddress($host)) {
-                return 'Host is not allowed.';
+                return ['ok' => false, 'reason' => 'Host is not allowed.'];
             }
 
-            return null;
+            // Literal IP in the URL — curl already connects there; no resolve pin.
+            return ['ok' => true, 'curl_resolve' => []];
         }
 
         if (! $isPrivateAllowed && $this->isBlockedHostName($host)) {
-            return 'Host is not allowed.';
+            return ['ok' => false, 'reason' => 'Host is not allowed.'];
         }
 
         $resolvedAddresses = $this->resolveHostAddresses($host);
 
-        if ($resolvedAddresses === [] && ! $isPrivateAllowed) {
-            return 'Host could not be resolved.';
+        if ($resolvedAddresses === []) {
+            if (! $isPrivateAllowed) {
+                return ['ok' => false, 'reason' => 'Host could not be resolved.'];
+            }
+
+            // Admin opted into private URLs and DNS returned nothing — cannot pin.
+            return ['ok' => true, 'curl_resolve' => []];
         }
 
         if (! $isPrivateAllowed) {
             foreach ($resolvedAddresses as $address) {
                 if ($this->isBlockedAddress($address)) {
-                    return 'Host resolves to a disallowed address.';
+                    return ['ok' => false, 'reason' => 'Host resolves to a disallowed address.'];
                 }
             }
         }
 
-        return null;
+        $pinnedAddress = $this->preferredPinnedAddress($resolvedAddresses);
+
+        return [
+            'ok' => true,
+            'curl_resolve' => [sprintf('%s:%d:%s', $host, $port, $pinnedAddress)],
+        ];
     }
 
     /**
@@ -133,12 +163,49 @@ final class WebhookUrlGuardService
     private function resolveHostAddresses(string $host): array
     {
         $resolver = $this->hostResolver ?? static function (string $name): array {
-            $addresses = gethostbynamel($name);
+            $records = dns_get_record($name, DNS_A | DNS_AAAA);
 
-            return is_array($addresses) ? $addresses : [];
+            if ($records === false) {
+                return [];
+            }
+
+            $addresses = [];
+
+            foreach ($records as $record) {
+                $type = $record['type'] ?? null;
+
+                if ($type === 'A' && isset($record['ip']) && is_string($record['ip'])) {
+                    $addresses[] = $record['ip'];
+                }
+
+                if ($type === 'AAAA' && isset($record['ipv6']) && is_string($record['ipv6'])) {
+                    $addresses[] = $record['ipv6'];
+                }
+            }
+
+            return array_values(array_unique($addresses));
         };
 
-        return $resolver($host);
+        /** @var list<string> $addresses */
+        $addresses = $resolver($host);
+
+        return $addresses;
+    }
+
+    /**
+     * Prefer an IPv4 pin when both families were validated (curl + Http client quirks).
+     *
+     * @param  non-empty-list<string>  $addresses
+     */
+    private function preferredPinnedAddress(array $addresses): string
+    {
+        foreach ($addresses as $address) {
+            if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+                return $address;
+            }
+        }
+
+        return $addresses[0];
     }
 
     private function isBlockedHostName(string $host): bool

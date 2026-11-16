@@ -5,7 +5,10 @@ Signaculum POSTs a signed JSON body when a subscribed domain event occurs.
 
 This is not telemetry: deliveries go only to URLs an admin registers. Private,
 loopback and link-local hosts are refused unless **Allow private webhook URLs**
-is enabled (local QA). Cloud metadata hosts stay blocked either way.
+is enabled (local QA). Cloud metadata hosts stay blocked either way. Hostname
+targets are resolved for A and AAAA; any disallowed address refuses the URL, and
+delivery pins one validated address with `CURLOPT_RESOLVE` so DNS rebinding
+cannot send the POST elsewhere.
 
 ## Events
 

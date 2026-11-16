@@ -88,6 +88,78 @@ it('refuses private webhook urls unless the instance setting allows them', funct
         ->and($guard->validate('https://169.254.169.254/latest'))->not->toBeNull();
 });
 
+it('refuses a host when any resolved address is disallowed including AAAA', function (): void {
+    $settings = app(SettingsRepositoryService::class);
+    $guard = new WebhookUrlGuardService(
+        $settings,
+        static fn (string $_host): array => ['93.184.216.34', '::1'],
+    );
+
+    expect($guard->validate('https://dual.example.com/hook'))
+        ->toBe('Host resolves to a disallowed address.');
+});
+
+it('pins the validated address so a later private DNS answer cannot be used', function (): void {
+    $settings = app(SettingsRepositoryService::class);
+    $callCount = 0;
+    $guard = new WebhookUrlGuardService(
+        $settings,
+        static function (string $_host) use (&$callCount): array {
+            $callCount++;
+
+            return $callCount === 1 ? ['93.184.216.34'] : ['127.0.0.1'];
+        },
+    );
+
+    $authorized = $guard->authorizeOutbound('https://rebinding.example.com/hook');
+
+    expect($authorized)->toMatchArray([
+        'ok' => true,
+        'curl_resolve' => ['rebinding.example.com:443:93.184.216.34'],
+    ])->and($callCount)->toBe(1);
+
+    // A second resolution would flip to loopback; delivery must keep using the pin.
+    expect($guard->authorizeOutbound('https://rebinding.example.com/hook')['ok'])->toBeFalse();
+});
+
+it('delivers to a hostname using the address pinned by the SSRF guard', function (): void {
+    Http::fake([
+        'hooks.example.com/*' => Http::response(['ok' => true], 200),
+    ]);
+
+    $guard = new WebhookUrlGuardService(
+        app(SettingsRepositoryService::class),
+        static fn (string $_host): array => ['93.184.216.34'],
+    );
+
+    app()->instance(WebhookUrlGuardService::class, $guard);
+
+    expect($guard->authorizeOutbound('https://hooks.example.com/signaculum'))->toMatchArray([
+        'ok' => true,
+        'curl_resolve' => ['hooks.example.com:443:93.184.216.34'],
+    ]);
+
+    $webhook = Webhook::query()->create([
+        'url' => 'https://hooks.example.com/signaculum',
+        'secret' => 'test-signing-secret-value',
+        'events' => [WebhookEventEnum::UserCreated->value],
+        'is_active' => true,
+    ]);
+
+    $job = new DeliverWebhookJob(
+        webhookId: $webhook->getKey(),
+        eventId: '22222222-2222-4222-8222-222222222222',
+        eventType: WebhookEventEnum::UserCreated->value,
+        createdAt: now()->toIso8601String(),
+        data: ['id' => 'subject', 'email' => 'ada@example.com', 'name' => 'Ada'],
+    );
+
+    $job->handle(app(WebhookUrlGuardService::class));
+
+    Http::assertSent(fn ($request): bool => $request->url() === $webhook->url);
+    expect(WebhookDelivery::query()->where('status', WebhookDelivery::STATUS_DELIVERED)->exists())->toBeTrue();
+});
+
 it('lets an instance admin create a webhook endpoint', function (): void {
     $admin = User::factory()->create(['is_instance_admin' => true]);
 
