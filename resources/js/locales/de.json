@@ -19,6 +19,11 @@
         "fabTitle": "Neuer Chat",
         "openFullPage": "Ganze Seite öffnen"
     },
+    "impersonation": {
+        "bannerTitle": "Benutzer wird imitiert",
+        "bannerDescription": "Sie sehen die App als dieses Konto. Nach dem Beenden sind Sie wieder {{name}}.",
+        "stop": "Imitation beenden"
+    },
     "common": {
         "actions": "Aktionen",
         "cancel": "Abbrechen",
@@ -363,7 +368,8 @@
                 "resetTwoFactor": "Zwei-Faktor zurücksetzen",
                 "grantInstanceAdmin": "Zum Instanz-Admin machen",
                 "revokeInstanceAdmin": "Instanz-Admin entziehen",
-                "unlock": "Sperre aufheben"
+                "unlock": "Sperre aufheben",
+                "impersonate": "Imitieren"
             },
             "confirm": {
                 "deactivateTitle": "{{name}} deaktivieren?",
@@ -492,7 +498,10 @@
             "settings_updated": "Einstellungen aktualisiert",
             "consent_granted": "Zustimmung erteilt",
             "token_revoked": "Zugriff widerrufen",
-            "secret_rotated": "Geheimnis rotiert"
+            "secret_rotated": "Geheimnis rotiert",
+            "user_impersonation_started": "Imitation gestartet",
+            "user_impersonation_stopped": "Imitation beendet",
+            "user_impersonation_expired": "Imitation abgelaufen"
         },
         "logs": {
             "default": "Anwendung",
@@ -581,7 +590,14 @@
         "settings": {
             "head": "Einstellungen — {{name}}",
             "title": "Einstellungen",
-            "description": "Name, Slug und Löschung der Organisation."
+            "description": "Name, Slug, Branding und Löschung der Organisation.",
+            "brandingTitle": "Branding",
+            "brandingDescription": "Logo und Farben auf Login und Zustimmung, wenn diese Organisation im Kontext ist.",
+            "brandColor": "Markenfarbe",
+            "brandColorDark": "Markenfarbe (dunkel)",
+            "logo": "Logo",
+            "logoDark": "Logo (dunkel)",
+            "saveBranding": "Branding speichern"
         },
         "accept": {
             "head": "Organisationseinladung",

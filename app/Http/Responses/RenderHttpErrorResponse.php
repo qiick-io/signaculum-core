@@ -41,7 +41,7 @@ final class RenderHttpErrorResponse
 
         if ($status === 404 && $request->user() === null) {
             // Public branding assets (login logos) must return a real 404, not a login redirect.
-            if ($request->routeIs('branding.show')) {
+            if ($request->routeIs('branding.show', 'organizations.branding.show')) {
                 return null;
             }
 

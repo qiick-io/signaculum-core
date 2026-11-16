@@ -18,6 +18,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $id
  * @property string $name
  * @property string $slug
+ * @property string|null $logo_path
+ * @property string|null $logo_dark_path
+ * @property string|null $brand_color
+ * @property string|null $brand_color_dark
  */
 class Organization extends Model
 {
@@ -32,6 +36,10 @@ class Organization extends Model
     protected $fillable = [
         'name',
         'slug',
+        'logo_path',
+        'logo_dark_path',
+        'brand_color',
+        'brand_color_dark',
     ];
 
     public function getRouteKeyName(): string

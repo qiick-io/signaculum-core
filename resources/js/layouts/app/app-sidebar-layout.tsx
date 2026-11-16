@@ -2,6 +2,7 @@ import { AppContent } from '@/components/app-content';
 import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
+import { ImpersonationBanner } from '@/components/impersonation-banner';
 import { SkipToContent } from '@/components/skip-to-content';
 import type { AppLayoutProps } from '@/types';
 
@@ -28,6 +29,7 @@ export default function AppSidebarLayout({
                 className="overflow-hidden"
                 tabIndex={-1}
             >
+                <ImpersonationBanner />
                 <AppSidebarHeader
                     breadcrumbs={breadcrumbs}
                     actions={headerActions}

@@ -6,17 +6,19 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 
 ## Endpoints
 
-| Path                                | Methods       | Notes                                                                               |
-| ----------------------------------- | ------------- | ----------------------------------------------------------------------------------- |
-| `/.well-known/openid-configuration` | `GET`         | Discovery (`DiscoveryController`)                                                   |
-| `/.well-known/jwks.json`            | `GET`         | Public signing keys (`JwksController`), `Cache-Control: public, max-age=300`        |
-| `/oauth/authorize`                  | `GET`, `POST` | Passport authorization + consent UI (`resources/js/pages/oauth/authorize.tsx`)      |
-| `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                                 |
-| `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                        |
-| `/oauth/introspect`                 | `POST`        | RFC 7662 introspection; confidential clients only (`client_secret_basic` / `_post`) |
-| `/oauth/revoke`                     | `POST`        | RFC 7009 token revocation (`revocation_endpoint`)                                   |
-| `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing        |
-| `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                     |
+| Path                                | Methods       | Notes                                                                                                                                                                            |
+| ----------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/.well-known/openid-configuration` | `GET`         | Discovery (`DiscoveryController`)                                                                                                                                                |
+| `/.well-known/jwks.json`            | `GET`         | Public signing keys (`JwksController`), `Cache-Control: public, max-age=300`                                                                                                     |
+| `/oauth/authorize`                  | `GET`, `POST` | Authorization request (GET or form-encoded POST, OIDC Core §3.1.2.1) + consent approve (`POST` with `auth_token`) / deny (`DELETE`); UI `resources/js/pages/oauth/authorize.tsx` |
+| `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                                                                                                                              |
+| `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                                                                                                                     |
+| `/oauth/introspect`                 | `POST`        | RFC 7662 introspection; confidential clients only (`client_secret_basic` / `_post`)                                                                                              |
+| `/oauth/revoke`                     | `POST`        | RFC 7009 token revocation (`revocation_endpoint`)                                                                                                                                |
+| `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing                                                                                                     |
+| `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                                                                                                                  |
+
+Known limitation (`/oauth/authorize` form POST): session cookies use `SameSite=Lax`, so a cross-site RP POST carries no session cookie and the user is asked to sign in again.
 
 ## Discovery fields
 
@@ -35,7 +37,7 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `code_challenge_methods_supported`: `S256`
 - `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, `amr`, `acr`, plus user claims below
 - `acr_values_supported`: `urn:qiick:loa:pwd`, `urn:qiick:loa:mfa`
-- `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false`
+- `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false` (Request Objects are not implemented; see Errors)
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
 - `authorization_response_iss_parameter_supported`: `true` (RFC 9207)
@@ -189,8 +191,10 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 | Situation                                                                                           | Behaviour                                                                                  |
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | PKCE / nonce / consent deny / `prompt=none` without session / `max_age` exceeded with `prompt=none` | Redirect to the registered `redirect_uri` with `error`, echoed `state`, and RFC 9207 `iss` |
+| `request` parameter present (OIDC Core §6.1 / §3.1.2.6)                                             | Redirect with `error=request_not_supported`, `state`, `iss`; never a `code`                |
+| `request_uri` parameter present (OIDC Core §6.1 / §3.1.2.6)                                         | Redirect with `error=request_uri_not_supported`, `state`, `iss`; never a `code`            |
 | `max_age` exceeded (no `prompt=none`) or `prompt=login`                                             | Redirect to Signaculum `/login` (then back to authorize)                                   |
-| Unknown client or unregistered `redirect_uri`                                                       | HTTP 401 (no redirect to an attacker URI)                                                  |
+| Unknown, revoked or unregistered `redirect_uri`                                                     | HTTP 401 (no redirect to an attacker URI)                                                  |
 | Bad token request (verifier, client secret, …)                                                      | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …)                 |
 | Revocation with a wrong client secret                                                               | HTTP 401 `invalid_client`                                                                  |
 | Userinfo without / with invalid Bearer                                                              | 401 `invalid_token` + `WWW-Authenticate`                                                   |

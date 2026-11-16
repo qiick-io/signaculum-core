@@ -19,6 +19,11 @@
         "fabTitle": "New chat",
         "openFullPage": "Open full page"
     },
+    "impersonation": {
+        "bannerTitle": "Impersonating a user",
+        "bannerDescription": "You are viewing the app as this account. Signed in as {{name}} when you stop.",
+        "stop": "Stop impersonation"
+    },
     "common": {
         "actions": "Actions",
         "cancel": "Cancel",
@@ -363,7 +368,8 @@
                 "resetTwoFactor": "Reset two-factor",
                 "grantInstanceAdmin": "Make instance admin",
                 "revokeInstanceAdmin": "Remove instance admin",
-                "unlock": "Clear lockout"
+                "unlock": "Clear lockout",
+                "impersonate": "Impersonate"
             },
             "confirm": {
                 "deactivateTitle": "Deactivate {{name}}?",
@@ -492,7 +498,10 @@
             "settings_updated": "Settings updated",
             "consent_granted": "Consent granted",
             "token_revoked": "Access revoked",
-            "secret_rotated": "Secret rotated"
+            "secret_rotated": "Secret rotated",
+            "user_impersonation_started": "Impersonation started",
+            "user_impersonation_stopped": "Impersonation stopped",
+            "user_impersonation_expired": "Impersonation expired"
         },
         "logs": {
             "default": "Application",
@@ -581,7 +590,14 @@
         "settings": {
             "head": "Settings — {{name}}",
             "title": "Settings",
-            "description": "Organisation name, slug and deletion."
+            "description": "Organisation name, slug, branding and deletion.",
+            "brandingTitle": "Branding",
+            "brandingDescription": "Logo and colours shown on login and consent when this organisation is in context.",
+            "brandColor": "Brand colour",
+            "brandColorDark": "Brand colour (dark)",
+            "logo": "Logo",
+            "logoDark": "Logo (dark)",
+            "saveBranding": "Save branding"
         },
         "accept": {
             "head": "Organisation invitation",
