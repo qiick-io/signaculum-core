@@ -44,31 +44,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'oauth/end-session',
         ]);
 
-        // Prefer getenv(): env() can be empty during early withMiddleware in some
-        // bootstrap paths; the Docker conformance stack always sets TRUSTED_PROXIES.
-        // Omit HEADER_X_FORWARDED_AWS_ELB so X-Forwarded-Proto/Host/Port are trusted
-        // cleanly behind the conformance TLS nginx proxy.
-        $trustedProxies = getenv('TRUSTED_PROXIES');
-
-        if ($trustedProxies === false || $trustedProxies === '') {
-            $trustedProxies = $_ENV['TRUSTED_PROXIES'] ?? $_SERVER['TRUSTED_PROXIES'] ?? null;
-        }
-
-        if (is_string($trustedProxies) && $trustedProxies !== '') {
-            $middleware->trustProxies(
-                at: $trustedProxies === '*'
-                    ? '*'
-                    : array_values(array_filter(array_map(
-                        static fn (string $proxy): string => trim($proxy),
-                        explode(',', $trustedProxies),
-                    ))),
-                headers: Request::HEADER_X_FORWARDED_FOR
-                    | Request::HEADER_X_FORWARDED_HOST
-                    | Request::HEADER_X_FORWARDED_PORT
-                    | Request::HEADER_X_FORWARDED_PROTO,
-            );
-        }
-
         $middleware->web(replace: [
             PreventRequestForgery::class => VerifyCsrfTokenMiddleware::class,
         ], append: [
