@@ -31,6 +31,7 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
@@ -39,6 +40,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -75,6 +77,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureTrustedProxies();
         $this->configureTransactionalEmailTemplates();
         $this->configureRateLimiting();
         $this->configureOpenIdConnect();
@@ -369,6 +372,44 @@ class AppServiceProvider extends ServiceProvider
 
         // Settings → Authentication & security; `strong` in production until an admin saves.
         Password::defaults(fn (): Password => app(SettingsRepositoryService::class)->passwordRule());
+    }
+
+    /**
+     * Honour TRUSTED_PROXIES / APP_URL behind a TLS-terminating proxy.
+     *
+     * `php artisan serve` only passes a short env whitelist into the PHP built-in
+     * server worker, so bootstrap/app.php getenv('TRUSTED_PROXIES') is often empty
+     * there. Config is loaded from `.env` after Dotenv, so this boot hook is the
+     * reliable place for local Docker conformance and CI `artisan serve`.
+     */
+    protected function configureTrustedProxies(): void
+    {
+        $appUrl = (string) config('app.url');
+
+        if (str_starts_with($appUrl, 'https://')) {
+            URL::forceScheme('https');
+        }
+
+        $trustedProxies = config('app.trusted_proxies');
+
+        if (! is_string($trustedProxies) || $trustedProxies === '') {
+            return;
+        }
+
+        TrustProxies::at(
+            $trustedProxies === '*'
+                ? '*'
+                : array_values(array_filter(array_map(
+                    static fn (string $proxy): string => trim($proxy),
+                    explode(',', $trustedProxies),
+                ))),
+        );
+        TrustProxies::withHeaders(
+            Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_HOST
+            | Request::HEADER_X_FORWARDED_PORT
+            | Request::HEADER_X_FORWARDED_PROTO,
+        );
     }
 
     /**

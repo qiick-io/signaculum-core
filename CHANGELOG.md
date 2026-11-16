@@ -8,6 +8,7 @@
 
 ### Added
 
+- OpenID Foundation conformance suite in CI (Basic OP, RP-Initiated Logout, Back-Channel Logout): `conformance/` helpers and `.github/workflows/oidc-conformance.yml`; relaxes `OIDC_REQUIRE_PKCE` / `OIDC_REQUIRE_NONCE` only in that job.
 - Optional passwordless sign-in with a six-digit email code (off by default): queued mail, editable template, hashed at rest, rate limited, lockout-aware; `amr` = `otp` only (#121).
 - Per-organisation MFA requirement: owners/admins can require members to enroll TOTP or a passkey before finishing OAuth authorization; `amr` / `acr` stay truthful; audited in the activity log (#120).
 - Granular instance password policy (minimum length, mixed case / numbers / symbols) and an optional Have I Been Pwned check via `Password::uncompromised()` — off by default; UI and `docs/password-policy.md` document the k-anonymity hash prefix (#119).

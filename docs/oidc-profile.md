@@ -52,7 +52,7 @@ Every redirect back to the client's `redirect_uri` — success (`code`) and erro
 - Interactive SSO uses the authorization code flow. Device code grant is disabled.
 - **PKCE S256 required for every client** (confidential included) when `OIDC_REQUIRE_PKCE` is true (default). `plain` is refused. Missing challenge → `invalid_request` redirect with `state`.
 - **`nonce` required** on every `openid` authorization request when `OIDC_REQUIRE_NONCE` is true (default). Echoed in the `id_token`. Missing nonce → `invalid_request` redirect with `state`.
-- Both flags may be relaxed only for the OpenID Foundation conformance suite, never in production.
+- Both flags may be relaxed only for the OpenID Foundation conformance suite, never in production. CI job and local steps: [`conformance/README.md`](../conformance/README.md); workflow `.github/workflows/oidc-conformance.yml` (own commit).
 
 ## Client credentials (machine clients)
 

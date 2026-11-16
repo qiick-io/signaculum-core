@@ -13,7 +13,7 @@ Every qiick app keeps working standalone with its own local login. Signaculum is
 - OpenID Connect provider on Laravel Passport: authorization code flow with PKCE (S256, required), RS256 `id_token`, discovery, JWKS with key rotation, userinfo, RP-initiated and back-channel logout
 - Scopes `openid`, `profile`, `email` and `qiick.orgs` (an `orgs` claim with the user's organisations and roles), plus `amr` / `acr` so apps know whether MFA happened
 - Admin screens for OIDC clients and organisations
-- Tested against the OpenID Foundation conformance suite
+- Tested against the OpenID Foundation conformance suite (see [`conformance/README.md`](conformance/README.md))
 
 Self-registration is **off by default** (closed IdP). Instance admins turn it on under Settings → Authentication & security (`registration_enabled`); qiick Cloud can enable it for its hosted instance. Until then, only instance admins create users.
 
