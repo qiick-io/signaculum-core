@@ -13,6 +13,7 @@ use App\Http\Controllers\Settings\InstanceSettingsController;
 use App\Http\Controllers\Settings\LocaleController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\WebhookController;
 use App\Models\Setting;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
@@ -66,6 +67,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('settings/instance/email-templates', [InstanceEmailTemplatesController::class, 'edit'])->name('instance.email-templates.edit');
         Route::put('settings/instance/email-templates', [InstanceEmailTemplatesController::class, 'update'])->name('instance.email-templates.update');
+
+        Route::get('settings/instance/webhooks', [WebhookController::class, 'index'])->name('instance.webhooks.index');
+        Route::post('settings/instance/webhooks', [WebhookController::class, 'store'])->name('instance.webhooks.store');
+        Route::put('settings/instance/webhooks/private-urls', [WebhookController::class, 'updatePrivateUrlsSetting'])->name('instance.webhooks.private-urls.update');
+        Route::put('settings/instance/webhooks/{webhook}', [WebhookController::class, 'update'])->name('instance.webhooks.update');
+        Route::delete('settings/instance/webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('instance.webhooks.destroy');
 
         Route::get('settings/appearance', [AppearanceSettingsController::class, 'edit'])->name('appearance.edit');
         Route::put('settings/appearance', [AppearanceSettingsController::class, 'update'])->name('appearance.update');

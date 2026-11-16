@@ -51,7 +51,8 @@
         "back": "Back",
         "continue": "Continue",
         "close": "Close",
-        "confirm": "Confirm"
+        "confirm": "Confirm",
+        "edit": "Edit"
     },
     "confirmDestructive": {
         "typeToConfirm": "Type \"{{name}}\" to confirm"
@@ -98,7 +99,8 @@
         "users": "Users",
         "applications": "Applications",
         "activityLog": "Activity Log",
-        "organizations": "Organisations"
+        "organizations": "Organisations",
+        "apiKeys": "API keys"
     },
     "realtime": {
         "connected": "Realtime connected",
@@ -238,9 +240,18 @@
                 "types": {
                     "verification": "Verification",
                     "reset": "Password reset",
-                    "invitation": "Invitation"
+                    "invitation": "Invitation",
+                    "email_login_code": "Email sign-in code"
                 }
-            }
+            },
+            "passwordMinLength": "Minimum password length",
+            "passwordRequireMixedCase": "Require upper and lower case letters",
+            "passwordRequireNumbers": "Require at least one number",
+            "passwordRequireSymbols": "Require at least one symbol",
+            "passwordRejectCompromised": "Reject passwords found in known data breaches",
+            "passwordRejectCompromisedHint": "Off by default. When enabled, Signaculum sends only a short SHA-1 hash prefix of the password to Have I Been Pwned (k-anonymity API). The password itself never leaves this server. See docs/password-policy.md.",
+            "emailCodeLoginEnabled": "Allow passwordless sign-in with an email code",
+            "emailCodeLoginEnabledHint": "Off by default. Guests can request a six-digit code by email. The code alone records amr otp and never counts as MFA by itself."
         },
         "layout": {
             "appearance": "Appearance",
@@ -257,7 +268,8 @@
             "security": "Security",
             "sessions": "Sessions",
             "title": "Settings",
-            "emailTemplates": "Email templates"
+            "emailTemplates": "Email templates",
+            "webhooks": "Webhooks"
         },
         "profile": {
             "breadcrumb": "Profile settings",
@@ -348,6 +360,25 @@
                 "enableTitle": "Enable two-factor authentication",
                 "enableDescription": "To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app"
             }
+        },
+        "webhooks": {
+            "head": "Webhooks",
+            "title": "Webhooks",
+            "description": "Push Signaculum domain events to your own HTTPS endpoints. Deliveries are signed with HMAC-SHA256; see the docs for the wire format.",
+            "add": "Add endpoint",
+            "empty": "No webhook endpoints yet.",
+            "secretTitle": "Signing secret (shown once)",
+            "allowPrivateUrls": "Allow private webhook URLs",
+            "allowPrivateUrlsDescription": "Off by default. When on, deliveries may target loopback and private networks (local QA). Cloud metadata hosts stay blocked. This is not telemetry; Signaculum only POSTs to URLs you register.",
+            "active": "Active",
+            "inactive": "Inactive",
+            "recentDeliveries": "Recent deliveries",
+            "editTitle": "Edit webhook",
+            "createTitle": "Add webhook",
+            "formDescription": "Subscribe to events and receive signed POSTs. Prefer HTTPS public URLs.",
+            "url": "Endpoint URL",
+            "urlDescription": "Exact URL Signaculum will POST to. Private and loopback hosts are refused unless the setting above is on.",
+            "events": "Events"
         }
     },
     "userMenu": {
@@ -446,6 +477,16 @@
             "authToggle": "login using a recovery code",
             "recoveryPlaceholder": "Enter recovery code",
             "orYouCan": "or you can "
+        },
+        "emailCode": {
+            "head": "Sign in with email code",
+            "orUseCode": "Or sign in with a one-time email code",
+            "email": "Email address",
+            "sendCode": "Email me a code",
+            "code": "Sign-in code",
+            "verify": "Sign in",
+            "resend": "Resend code",
+            "backToLogin": "Back to password login"
         }
     },
     "admin": {
@@ -564,6 +605,20 @@
                 "filteredDescription": "Try another search or clear the filters.",
                 "cta": "New application"
             }
+        },
+        "apiKeys": {
+            "head": "API keys",
+            "title": "API keys",
+            "description": "Bearer keys for the Admin REST API. Secrets are shown once; scopes gate each resource.",
+            "add": "Create key",
+            "empty": "No API keys yet.",
+            "secretTitle": "API key secret (shown once)",
+            "createTitle": "Create API key",
+            "formDescription": "Choose scopes carefully. Prefer read scopes for automation that only lists data.",
+            "scopes": "Scopes",
+            "active": "Active",
+            "inactive": "Revoked or expired",
+            "revoke": "Revoke"
         }
     },
     "activityLog": {
@@ -699,7 +754,9 @@
             "brandColorDark": "Brand colour (dark)",
             "logo": "Logo",
             "logoDark": "Logo (dark)",
-            "saveBranding": "Save branding"
+            "saveBranding": "Save branding",
+            "requireMfa": "Members must use two-factor authentication",
+            "requireMfaHint": "Members without TOTP or a passkey are sent to Security before they can authorize an application. Signaculum never claims MFA in amr or acr unless the user actually used a second factor."
         },
         "accept": {
             "head": "Organisation invitation",

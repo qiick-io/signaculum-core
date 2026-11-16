@@ -22,7 +22,9 @@ use Illuminate\Validation\Rules\Password;
  */
 final class SettingsRepositoryService
 {
-    public const array PASSWORD_POLICIES = ['weak', 'medium', 'strong'];
+    public const int PASSWORD_MIN_LENGTH_FLOOR = 6;
+
+    public const int PASSWORD_MIN_LENGTH_CEILING = 128;
 
     public const array APPEARANCES = ['system', 'light', 'dark'];
 
@@ -58,7 +60,14 @@ final class SettingsRepositoryService
             'project_logo' => null,
             'project_logo_dark' => null,
             'public_favicon' => null,
-            'password_policy' => app()->isProduction() ? 'strong' : 'weak',
+            // Granular password policy (#119). Breached-password check stays off by default:
+            // Laravel's Password::uncompromised() sends a SHA-1 prefix to Have I Been Pwned
+            // (k-anonymity); that is opt-in and documented in the UI and docs/password-policy.md.
+            'password_min_length' => app()->isProduction() ? 12 : 8,
+            'password_require_mixed_case' => app()->isProduction(),
+            'password_require_numbers' => app()->isProduction(),
+            'password_require_symbols' => app()->isProduction(),
+            'password_reject_compromised' => false,
             'login_max_attempts' => 5,
             'login_lockout_threshold' => 5,
             'login_lockout_minutes' => 15,
@@ -66,9 +75,13 @@ final class SettingsRepositoryService
             // (qiick Cloud can enable it). Decision of 2026-11-13 on #23.
             'registration_enabled' => false,
             'two_factor_required' => false,
+            // Passwordless email one-time code (#121). Off by default.
+            'email_code_login_enabled' => false,
             'activity_retention_days' => (int) config('activitylog.clean_after_days', 365),
             // Nested overrides for verification / reset / invitation × en/it/de; empty = lang defaults.
             'email_templates' => [],
+            // Off by default: webhook deliveries must not hit private/loopback hosts (SSRF).
+            'webhooks_allow_private_urls' => false,
         ];
     }
 
@@ -199,11 +212,40 @@ final class SettingsRepositoryService
         return $this->hexColor('project_color_dark');
     }
 
-    public function passwordPolicy(): string
+    /**
+     * Minimum password length for new and changed passwords.
+     */
+    public function passwordMinLength(): int
     {
-        $policy = $this->all()['password_policy'];
+        return $this->integer(
+            'password_min_length',
+            self::PASSWORD_MIN_LENGTH_FLOOR,
+            self::PASSWORD_MIN_LENGTH_CEILING,
+        );
+    }
 
-        return in_array($policy, self::PASSWORD_POLICIES, true) ? $policy : 'strong';
+    public function requiresPasswordMixedCase(): bool
+    {
+        return (bool) $this->all()['password_require_mixed_case'];
+    }
+
+    public function requiresPasswordNumbers(): bool
+    {
+        return (bool) $this->all()['password_require_numbers'];
+    }
+
+    public function requiresPasswordSymbols(): bool
+    {
+        return (bool) $this->all()['password_require_symbols'];
+    }
+
+    /**
+     * When true, Laravel calls Have I Been Pwned with a SHA-1 hash prefix (k-anonymity).
+     * Off by default so a self-hosted instance never talks to that service unless an admin opts in.
+     */
+    public function rejectsCompromisedPasswords(): bool
+    {
+        return (bool) $this->all()['password_reject_compromised'];
     }
 
     /**
@@ -211,11 +253,25 @@ final class SettingsRepositoryService
      */
     public function passwordRule(): Password
     {
-        return match ($this->passwordPolicy()) {
-            'weak' => Password::min(6),
-            'medium' => Password::min(8)->mixedCase()->numbers(),
-            default => Password::min(12)->mixedCase()->letters()->numbers()->symbols()->uncompromised(),
-        };
+        $rule = Password::min($this->passwordMinLength());
+
+        if ($this->requiresPasswordMixedCase()) {
+            $rule = $rule->mixedCase();
+        }
+
+        if ($this->requiresPasswordNumbers()) {
+            $rule = $rule->numbers();
+        }
+
+        if ($this->requiresPasswordSymbols()) {
+            $rule = $rule->symbols();
+        }
+
+        if ($this->rejectsCompromisedPasswords()) {
+            $rule = $rule->uncompromised();
+        }
+
+        return $rule;
     }
 
     /**
@@ -255,6 +311,23 @@ final class SettingsRepositoryService
     public function isTwoFactorRequired(): bool
     {
         return (bool) $this->all()['two_factor_required'];
+    }
+
+    /**
+     * When true, outbound webhook URLs may target private / loopback hosts (local QA only).
+     * Metadata endpoints stay blocked either way.
+     */
+    public function areWebhookPrivateUrlsAllowed(): bool
+    {
+        return (bool) $this->all()['webhooks_allow_private_urls'];
+    }
+
+    /**
+     * Whether guests may sign in with a one-time code emailed to them (#121).
+     */
+    public function isEmailCodeLoginEnabled(): bool
+    {
+        return (bool) $this->all()['email_code_login_enabled'];
     }
 
     /**

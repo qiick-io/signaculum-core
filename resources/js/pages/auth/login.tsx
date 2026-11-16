@@ -12,21 +12,24 @@ import PasskeyVerify from '@/components/passkey-verify';
 import i18n from 'i18next';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
+import { store as sendEmailCode } from '@/routes/login/email-code';
 import { request } from '@/routes/password';
 
 type Props = {
     status?: string;
     canResetPassword: boolean;
     canRegister?: boolean;
+    canEmailCodeLogin?: boolean;
 };
 
 /**
- * Guest auth: email/password login with optional passkey and registration link.
+ * Guest auth: email/password login with optional passkey, email code, and registration link.
  */
 export default function Login({
     status,
     canResetPassword,
     canRegister = false,
+    canEmailCodeLogin = false,
 }: Props) {
     const { t } = useTranslation();
 
@@ -125,6 +128,40 @@ export default function Login({
                     </>
                 )}
             </Form>
+
+            {canEmailCodeLogin ? (
+                <Form
+                    {...sendEmailCode.form()}
+                    className="mt-6 flex flex-col gap-3"
+                    noValidate
+                >
+                    {({ processing, errors }) => (
+                        <>
+                            <p className="text-center text-sm text-muted-foreground">
+                                {t('auth.emailCode.orUseCode')}
+                            </p>
+                            <Input
+                                type="email"
+                                name="email"
+                                autoComplete="email"
+                                placeholder="email@example.com"
+                                aria-label={t('auth.emailCode.email')}
+                            />
+                            <InputError message={errors.email} />
+                            <Button
+                                type="submit"
+                                variant="secondary"
+                                className="w-full"
+                                disabled={processing}
+                                data-test="email-code-request"
+                            >
+                                {processing ? <Spinner /> : null}
+                                {t('auth.emailCode.sendCode')}
+                            </Button>
+                        </>
+                    )}
+                </Form>
+            ) : null}
 
             {status && (
                 <div className="mb-4 text-center text-sm font-medium text-success">

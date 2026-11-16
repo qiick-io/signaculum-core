@@ -1,6 +1,3 @@
-/** Password policies accepted by Settings → Authentication & security. */
-export type PasswordPolicy = 'weak' | 'medium' | 'strong';
-
 /** Light/dark/system theme. */
 export type DefaultAppearance = 'system' | 'light' | 'dark';
 
@@ -20,10 +17,15 @@ export type InstanceSettingsForm = {
     activity_retention_days: number;
     default_language: string;
     default_appearance: DefaultAppearance;
-    password_policy: PasswordPolicy;
+    password_min_length: number;
+    password_require_mixed_case: boolean;
+    password_require_numbers: boolean;
+    password_require_symbols: boolean;
+    password_reject_compromised: boolean;
     login_max_attempts: number;
     login_lockout_threshold: number;
     login_lockout_minutes: number;
     registration_enabled: boolean;
     two_factor_required: boolean;
+    email_code_login_enabled: boolean;
 };

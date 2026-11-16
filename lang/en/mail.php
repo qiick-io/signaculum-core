@@ -26,4 +26,10 @@ return [
         'action_label' => 'Accept invitation',
     ],
 
+    'email_login_code' => [
+        'subject' => 'Your sign-in code for {{app_name}}',
+        'body' => "Your one-time sign-in code for {{app_name}} is {{code}}.\n\nIt expires in {{expire_minutes}} minutes. If you did not request this code, you can ignore this email.",
+        'action_label' => '',
+    ],
+
 ];

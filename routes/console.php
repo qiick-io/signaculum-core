@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\EmailLoginCode;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -19,3 +20,7 @@ Schedule::call(fn () => Artisan::call('activitylog:clean', [
     '--days' => app(SettingsRepositoryService::class)->activityRetentionDays(),
     '--force' => true,
 ]))->name('activitylog:clean')->daily();
+
+Schedule::command('model:prune', [
+    '--model' => [EmailLoginCode::class],
+])->daily();

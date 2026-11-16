@@ -51,7 +51,8 @@
         "back": "Zurück",
         "continue": "Weiter",
         "close": "Schließen",
-        "confirm": "Bestätigen"
+        "confirm": "Bestätigen",
+        "edit": "Bearbeiten"
     },
     "confirmDestructive": {
         "typeToConfirm": "Tippe „{{name}}“ zur Bestätigung"
@@ -98,7 +99,8 @@
         "users": "Benutzer",
         "applications": "Anwendungen",
         "activityLog": "Aktivitätsprotokoll",
-        "organizations": "Organisationen"
+        "organizations": "Organisationen",
+        "apiKeys": "API-Schlüssel"
     },
     "realtime": {
         "connected": "Realtime verbunden",
@@ -238,9 +240,18 @@
                 "types": {
                     "verification": "Verifizierung",
                     "reset": "Passwortzurücksetzung",
-                    "invitation": "Einladung"
+                    "invitation": "Einladung",
+                    "email_login_code": "E-Mail-Anmeldecode"
                 }
-            }
+            },
+            "passwordMinLength": "Mindestlänge des Passworts",
+            "passwordRequireMixedCase": "Groß- und Kleinbuchstaben erforderlich",
+            "passwordRequireNumbers": "Mindestens eine Zahl erforderlich",
+            "passwordRequireSymbols": "Mindestens ein Sonderzeichen erforderlich",
+            "passwordRejectCompromised": "In bekannten Datenlecks gefundene Passwörter ablehnen",
+            "passwordRejectCompromisedHint": "Standardmäßig aus. Wenn aktiviert, sendet Signaculum nur ein kurzes SHA-1-Hash-Präfix des Passworts an Have I Been Pwned (k-Anonymity-API). Das Passwort selbst verlässt diesen Server nie. Siehe docs/password-policy.md.",
+            "emailCodeLoginEnabled": "Passwortlose Anmeldung mit E-Mail-Code erlauben",
+            "emailCodeLoginEnabledHint": "Standardmäßig aus. Gäste können einen sechsstelligen Code per E-Mail anfordern. Der Code allein setzt amr otp und zählt nie allein als MFA."
         },
         "layout": {
             "appearance": "Darstellung",
@@ -257,7 +268,8 @@
             "security": "Sicherheit",
             "sessions": "Sitzungen",
             "title": "Einstellungen",
-            "emailTemplates": "E-Mail-Vorlagen"
+            "emailTemplates": "E-Mail-Vorlagen",
+            "webhooks": "Webhooks"
         },
         "profile": {
             "breadcrumb": "Profileinstellungen",
@@ -348,6 +360,25 @@
                 "enableTitle": "Zwei-Faktor-Authentifizierung aktivieren",
                 "enableDescription": "Um die Zwei-Faktor-Authentifizierung zu aktivieren, scannen Sie den QR-Code oder geben Sie den Einrichtungsschlüssel in Ihrer Authenticator-App ein"
             }
+        },
+        "webhooks": {
+            "head": "Webhooks",
+            "title": "Webhooks",
+            "description": "Sende Signaculum-Domänenereignisse an eigene HTTPS-Endpunkte. Lieferungen sind mit HMAC-SHA256 signiert; das Format steht in der Doku.",
+            "add": "Endpunkt hinzufügen",
+            "empty": "Noch keine Webhook-Endpunkte.",
+            "secretTitle": "Signaturgeheimnis (nur einmal sichtbar)",
+            "allowPrivateUrls": "Private Webhook-URLs erlauben",
+            "allowPrivateUrlsDescription": "Standardmäßig aus. Wenn aktiv, dürfen Lieferungen Loopback- und private Netze erreichen (lokale QA). Cloud-Metadaten bleiben gesperrt. Keine Telemetrie: Signaculum POSTet nur an von dir registrierte URLs.",
+            "active": "Aktiv",
+            "inactive": "Inaktiv",
+            "recentDeliveries": "Letzte Lieferungen",
+            "editTitle": "Webhook bearbeiten",
+            "createTitle": "Webhook hinzufügen",
+            "formDescription": "Ereignisse abonnieren und signierte POSTs empfangen. Bevorzuge öffentliche HTTPS-URLs.",
+            "url": "Endpunkt-URL",
+            "urlDescription": "Exakte URL für POSTs. Private und Loopback-Hosts werden abgelehnt, außer die Einstellung oben ist aktiv.",
+            "events": "Ereignisse"
         }
     },
     "userMenu": {
@@ -446,6 +477,16 @@
             "authToggle": "mit einem Wiederherstellungscode anmelden",
             "recoveryPlaceholder": "Wiederherstellungscode eingeben",
             "orYouCan": "oder Sie können sich "
+        },
+        "emailCode": {
+            "head": "Mit E-Mail-Code anmelden",
+            "orUseCode": "Oder mit einem einmaligen E-Mail-Code anmelden",
+            "email": "E-Mail-Adresse",
+            "sendCode": "Code per E-Mail senden",
+            "code": "Anmeldecode",
+            "verify": "Anmelden",
+            "resend": "Code erneut senden",
+            "backToLogin": "Zurück zur Passwort-Anmeldung"
         }
     },
     "admin": {
@@ -564,6 +605,20 @@
                 "filteredDescription": "Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.",
                 "cta": "Neue Anwendung"
             }
+        },
+        "apiKeys": {
+            "head": "API-Schlüssel",
+            "title": "API-Schlüssel",
+            "description": "Bearer-Schlüssel für die Admin-REST-API. Geheimnisse werden einmal angezeigt; Scopes steuern jede Ressource.",
+            "add": "Schlüssel erstellen",
+            "empty": "Noch keine API-Schlüssel.",
+            "secretTitle": "API-Schlüsselgeheimnis (nur einmal sichtbar)",
+            "createTitle": "API-Schlüssel erstellen",
+            "formDescription": "Scopes sorgfältig wählen. Lese-Scopes für Automationen bevorzugen, die nur listen.",
+            "scopes": "Scopes",
+            "active": "Aktiv",
+            "inactive": "Widerrufen oder abgelaufen",
+            "revoke": "Widerrufen"
         }
     },
     "activityLog": {
@@ -699,7 +754,9 @@
             "brandColorDark": "Markenfarbe (dunkel)",
             "logo": "Logo",
             "logoDark": "Logo (dunkel)",
-            "saveBranding": "Branding speichern"
+            "saveBranding": "Branding speichern",
+            "requireMfa": "Mitglieder müssen die Zwei-Faktor-Authentifizierung nutzen",
+            "requireMfaHint": "Mitglieder ohne TOTP oder Passkey werden zur Sicherheit geleitet, bevor sie eine Anwendung autorisieren können. Signaculum behauptet MFA in amr oder acr nie, wenn kein zweiter Faktor verwendet wurde."
         },
         "accept": {
             "head": "Organisationseinladung",

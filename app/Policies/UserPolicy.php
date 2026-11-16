@@ -17,6 +17,11 @@ final class UserPolicy
         return (bool) $actor->is_instance_admin;
     }
 
+    public function view(User $actor, User $target): bool
+    {
+        return (bool) $actor->is_instance_admin;
+    }
+
     public function create(User $actor): bool
     {
         return (bool) $actor->is_instance_admin;
