@@ -26,7 +26,7 @@ First tagged beta of Signaculum: self-hosted OpenID Connect IdP for the qiick su
 - RFC 7009 token revocation at `/oauth/revoke` (`revocation_endpoint`), with the same client auth methods as the token endpoint (#101).
 - OIDC scope `qiick.orgs` and claim `orgs: [{ id, slug, roles }]` on `id_token` and userinfo (consent copy; discovery `scopes_supported` / `claims_supported`) (#100).
 - `acr` on the `id_token` only when requested (`acr_values` or `claims`): `urn:qiick:loa:pwd` or `urn:qiick:loa:mfa`, with discovery `acr_values_supported` (#93).
-- Account data export (JSON) from Settings → Profile: profile, organisations, sessions and connected apps (never passwords or 2FA secrets) (#99).
+- Account data export (JSON) from Settings → Profile: profile, organisations, sessions and connected apps (never passwords or 2FA secrets) (#98).
 - Organisation invitations (email, hashed token, expiry, resend/revoke) and Members / Invitations / Settings view tabs.
 - OIDC `max_age` / `prompt=login` on `/oauth/authorize`: re-authenticate when session `auth_time` is too old (or `prompt=login`), without back-channel fan-out and keeping the same `sid`; `prompt=none` + stale `max_age` returns `login_required` with `iss` and leaves the session intact; always emit `auth_time` in the `id_token` when `max_age` was sent (#86).
 - Brute-force login lockout: configurable failure threshold and duration, activity log on lock, admin unlock on Users.
