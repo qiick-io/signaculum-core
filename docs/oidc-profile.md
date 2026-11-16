@@ -10,13 +10,15 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 | ----------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/.well-known/openid-configuration` | `GET`         | Discovery (`DiscoveryController`)                                                                                                                                                |
 | `/.well-known/jwks.json`            | `GET`         | Public signing keys (`JwksController`), `Cache-Control: public, max-age=300`                                                                                                     |
-| `/oauth/authorize`                  | `GET`, `POST` | Authorization request (GET or form-encoded POST, OIDC Core §3.1.2.1) + consent approve (`POST` with `auth_token`) / deny (`DELETE`); UI `resources/js/pages/oauth/authorize.tsx`. Known limitation: session cookies use `SameSite=Lax`, so a cross-site RP POST carries no session cookie and the user is asked to sign in again. |
+| `/oauth/authorize`                  | `GET`, `POST` | Authorization request (GET or form-encoded POST, OIDC Core §3.1.2.1) + consent approve (`POST` with `auth_token`) / deny (`DELETE`); UI `resources/js/pages/oauth/authorize.tsx` |
 | `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                                                                                                                              |
 | `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                                                                                                                     |
 | `/oauth/introspect`                 | `POST`        | RFC 7662 introspection; confidential clients only (`client_secret_basic` / `_post`)                                                                                              |
 | `/oauth/revoke`                     | `POST`        | RFC 7009 token revocation (`revocation_endpoint`)                                                                                                                                |
 | `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing                                                                                                     |
 | `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                                                                                                                  |
+
+Known limitation (`/oauth/authorize` form POST): session cookies use `SameSite=Lax`, so a cross-site RP POST carries no session cookie and the user is asked to sign in again.
 
 ## Discovery fields
 
