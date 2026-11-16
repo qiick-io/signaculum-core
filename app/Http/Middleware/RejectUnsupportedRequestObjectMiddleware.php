@@ -55,7 +55,7 @@ final class RejectUnsupportedRequestObjectMiddleware
 
     /**
      * Redirect to the registered redirect_uri with the unsupported-request error.
-     * Unknown client or unregistered URI → HTTP 401 (no open redirect).
+     * Unknown, revoked or unregistered URI → HTTP 401 (no open redirect).
      */
     private function unsupportedRequestRedirect(Request $request, string $error): RedirectResponse|Response
     {
@@ -68,7 +68,7 @@ final class RejectUnsupportedRequestObjectMiddleware
 
         $client = Client::query()->find($clientId);
 
-        if ($client === null || ! in_array($redirectUri, $client->redirect_uris, true)) {
+        if ($client === null || $client->revoked || ! in_array($redirectUri, $client->redirect_uris, true)) {
             abort(401);
         }
 

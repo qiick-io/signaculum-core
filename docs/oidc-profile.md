@@ -192,7 +192,7 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 | `request` parameter present (OIDC Core §6.1 / §3.1.2.6)                                             | Redirect with `error=request_not_supported`, `state`, `iss`; never a `code`                |
 | `request_uri` parameter present (OIDC Core §6.1 / §3.1.2.6)                                         | Redirect with `error=request_uri_not_supported`, `state`, `iss`; never a `code`            |
 | `max_age` exceeded (no `prompt=none`) or `prompt=login`                                             | Redirect to Signaculum `/login` (then back to authorize)                                   |
-| Unknown client or unregistered `redirect_uri`                                                       | HTTP 401 (no redirect to an attacker URI)                                                  |
+| Unknown, revoked or unregistered `redirect_uri`                                                     | HTTP 401 (no redirect to an attacker URI)                                                  |
 | Bad token request (verifier, client secret, …)                                                      | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …)                 |
 | Revocation with a wrong client secret                                                               | HTTP 401 `invalid_client`                                                                  |
 | Userinfo without / with invalid Bearer                                                              | 401 `invalid_token` + `WWW-Authenticate`                                                   |

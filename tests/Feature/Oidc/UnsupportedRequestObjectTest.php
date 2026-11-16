@@ -73,3 +73,16 @@ test('request with an unregistered redirect_uri is never redirected to', functio
     expect($response->getStatusCode())->toBe(401)
         ->and((string) $response->headers->get('Location'))->not->toContain('attacker');
 });
+
+test('request with a revoked client is refused with http 401', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->client->forceFill(['revoked' => true])->save();
+
+    $response = $this->get(authorizeUrl($this->client, $this->pkce['challenge'], [
+        'request' => 'eyJhbGciOiJub25lIn0.e30.',
+    ]));
+
+    expect($response->getStatusCode())->toBe(401)
+        ->and((string) $response->headers->get('Location'))->toBe('');
+});
