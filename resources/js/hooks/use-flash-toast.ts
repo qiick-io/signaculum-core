@@ -10,13 +10,13 @@ export function useFlashToast(): void {
     useEffect(() => {
         return router.on('flash', (event) => {
             const flash = (event as CustomEvent).detail?.flash;
-            const data = flash?.toast as FlashToast | undefined;
+            const flashToast = flash?.toast as FlashToast | undefined;
 
-            if (!data) {
+            if (!flashToast) {
                 return;
             }
 
-            toast[data.type](data.message);
+            toast[flashToast.type](flashToast.message);
         });
     }, []);
 }
