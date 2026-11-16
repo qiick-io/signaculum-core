@@ -1,39 +1,39 @@
 # Overlay for OpenID Foundation docker-compose-localtest.yml in CI / local S7 runs.
 # Set SIGNACULUM_CONFORMANCE_DIR to this directory's absolute path before `docker compose`.
 services:
-  signaculum-proxy:
-    build:
-      context: ${SIGNACULUM_CONFORMANCE_DIR}/nginx
-    ports:
-      - "9443:8443"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - "${SIGNACULUM_CONFORMANCE_DIR}/signaculum-proxy.conf:/etc/nginx/nginx.conf:ro"
+    signaculum-proxy:
+        build:
+            context: ${SIGNACULUM_CONFORMANCE_DIR}/nginx
+        ports:
+            - '9443:8443'
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        volumes:
+            - '${SIGNACULUM_CONFORMANCE_DIR}/signaculum-proxy.conf:/etc/nginx/nginx.conf:ro'
 
-  chrome:
-    image: selenium/standalone-chromium:latest
-    shm_size: 2gb
-    ports:
-      - "4444:4444"
-    environment:
-      - SE_NODE_MAX_SESSIONS=3
-      - SE_SESSION_REQUEST_TIMEOUT=60
-      - SE_SESSION_RETRY_INTERVAL=2
-      - SE_BROWSER_ARGS_HEADLESS=--headless=new
-      - SE_BROWSER_ARGS_NO_SANDBOX=--no-sandbox
-      - SE_BROWSER_ARGS_DISABLE_DEV_SHM_USAGE=--disable-dev-shm-usage
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    chrome:
+        image: selenium/standalone-chromium:latest
+        shm_size: 2gb
+        ports:
+            - '4444:4444'
+        environment:
+            - SE_NODE_MAX_SESSIONS=3
+            - SE_SESSION_REQUEST_TIMEOUT=60
+            - SE_SESSION_RETRY_INTERVAL=2
+            - SE_BROWSER_ARGS_HEADLESS=--headless=new
+            - SE_BROWSER_ARGS_NO_SANDBOX=--no-sandbox
+            - SE_BROWSER_ARGS_DISABLE_DEV_SHM_USAGE=--disable-dev-shm-usage
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
 
-  nginx:
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    nginx:
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
 
-  server:
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    server:
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
 
-  test:
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    test:
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
