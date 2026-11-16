@@ -89,9 +89,9 @@ export function UserFormDrawer({
         };
 
         if (editing) {
-            form.transform((data) => ({
-                ...data,
-                password: data.password || undefined,
+            form.transform((formValues) => ({
+                ...formValues,
+                password: formValues.password || undefined,
             }));
             form.put(updateUser.url(editing.id), opts);
         } else {

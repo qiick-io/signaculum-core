@@ -1,10 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Concerns;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rules\Password;
 
+/**
+ * Shared current-password and new-password validation rules for Fortify and Settings.
+ * Lives under Concerns to keep the starter-kit trait name and location.
+ */
 trait PasswordValidationRules
 {
     /**
