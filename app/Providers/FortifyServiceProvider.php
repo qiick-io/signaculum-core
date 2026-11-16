@@ -107,6 +107,7 @@ class FortifyServiceProvider extends ServiceProvider
                 'canResetPassword' => Features::enabled(Features::resetPasswords()),
                 'canRegister' => Features::enabled(Features::registration())
                     && $settings->isRegistrationEnabled(),
+                'canEmailCodeLogin' => $settings->isEmailCodeLoginEnabled(),
                 'status' => $request->session()->get('status'),
             ]);
         });

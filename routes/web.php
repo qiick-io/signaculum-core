@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\AcceptInvitationController;
+use App\Http\Controllers\Auth\EmailLoginCodeController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Oidc\EndSessionController;
@@ -20,6 +21,17 @@ use Illuminate\Support\Facades\Route;
  * Signaculum has no public landing page: the root sends people to their account.
  */
 Route::redirect('/', '/dashboard')->name('home');
+
+Route::middleware('guest')->group(function (): void {
+    Route::get('login/email-code', [EmailLoginCodeController::class, 'create'])
+        ->name('login.email-code.show');
+    Route::post('login/email-code', [EmailLoginCodeController::class, 'store'])
+        ->middleware('throttle:email-login-code')
+        ->name('login.email-code.store');
+    Route::post('login/email-code/verify', [EmailLoginCodeController::class, 'verify'])
+        ->middleware('throttle:email-login-code')
+        ->name('login.email-code.verify');
+});
 
 // Uploaded logo and favicon (Settings → Appearance): public, the login page needs them.
 Route::get('branding/{asset}', [BrandingController::class, 'show'])

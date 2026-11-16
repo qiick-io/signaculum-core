@@ -8,6 +8,7 @@
 
 ### Added
 
+- Optional passwordless sign-in with a six-digit email code (off by default): queued mail, editable template, hashed at rest, rate limited, lockout-aware; `amr` = `otp` only (#121).
 - Per-organisation MFA requirement: owners/admins can require members to enroll TOTP or a passkey before finishing OAuth authorization; `amr` / `acr` stay truthful; audited in the activity log (#120).
 - Granular instance password policy (minimum length, mixed case / numbers / symbols) and an optional Have I Been Pwned check via `Password::uncompromised()` — off by default; UI and `docs/password-policy.md` document the k-anonymity hash prefix (#119).
 - Instance-admin editable email templates (verification, password reset, organisation invitation) with en/it/de defaults, preview and fallback to packaged copy.
@@ -33,6 +34,7 @@
 
 ### Upgrade notes
 
+- New migration creates `email_login_codes`. Run `php artisan signaculum:upgrade` (or `migrate --force`). Enable email-code login under Settings → Authentication & security when needed.
 - New migration adds `organizations.is_mfa_required` (default false). Run `php artisan signaculum:upgrade` (or `migrate --force`).
 - Authentication & security settings replace the `weak` / `medium` / `strong` password presets with granular fields. Re-save that page after upgrade if you relied on a stored preset; the former `strong` preset’s HIBP check is no longer implied — enable “Reject breached passwords” explicitly if you want it.
 - `composer create-project` no longer migrates. Run `php artisan signaculum:install` (or `php artisan migrate --force` on a tree that was already installed before this change).

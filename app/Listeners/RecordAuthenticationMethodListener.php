@@ -18,8 +18,9 @@ use Laravel\Passkeys\Events\PasskeyVerified;
  *   that fire `Login` afterwards do not pick up a false `pwd`).
  * - Remember-me recaller → record nothing: the cookie restored the session, the
  *   user did not type a password on this request (Auth::viaRemember()).
- * - Fortify TOTP / recovery → `pwd` + `otp` (+ `mfa`), because the password was
- *   already verified to reach the challenge.
+ * - Fortify TOTP / recovery after password → `pwd` + `otp` (+ `mfa`).
+ * - Fortify TOTP after email-code login → keep prior `otp`, add `mfa` (both proofs
+ *   are `otp` in RFC 8176, so `mfa` is forced).
  * - Passkey verification → `hwk` or `swk` from the credential transports.
  */
 final class RecordAuthenticationMethodListener
@@ -37,8 +38,20 @@ final class RecordAuthenticationMethodListener
         }
 
         if ($event instanceof ValidTwoFactorAuthenticationCodeProvided) {
-            $this->authenticationContextService->record(AuthenticationMethodEnum::Password);
+            // Password login leaves methods empty until this event. Email-code login
+            // already recorded `otp` before staging the Fortify challenge.
+            $hadPriorFactor = $this->authenticationContextService->methods() !== [];
+
+            if (! $hadPriorFactor) {
+                $this->authenticationContextService->record(AuthenticationMethodEnum::Password);
+            }
+
             $this->authenticationContextService->record(AuthenticationMethodEnum::OneTimePassword);
+
+            // Email OTP + TOTP both map to `otp`; still two proofs → force `mfa`.
+            if ($hadPriorFactor) {
+                $this->authenticationContextService->record(AuthenticationMethodEnum::MultipleFactors);
+            }
 
             return;
         }

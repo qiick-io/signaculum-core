@@ -25,4 +25,10 @@ return [
         'action_label' => 'Einladung annehmen',
     ],
 
+    'email_login_code' => [
+        'subject' => 'Ihr Anmeldecode für {{app_name}}',
+        'body' => "Ihr einmaliger Anmeldecode für {{app_name}} lautet {{code}}.\n\nEr läuft in {{expire_minutes}} Minuten ab. Wenn Sie diesen Code nicht angefordert haben, können Sie diese E-Mail ignorieren.",
+        'action_label' => '',
+    ],
+
 ];

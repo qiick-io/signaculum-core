@@ -202,6 +202,8 @@
             "securityTitle": "Sicherheit",
             "twoFactorRequired": "Zwei-Faktor-Authentifizierung für alle Benutzer verlangen",
             "twoFactorRequiredHint": "Wenn aktiv, müssen Benutzer TOTP-2FA aktivieren oder einen Passkey auf der Sicherheitsseite registrieren, bevor sie die App nutzen.",
+            "emailCodeLoginEnabled": "Passwortlose Anmeldung mit E-Mail-Code erlauben",
+            "emailCodeLoginEnabledHint": "Standardmäßig aus. Gäste können einen sechsstelligen Code per E-Mail anfordern. Der Code allein setzt amr otp und zählt nie allein als MFA.",
             "retentionTitle": "Datenaufbewahrung",
             "retentionDescription": "Wie lange Signaculum das Aktivitätsprotokoll behält. Ältere Einträge werden täglich gelöscht.",
             "activityRetentionDays": "Aktivitätsprotokoll (Tage)",
@@ -227,7 +229,8 @@
                 "types": {
                     "verification": "Verifizierung",
                     "reset": "Passwortzurücksetzung",
-                    "invitation": "Einladung"
+                    "invitation": "Einladung",
+                    "email_login_code": "E-Mail-Anmeldecode"
                 }
             }
         },
@@ -336,7 +339,17 @@
     },
     "auth": {
         "firstName": "Vorname",
-        "lastName": "Nachname"
+        "lastName": "Nachname",
+        "emailCode": {
+            "head": "Mit E-Mail-Code anmelden",
+            "orUseCode": "Oder mit einem einmaligen E-Mail-Code anmelden",
+            "email": "E-Mail-Adresse",
+            "sendCode": "Code per E-Mail senden",
+            "code": "Anmeldecode",
+            "verify": "Anmelden",
+            "resend": "Code erneut senden",
+            "backToLogin": "Zurück zur Passwort-Anmeldung"
+        }
     },
     "admin": {
         "users": {

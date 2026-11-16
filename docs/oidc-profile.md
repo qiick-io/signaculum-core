@@ -88,13 +88,13 @@ User claims come from `OidcClaimsService` (same values in `id_token` and userinf
 
 Always emitted on the `id_token` from methods recorded at login (`AuthenticationContextService`, session key `oidc.authentication_methods`, copied onto the auth code):
 
-| Value | When                                                                                                  |
-| ----- | ----------------------------------------------------------------------------------------------------- |
-| `pwd` | Password authentication (also the fallback when a signed-in session has no recorded method)           |
-| `otp` | Fortify TOTP / recovery-code challenge                                                                |
-| `hwk` | Passkey whose credential transports include a hardware channel (`usb` / `nfc` / `ble` / `smart-card`) |
-| `swk` | Passkey without a hardware transport (platform / hybrid)                                              |
-| `mfa` | Two or more of the concrete factors above were used in the same authentication                        |
+| Value | When                                                                                                                 |
+| ----- | -------------------------------------------------------------------------------------------------------------------- |
+| `pwd` | Password authentication (also the fallback when a signed-in session has no recorded method)                          |
+| `otp` | Fortify TOTP / recovery-code challenge, or passwordless email one-time code (instance setting; never alone as `mfa`) |
+| `hwk` | Passkey whose credential transports include a hardware channel (`usb` / `nfc` / `ble` / `smart-card`)                |
+| `swk` | Passkey without a hardware transport (platform / hybrid)                                                             |
+| `mfa` | Two or more of the concrete factors above were used in the same authentication                                       |
 
 A remember-me **recaller** login (session restored from the cookie, `Auth::viaRemember()`) does **not** record a fresh `pwd`: the user did not type a password on that request. Interactive password login with the "remember me" checkbox still records `pwd` as usual. When the recaller leaves the session without recorded methods, `amr` falls back to `pwd` as for any other unsigned method list.
 

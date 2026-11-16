@@ -30,6 +30,7 @@ type SecurityInstanceSettings = Pick<
     | 'login_lockout_minutes'
     | 'registration_enabled'
     | 'two_factor_required'
+    | 'email_code_login_enabled'
 >;
 
 type Props = {
@@ -48,6 +49,7 @@ function buildFormState(instance: SecurityInstanceSettings) {
         login_lockout_minutes: instance.login_lockout_minutes,
         registration_enabled: instance.registration_enabled,
         two_factor_required: instance.two_factor_required,
+        email_code_login_enabled: instance.email_code_login_enabled,
     };
 }
 
@@ -93,6 +95,13 @@ export default function InstanceSecuritySettingsPage({ instance }: Props) {
                                 type="hidden"
                                 name="two_factor_required"
                                 value={form.two_factor_required ? '1' : '0'}
+                            />
+                            <input
+                                type="hidden"
+                                name="email_code_login_enabled"
+                                value={
+                                    form.email_code_login_enabled ? '1' : '0'
+                                }
                             />
                             <input
                                 type="hidden"
@@ -464,6 +473,47 @@ export default function InstanceSecuritySettingsPage({ instance }: Props) {
                                         </FieldDescription>
                                         <FieldError id="two-factor-required-error">
                                             {errors.two_factor_required}
+                                        </FieldError>
+                                    </Field>
+
+                                    <Field
+                                        data-invalid={
+                                            errors.email_code_login_enabled
+                                                ? true
+                                                : undefined
+                                        }
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Checkbox
+                                                id="email_code_login_enabled"
+                                                checked={
+                                                    form.email_code_login_enabled
+                                                }
+                                                onCheckedChange={(checked) =>
+                                                    setForm((current) => ({
+                                                        ...current,
+                                                        email_code_login_enabled:
+                                                            checked === true,
+                                                    }))
+                                                }
+                                                aria-describedby="email-code-login-hint"
+                                            />
+                                            <FieldLabel htmlFor="email_code_login_enabled">
+                                                {t(
+                                                    'settings.instance.emailCodeLoginEnabled',
+                                                )}
+                                            </FieldLabel>
+                                        </div>
+                                        <FieldDescription
+                                            id="email-code-login-hint"
+                                            className="pl-8"
+                                        >
+                                            {t(
+                                                'settings.instance.emailCodeLoginEnabledHint',
+                                            )}
+                                        </FieldDescription>
+                                        <FieldError>
+                                            {errors.email_code_login_enabled}
                                         </FieldError>
                                     </Field>
                                 </FieldGroup>
