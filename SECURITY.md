@@ -10,4 +10,4 @@ Please do not open a public issue. Use GitHub's private vulnerability reporting 
 
 Signaculum is an identity provider: flaws in token signing, PKCE, redirect URI matching, nonce handling, session or logout handling are treated as critical.
 
-Signaculum has no telemetry.
+Signaculum has no telemetry. The optional “reject breached passwords” setting (off by default) is the only built-in outbound check related to credentials: it sends a SHA-1 hash prefix to Have I Been Pwned’s k-anonymity API. See [`docs/password-policy.md`](docs/password-policy.md).

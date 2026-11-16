@@ -13,25 +13,18 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit as editSecurity } from '@/routes/instance/security';
-import type {
-    BreadcrumbItem,
-    PasswordPolicy,
-    InstanceSettingsForm,
-} from '@/types';
+import type { BreadcrumbItem, InstanceSettingsForm } from '@/types';
 
 type SecurityInstanceSettings = Pick<
     InstanceSettingsForm,
-    | 'password_policy'
+    | 'password_min_length'
+    | 'password_require_mixed_case'
+    | 'password_require_numbers'
+    | 'password_require_symbols'
+    | 'password_reject_compromised'
     | 'login_max_attempts'
     | 'login_lockout_threshold'
     | 'login_lockout_minutes'
@@ -41,12 +34,15 @@ type SecurityInstanceSettings = Pick<
 
 type Props = {
     instance: SecurityInstanceSettings;
-    passwordPolicies: PasswordPolicy[];
 };
 
 function buildFormState(instance: SecurityInstanceSettings) {
     return {
-        password_policy: instance.password_policy,
+        password_min_length: instance.password_min_length,
+        password_require_mixed_case: instance.password_require_mixed_case,
+        password_require_numbers: instance.password_require_numbers,
+        password_require_symbols: instance.password_require_symbols,
+        password_reject_compromised: instance.password_reject_compromised,
         login_max_attempts: instance.login_max_attempts,
         login_lockout_threshold: instance.login_lockout_threshold,
         login_lockout_minutes: instance.login_lockout_minutes,
@@ -56,14 +52,11 @@ function buildFormState(instance: SecurityInstanceSettings) {
 }
 
 /**
- * Settings → Authentication & security: password policy, login attempts per minute,
- * self-registration and required two-factor authentication. Copied from Excubia / externa
- * without Excubia's SSO section.
+ * Settings → Authentication & security: granular password policy, login attempts,
+ * self-registration and required two-factor authentication. Pattern from app-ui
+ * `settings.md` / Excubia instance security, without Excubia's SSO section.
  */
-export default function InstanceSecuritySettingsPage({
-    instance,
-    passwordPolicies,
-}: Props) {
+export default function InstanceSecuritySettingsPage({ instance }: Props) {
     const { t } = useTranslation();
     const [form, setForm] = useState(() => buildFormState(instance));
 
@@ -103,8 +96,31 @@ export default function InstanceSecuritySettingsPage({
                             />
                             <input
                                 type="hidden"
-                                name="password_policy"
-                                value={form.password_policy}
+                                name="password_require_mixed_case"
+                                value={
+                                    form.password_require_mixed_case ? '1' : '0'
+                                }
+                            />
+                            <input
+                                type="hidden"
+                                name="password_require_numbers"
+                                value={
+                                    form.password_require_numbers ? '1' : '0'
+                                }
+                            />
+                            <input
+                                type="hidden"
+                                name="password_require_symbols"
+                                value={
+                                    form.password_require_symbols ? '1' : '0'
+                                }
+                            />
+                            <input
+                                type="hidden"
+                                name="password_reject_compromised"
+                                value={
+                                    form.password_reject_compromised ? '1' : '0'
+                                }
                             />
 
                             <div className="space-y-6">
@@ -119,96 +135,154 @@ export default function InstanceSecuritySettingsPage({
                                 <FieldGroup className="gap-6">
                                     <Field
                                         data-invalid={
-                                            errors.password_policy
+                                            errors.password_min_length
                                                 ? true
                                                 : undefined
                                         }
                                     >
-                                        <FieldLabel htmlFor="password_policy">
+                                        <FieldLabel htmlFor="password_min_length">
                                             {t(
-                                                'settings.instance.passwordPolicy',
+                                                'settings.instance.passwordMinLength',
                                             )}
                                         </FieldLabel>
-                                        <Select
-                                            value={form.password_policy}
-                                            onValueChange={(value) => {
-                                                if (
-                                                    value === 'weak' ||
-                                                    value === 'medium' ||
-                                                    value === 'strong'
-                                                ) {
+                                        <Input
+                                            id="password_min_length"
+                                            name="password_min_length"
+                                            type="number"
+                                            min={6}
+                                            max={128}
+                                            value={form.password_min_length}
+                                            onChange={(event) =>
+                                                setForm((current) => ({
+                                                    ...current,
+                                                    password_min_length: Number(
+                                                        event.target.value,
+                                                    ),
+                                                }))
+                                            }
+                                            aria-invalid={
+                                                errors.password_min_length
+                                                    ? true
+                                                    : undefined
+                                            }
+                                            aria-describedby={
+                                                errors.password_min_length
+                                                    ? 'password-min-length-error'
+                                                    : undefined
+                                            }
+                                        />
+                                        <FieldError id="password-min-length-error">
+                                            {errors.password_min_length}
+                                        </FieldError>
+                                    </Field>
+
+                                    <Field>
+                                        <div className="flex items-center gap-3">
+                                            <Checkbox
+                                                id="password_require_mixed_case"
+                                                checked={
+                                                    form.password_require_mixed_case
+                                                }
+                                                onCheckedChange={(checked) =>
                                                     setForm((current) => ({
                                                         ...current,
-                                                        password_policy: value,
-                                                    }));
+                                                        password_require_mixed_case:
+                                                            checked === true,
+                                                    }))
                                                 }
-                                            }}
-                                        >
-                                            <SelectTrigger
-                                                id="password_policy"
-                                                className="w-full"
-                                                aria-invalid={
-                                                    errors.password_policy
-                                                        ? true
-                                                        : undefined
-                                                }
-                                                aria-describedby={
-                                                    errors.password_policy
-                                                        ? 'password-policy-error'
-                                                        : undefined
-                                                }
-                                            >
-                                                <SelectValue>
-                                                    {t(
-                                                        `settings.instance.passwordPolicies.${form.password_policy}.label`,
-                                                    )}
-                                                </SelectValue>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {passwordPolicies.map(
-                                                    (policy) => (
-                                                        <SelectItem
-                                                            key={policy}
-                                                            value={policy}
-                                                            textValue={t(
-                                                                `settings.instance.passwordPolicies.${policy}.label`,
-                                                            )}
-                                                            className="items-start py-2"
-                                                        >
-                                                            <span className="flex flex-col gap-0.5 text-left">
-                                                                <span>
-                                                                    {t(
-                                                                        `settings.instance.passwordPolicies.${policy}.label`,
-                                                                    )}
-                                                                </span>
-                                                                <span className="text-xs font-normal whitespace-normal text-muted-foreground">
-                                                                    {t(
-                                                                        `settings.instance.passwordPolicies.${policy}.description`,
-                                                                    )}
-                                                                </span>
-                                                            </span>
-                                                        </SelectItem>
-                                                    ),
+                                            />
+                                            <FieldLabel htmlFor="password_require_mixed_case">
+                                                {t(
+                                                    'settings.instance.passwordRequireMixedCase',
                                                 )}
-                                            </SelectContent>
-                                        </Select>
-                                        <ul className="list-disc space-y-1 pl-6 text-sm text-muted-foreground">
-                                            {passwordPolicies.map((policy) => (
-                                                <li key={`hint-${policy}`}>
-                                                    <span className="font-medium text-foreground">
-                                                        {t(
-                                                            `settings.instance.passwordPolicies.${policy}.label`,
-                                                        )}
-                                                        :
-                                                    </span>{' '}
-                                                    {t(
-                                                        `settings.instance.passwordPolicies.${policy}.description`,
-                                                    )}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        <FieldError id="password-policy-error">
-                                            {errors.password_policy}
+                                            </FieldLabel>
+                                        </div>
+                                    </Field>
+
+                                    <Field>
+                                        <div className="flex items-center gap-3">
+                                            <Checkbox
+                                                id="password_require_numbers"
+                                                checked={
+                                                    form.password_require_numbers
+                                                }
+                                                onCheckedChange={(checked) =>
+                                                    setForm((current) => ({
+                                                        ...current,
+                                                        password_require_numbers:
+                                                            checked === true,
+                                                    }))
+                                                }
+                                            />
+                                            <FieldLabel htmlFor="password_require_numbers">
+                                                {t(
+                                                    'settings.instance.passwordRequireNumbers',
+                                                )}
+                                            </FieldLabel>
+                                        </div>
+                                    </Field>
+
+                                    <Field>
+                                        <div className="flex items-center gap-3">
+                                            <Checkbox
+                                                id="password_require_symbols"
+                                                checked={
+                                                    form.password_require_symbols
+                                                }
+                                                onCheckedChange={(checked) =>
+                                                    setForm((current) => ({
+                                                        ...current,
+                                                        password_require_symbols:
+                                                            checked === true,
+                                                    }))
+                                                }
+                                            />
+                                            <FieldLabel htmlFor="password_require_symbols">
+                                                {t(
+                                                    'settings.instance.passwordRequireSymbols',
+                                                )}
+                                            </FieldLabel>
+                                        </div>
+                                    </Field>
+
+                                    <Field
+                                        data-invalid={
+                                            errors.password_reject_compromised
+                                                ? true
+                                                : undefined
+                                        }
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Checkbox
+                                                id="password_reject_compromised"
+                                                checked={
+                                                    form.password_reject_compromised
+                                                }
+                                                onCheckedChange={(checked) =>
+                                                    setForm((current) => ({
+                                                        ...current,
+                                                        password_reject_compromised:
+                                                            checked === true,
+                                                    }))
+                                                }
+                                                aria-describedby="password-reject-compromised-hint"
+                                            />
+                                            <FieldLabel htmlFor="password_reject_compromised">
+                                                {t(
+                                                    'settings.instance.passwordRejectCompromised',
+                                                )}
+                                            </FieldLabel>
+                                        </div>
+                                        <FieldDescription
+                                            id="password-reject-compromised-hint"
+                                            className="pl-8"
+                                        >
+                                            {t(
+                                                'settings.instance.passwordRejectCompromisedHint',
+                                            )}
+                                        </FieldDescription>
+                                        <FieldError>
+                                            {errors.password_reject_compromised}
                                         </FieldError>
                                     </Field>
 
