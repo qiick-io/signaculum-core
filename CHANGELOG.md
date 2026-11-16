@@ -7,17 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0-beta.1] - 2026-11-13
+## [1.0.0-beta.1] - 2026-11-16
 
 First tagged beta of Signaculum: self-hosted OpenID Connect IdP for the qiick suite (Passport 13 + in-house OIDC layer, admin UI, organisations, distribution).
 
 ### Fixed
 
+- Authorization endpoint accepts `application/x-www-form-urlencoded` POST (OIDC Core §3.1.2.1) in addition to GET.
+- Unsupported OIDC Request Object parameters `request` / `request_uri` are refused with `request_not_supported` / `request_uri_not_supported` (plus `state` and RFC 9207 `iss`); never a `code`.
 - Remember-me recaller login no longer records a spurious `pwd` authentication method for `amr` (only interactive password login does).
 - RFC 9207 `iss` middleware scoped to authorize routes so unrelated redirects are untouched.
 
 ### Added
 
+- Per-organisation branding (logo / colours) for login and consent screens.
+- Time-boxed user impersonation for instance admins, with audit events and an expire / stop banner.
 - Instance-admin editable email templates (verification, password reset, organisation invitation) with en/it/de defaults, preview and fallback to packaged copy.
 - RFC 7662 token introspection at `POST /oauth/introspect` (confidential clients), advertised as `introspection_endpoint` in discovery; inactive / revoked / expired tokens return `{ "active": false }`.
 - OAuth 2.0 `client_credentials` for confidential applications that opt in (Admin → Applications): machine access tokens without `id_token`; discovery `grant_types_supported` includes `client_credentials`.
