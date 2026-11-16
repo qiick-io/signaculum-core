@@ -12,6 +12,7 @@ enum EmailTemplateTypeEnum: string
     case Verification = 'verification';
     case Reset = 'reset';
     case Invitation = 'invitation';
+    case EmailLoginCode = 'email_login_code';
 
     /**
      * @return list<string>
@@ -32,6 +33,7 @@ enum EmailTemplateTypeEnum: string
             self::Verification => ['app_name', 'user_name', 'url'],
             self::Reset => ['app_name', 'user_name', 'url', 'expire_minutes'],
             self::Invitation => ['app_name', 'organization_name', 'url'],
+            self::EmailLoginCode => ['app_name', 'user_name', 'code', 'expire_minutes'],
         };
     }
 }

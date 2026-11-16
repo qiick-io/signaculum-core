@@ -48,7 +48,11 @@
         "clearFilters": "Filter zurücksetzen",
         "sortAscending": "Aufsteigend sortieren",
         "sortDescending": "Absteigend sortieren",
-        "back": "Zurück"
+        "back": "Zurück",
+        "continue": "Weiter",
+        "close": "Schließen",
+        "confirm": "Bestätigen",
+        "edit": "Bearbeiten"
     },
     "confirmDestructive": {
         "typeToConfirm": "Tippe „{{name}}“ zur Bestätigung"
@@ -95,7 +99,8 @@
         "users": "Benutzer",
         "applications": "Anwendungen",
         "activityLog": "Aktivitätsprotokoll",
-        "organizations": "Organisationen"
+        "organizations": "Organisationen",
+        "apiKeys": "API-Schlüssel"
     },
     "realtime": {
         "connected": "Realtime verbunden",
@@ -235,9 +240,18 @@
                 "types": {
                     "verification": "Verifizierung",
                     "reset": "Passwortzurücksetzung",
-                    "invitation": "Einladung"
+                    "invitation": "Einladung",
+                    "email_login_code": "E-Mail-Anmeldecode"
                 }
-            }
+            },
+            "passwordMinLength": "Mindestlänge des Passworts",
+            "passwordRequireMixedCase": "Groß- und Kleinbuchstaben erforderlich",
+            "passwordRequireNumbers": "Mindestens eine Zahl erforderlich",
+            "passwordRequireSymbols": "Mindestens ein Sonderzeichen erforderlich",
+            "passwordRejectCompromised": "In bekannten Datenlecks gefundene Passwörter ablehnen",
+            "passwordRejectCompromisedHint": "Standardmäßig aus. Wenn aktiviert, sendet Signaculum nur ein kurzes SHA-1-Hash-Präfix des Passworts an Have I Been Pwned (k-Anonymity-API). Das Passwort selbst verlässt diesen Server nie. Siehe docs/password-policy.md.",
+            "emailCodeLoginEnabled": "Passwortlose Anmeldung mit E-Mail-Code erlauben",
+            "emailCodeLoginEnabledHint": "Standardmäßig aus. Gäste können einen sechsstelligen Code per E-Mail anfordern. Der Code allein setzt amr otp und zählt nie allein als MFA."
         },
         "layout": {
             "appearance": "Darstellung",
@@ -254,7 +268,8 @@
             "security": "Sicherheit",
             "sessions": "Sitzungen",
             "title": "Einstellungen",
-            "emailTemplates": "E-Mail-Vorlagen"
+            "emailTemplates": "E-Mail-Vorlagen",
+            "webhooks": "Webhooks"
         },
         "profile": {
             "breadcrumb": "Profileinstellungen",
@@ -309,6 +324,61 @@
             "signOutOthers": "Von allen anderen Browsern abmelden",
             "thisDevice": "Dieses Gerät",
             "title": "Angemeldete Browser"
+        },
+        "deleteAccount": {
+            "title": "Konto löschen",
+            "description": "Ihr Konto und alle zugehörigen Ressourcen löschen",
+            "warningTitle": "Warnung",
+            "warningDescription": "Bitte gehen Sie vorsichtig vor, dies kann nicht rückgängig gemacht werden.",
+            "confirmTitle": "Möchten Sie Ihr Konto wirklich löschen?",
+            "confirmDescription": "Wenn Ihr Konto gelöscht ist, werden auch alle zugehörigen Ressourcen und Daten endgültig gelöscht. Geben Sie Ihr Passwort ein, um zu bestätigen, dass Sie Ihr Konto endgültig löschen möchten."
+        },
+        "twoFactor": {
+            "title": "Zwei-Faktor-Authentifizierung",
+            "description": "Einstellungen der Zwei-Faktor-Authentifizierung verwalten",
+            "enabledDescription": "Bei der Anmeldung werden Sie nach einer sicheren, zufälligen PIN gefragt, die Sie in der TOTP-fähigen App auf Ihrem Telefon abrufen.",
+            "disabledDescription": "Wenn Sie die Zwei-Faktor-Authentifizierung aktivieren, werden Sie bei der Anmeldung nach einer sicheren PIN gefragt. Diese PIN rufen Sie in einer TOTP-fähigen App auf Ihrem Telefon ab.",
+            "enable": "2FA aktivieren",
+            "disable": "2FA deaktivieren",
+            "continueSetup": "Einrichtung fortsetzen",
+            "recoveryCodes": {
+                "title": "2FA-Wiederherstellungscodes",
+                "description": "Mit Wiederherstellungscodes erhalten Sie wieder Zugriff, wenn Sie Ihr 2FA-Gerät verlieren. Bewahren Sie sie in einem sicheren Passwortmanager auf.",
+                "view": "Wiederherstellungscodes anzeigen",
+                "hide": "Wiederherstellungscodes ausblenden",
+                "regenerate": "Codes neu erzeugen",
+                "listLabel": "Wiederherstellungscodes",
+                "loading": "Wiederherstellungscodes werden geladen",
+                "regenerateHint": "Jeder Wiederherstellungscode kann einmal für den Zugriff auf Ihr Konto verwendet werden und wird danach entfernt. Wenn Sie weitere benötigen, klicken Sie oben auf <bold>Codes neu erzeugen</bold>."
+            },
+            "setup": {
+                "manualEntry": "oder geben Sie den Code manuell ein",
+                "enabledTitle": "Zwei-Faktor-Authentifizierung aktiviert",
+                "enabledDescription": "Die Zwei-Faktor-Authentifizierung ist jetzt aktiviert. Scannen Sie den QR-Code oder geben Sie den Einrichtungsschlüssel in Ihrer Authenticator-App ein.",
+                "verifyTitle": "Authentifizierungscode bestätigen",
+                "verifyDescription": "Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein",
+                "enableTitle": "Zwei-Faktor-Authentifizierung aktivieren",
+                "enableDescription": "Um die Zwei-Faktor-Authentifizierung zu aktivieren, scannen Sie den QR-Code oder geben Sie den Einrichtungsschlüssel in Ihrer Authenticator-App ein"
+            }
+        },
+        "webhooks": {
+            "head": "Webhooks",
+            "title": "Webhooks",
+            "description": "Sende Signaculum-Domänenereignisse an eigene HTTPS-Endpunkte. Lieferungen sind mit HMAC-SHA256 signiert; das Format steht in der Doku.",
+            "add": "Endpunkt hinzufügen",
+            "empty": "Noch keine Webhook-Endpunkte.",
+            "secretTitle": "Signaturgeheimnis (nur einmal sichtbar)",
+            "allowPrivateUrls": "Private Webhook-URLs erlauben",
+            "allowPrivateUrlsDescription": "Standardmäßig aus. Wenn aktiv, dürfen Lieferungen Loopback- und private Netze erreichen (lokale QA). Cloud-Metadaten bleiben gesperrt. Keine Telemetrie: Signaculum POSTet nur an von dir registrierte URLs.",
+            "active": "Aktiv",
+            "inactive": "Inaktiv",
+            "recentDeliveries": "Letzte Lieferungen",
+            "editTitle": "Webhook bearbeiten",
+            "createTitle": "Webhook hinzufügen",
+            "formDescription": "Ereignisse abonnieren und signierte POSTs empfangen. Bevorzuge öffentliche HTTPS-URLs.",
+            "url": "Endpunkt-URL",
+            "urlDescription": "Exakte URL für POSTs. Private und Loopback-Hosts werden abgelehnt, außer die Einstellung oben ist aktiv.",
+            "events": "Ereignisse"
         }
     },
     "userMenu": {
@@ -344,7 +414,80 @@
     },
     "auth": {
         "firstName": "Vorname",
-        "lastName": "Nachname"
+        "lastName": "Nachname",
+        "login": {
+            "title": "In Ihr Konto einloggen",
+            "description": "Geben Sie unten E-Mail und Passwort ein, um sich anzumelden",
+            "head": "Anmelden",
+            "forgotPassword": "Passwort vergessen?",
+            "rememberMe": "Angemeldet bleiben",
+            "submit": "Anmelden",
+            "passkey": "Mit einem Passkey anmelden",
+            "authenticating": "Authentifizierung läuft...",
+            "orContinueWithEmail": "Oder mit E-Mail fortfahren",
+            "noAccount": "Noch kein Konto?",
+            "signUp": "Registrieren"
+        },
+        "register": {
+            "title": "Konto erstellen",
+            "description": "Geben Sie Ihre Daten ein, um ein Konto zu erstellen",
+            "head": "Registrieren",
+            "submit": "Konto erstellen",
+            "hasAccount": "Bereits ein Konto?",
+            "logIn": "Anmelden"
+        },
+        "forgotPassword": {
+            "title": "Passwort vergessen",
+            "description": "Geben Sie Ihre E-Mail ein, um einen Reset-Link zu erhalten",
+            "head": "Passwort vergessen",
+            "submit": "Reset-Link senden",
+            "orReturn": "Oder zurück zur",
+            "logIn": "Anmeldung"
+        },
+        "resetPassword": {
+            "title": "Passwort zurücksetzen",
+            "description": "Bitte geben Sie unten Ihr neues Passwort ein",
+            "head": "Passwort zurücksetzen",
+            "submit": "Passwort zurücksetzen"
+        },
+        "confirmPassword": {
+            "title": "Passwort bestätigen",
+            "description": "Dies ist ein geschützter Bereich der Anwendung. Bitte bestätigen Sie Ihr Passwort, um fortzufahren.",
+            "head": "Passwort bestätigen",
+            "submit": "Passwort bestätigen",
+            "passkey": "Mit Passkey bestätigen",
+            "confirming": "Bestätigung läuft...",
+            "orConfirmWithPassword": "Oder mit Passwort bestätigen"
+        },
+        "verifyEmail": {
+            "title": "E-Mail-Bestätigung",
+            "description": "Bitte bestätigen Sie Ihre E-Mail-Adresse über den Link, den wir Ihnen gerade gesendet haben.",
+            "head": "E-Mail-Bestätigung",
+            "linkSent": "Ein neuer Bestätigungslink wurde an die bei der Registrierung angegebene E-Mail-Adresse gesendet.",
+            "resend": "Bestätigungs-E-Mail erneut senden",
+            "logOut": "Abmelden"
+        },
+        "twoFactorChallenge": {
+            "head": "Zwei-Faktor-Authentifizierung",
+            "recoveryTitle": "Wiederherstellungscode",
+            "recoveryDescription": "Bestätigen Sie den Zugriff auf Ihr Konto mit einem Ihrer Notfall-Wiederherstellungscodes.",
+            "recoveryToggle": "mit einem Authentifizierungscode anmelden",
+            "authTitle": "Authentifizierungscode",
+            "authDescription": "Geben Sie den Code aus Ihrer Authenticator-App ein.",
+            "authToggle": "mit einem Wiederherstellungscode anmelden",
+            "recoveryPlaceholder": "Wiederherstellungscode eingeben",
+            "orYouCan": "oder Sie können sich "
+        },
+        "emailCode": {
+            "head": "Mit E-Mail-Code anmelden",
+            "orUseCode": "Oder mit einem einmaligen E-Mail-Code anmelden",
+            "email": "E-Mail-Adresse",
+            "sendCode": "Code per E-Mail senden",
+            "code": "Anmeldecode",
+            "verify": "Anmelden",
+            "resend": "Code erneut senden",
+            "backToLogin": "Zurück zur Passwort-Anmeldung"
+        }
     },
     "admin": {
         "users": {
@@ -462,6 +605,20 @@
                 "filteredDescription": "Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.",
                 "cta": "Neue Anwendung"
             }
+        },
+        "apiKeys": {
+            "head": "API-Schlüssel",
+            "title": "API-Schlüssel",
+            "description": "Bearer-Schlüssel für die Admin-REST-API. Geheimnisse werden einmal angezeigt; Scopes steuern jede Ressource.",
+            "add": "Schlüssel erstellen",
+            "empty": "Noch keine API-Schlüssel.",
+            "secretTitle": "API-Schlüsselgeheimnis (nur einmal sichtbar)",
+            "createTitle": "API-Schlüssel erstellen",
+            "formDescription": "Scopes sorgfältig wählen. Lese-Scopes für Automationen bevorzugen, die nur listen.",
+            "scopes": "Scopes",
+            "active": "Aktiv",
+            "inactive": "Widerrufen oder abgelaufen",
+            "revoke": "Widerrufen"
         }
     },
     "activityLog": {
@@ -597,7 +754,9 @@
             "brandColorDark": "Markenfarbe (dunkel)",
             "logo": "Logo",
             "logoDark": "Logo (dunkel)",
-            "saveBranding": "Branding speichern"
+            "saveBranding": "Branding speichern",
+            "requireMfa": "Mitglieder müssen die Zwei-Faktor-Authentifizierung nutzen",
+            "requireMfaHint": "Mitglieder ohne TOTP oder Passkey werden zur Sicherheit geleitet, bevor sie eine Anwendung autorisieren können. Signaculum behauptet MFA in amr oder acr nie, wenn kein zweiter Faktor verwendet wurde."
         },
         "accept": {
             "head": "Organisationseinladung",

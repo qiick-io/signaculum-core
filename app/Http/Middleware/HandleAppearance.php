@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use App\Services\SettingsRepositoryService;
@@ -9,6 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Shares appearance and accessibility cookies with the root Blade view so the
+ * first paint already has the correct theme and contrast classes on `<html>`.
+ */
 class HandleAppearance
 {
     /**

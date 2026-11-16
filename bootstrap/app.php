@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CaptureOrganizationBrandingMiddleware;
+use App\Http\Middleware\EnsureOrganizationMfaIsSatisfiedMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
 use App\Http\Middleware\EnsureUserIsActiveMiddleware;
 use App\Http\Middleware\ExpireImpersonationMiddleware;
@@ -23,8 +24,10 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        apiPrefix: 'api',
         then: function (): void {
             Route::middleware('api')->group(base_path('routes/oidc.php'));
 
@@ -53,6 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsureTwoFactorIsEnabledMiddleware::class,
+            EnsureOrganizationMfaIsSatisfiedMiddleware::class,
             // Last so defense headers apply to the final HTML (app-ui security-headers.md).
             SetSecurityHeadersMiddleware::class,
         ]);

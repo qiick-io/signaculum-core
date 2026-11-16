@@ -20,8 +20,11 @@ First tagged beta of Signaculum: self-hosted OpenID Connect IdP for the qiick su
 
 ### Added
 
-- Per-organisation branding (logo / colours) for login and consent screens.
-- Time-boxed user impersonation for instance admins, with audit events and an expire / stop banner.
+- Optional passwordless sign-in with a six-digit email code (off by default): queued mail, editable template, hashed at rest, rate limited, lockout-aware; `amr` = `otp` only (#126).
+- Per-organisation MFA requirement: owners/admins can require members to enroll TOTP or a passkey before finishing OAuth authorization; `amr` / `acr` stay truthful; audited in the activity log (#125).
+- Granular instance password policy (minimum length, mixed case / numbers / symbols) and an optional Have I Been Pwned check via `Password::uncompromised()` — off by default; UI and `docs/password-policy.md` document the k-anonymity hash prefix (#124).
+- Per-organisation branding (logo / colours) for login and consent screens (#109).
+- Time-boxed user impersonation for instance admins, with audit events and an expire / stop banner (#108).
 - Instance-admin editable email templates (verification, password reset, organisation invitation) with en/it/de defaults, preview and fallback to packaged copy.
 - RFC 7662 token introspection at `POST /oauth/introspect` (confidential clients), advertised as `introspection_endpoint` in discovery; inactive / revoked / expired tokens return `{ "active": false }`.
 - OAuth 2.0 `client_credentials` for confidential applications that opt in (Admin → Applications): machine access tokens without `id_token`; discovery `grant_types_supported` includes `client_credentials`.
@@ -53,6 +56,9 @@ First tagged beta of Signaculum: self-hosted OpenID Connect IdP for the qiick su
 - **First tag.** There is no previous SemVer upgrade path. Fresh installs: `composer create-project qiick/signaculum-core` then `php artisan signaculum:install`.
 - `composer create-project` does **not** migrate. Always finish with `signaculum:install` (or `php artisan migrate --force` on a tree that was already installed from `develop` before this layout).
 - Later updates: put the new code in place, install dependencies (`composer install`, `npm ci`, `npm run build`), then `php artisan signaculum:upgrade`. Do **not** run `create-project` again. Optional: `signaculum:upgrade --sync-upstream=v1.0.0-beta.1` (try `--dry-run` first).
+- New migration creates `email_login_codes`. Run `php artisan signaculum:upgrade` (or `migrate --force`). Enable email-code login under Settings → Authentication & security when needed.
+- New migration adds `organizations.is_mfa_required` (default false). Run `php artisan signaculum:upgrade` (or `migrate --force`).
+- Authentication & security settings replace the `weak` / `medium` / `strong` password presets with granular fields. Re-save that page after upgrade if you relied on a stored preset; the former `strong` preset’s HIBP check is no longer implied — enable “Reject breached passwords” explicitly if you want it.
 - New dependency: `spatie/laravel-activitylog`. Run `composer update` / `composer install` and migrate so the `activity_log` table exists.
 - Back up `APP_KEY`, `storage/oauth-*.key` and the database (including `signing_keys`) before moving hosts — see [docs/key-rotation-and-backup.md](./docs/key-rotation-and-backup.md).
 - Beta: wire contracts may still change before 1.0.0; pin clients to this tag and read [docs/oidc-profile.md](./docs/oidc-profile.md).

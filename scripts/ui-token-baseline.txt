@@ -1,20 +1,3 @@
 # Baseline of known raw Tailwind palette / #hex className usages outside components/ui.
 # Maintained with scripts/check-ui-tokens.mjs. Do not grow counts; fix call sites instead.
 # Format: path:kind:token:count
-resources/js/components/delete-user.tsx:palette:bg-red-50:1
-resources/js/components/delete-user.tsx:palette:bg-red-700/10:1
-resources/js/components/delete-user.tsx:palette:border-red-100:1
-resources/js/components/delete-user.tsx:palette:border-red-200/10:1
-resources/js/components/delete-user.tsx:palette:text-red-100:1
-resources/js/components/delete-user.tsx:palette:text-red-600:1
-resources/js/components/input-error.tsx:palette:text-red-400:1
-resources/js/components/input-error.tsx:palette:text-red-600:1
-resources/js/components/nav-footer.tsx:palette:text-neutral-100:1
-resources/js/components/nav-footer.tsx:palette:text-neutral-300:1
-resources/js/components/nav-footer.tsx:palette:text-neutral-600:1
-resources/js/components/nav-footer.tsx:palette:text-neutral-800:1
-resources/js/pages/auth/forgot-password.tsx:palette:text-green-600:1
-resources/js/pages/auth/login.tsx:palette:text-green-600:1
-resources/js/pages/auth/two-factor-challenge.tsx:palette:decoration-neutral-300:1
-resources/js/pages/auth/two-factor-challenge.tsx:palette:decoration-neutral-500:1
-resources/js/pages/auth/verify-email.tsx:palette:text-green-600:1

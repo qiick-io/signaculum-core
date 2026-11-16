@@ -24,9 +24,13 @@ final class RegenerateApplicationSecretAction
             throw new InvalidArgumentException('Public clients have no secret to regenerate.');
         }
 
+        $plainSecret = Str::random(40);
+
         $application->forceFill([
-            'secret' => Str::random(40),
+            'secret' => $plainSecret,
         ])->save();
+
+        $application->plainSecret = $plainSecret;
 
         // Secret is excluded from model activity logging; record the rotation without the value.
         $activity = activity()

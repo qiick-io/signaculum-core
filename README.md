@@ -38,6 +38,8 @@ Every qiick app keeps working standalone with local login. Signaculum is one sta
 
 Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social logins, front-channel logout.
 
+Password rules are configured under Settings → Authentication & security (length and character classes). Rejecting passwords found in known breaches is **off by default** and documented in [docs/password-policy.md](./docs/password-policy.md) (k-anonymity check against Have I Been Pwned when enabled).
+
 ## Requirements
 
 | Requirement | Notes |
@@ -97,6 +99,12 @@ Local site: [Laravel Herd](https://herd.laravel.com) at `https://signaculum-core
 ### Required checks (maintainer)
 
 The list Luca should set on `develop` and `main` is in [docs/required-checks.md](./docs/required-checks.md) (`ci`, `pr-title / commitlint`, `app-ui-drift / standards`, `php-quality / php-quality`, `ui-quality / ui-quality`, `migrations-frozen / migrations-frozen`, `distribution-smoke / smoke`).
+
+## Docs
+
+- [OIDC profile](docs/oidc-profile.md) — implemented wire contract
+- [Admin REST API](docs/admin-api.md) — Bearer API keys, scopes, OpenAPI at `/api/v1/openapi.json`
+- [Outbound webhooks](docs/webhooks.md) — signed domain events (when enabled on your branch / release)
 
 ## License
 
