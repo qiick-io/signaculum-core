@@ -35,7 +35,7 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `code_challenge_methods_supported`: `S256`
 - `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, `amr`, `acr`, plus user claims below
 - `acr_values_supported`: `urn:qiick:loa:pwd`, `urn:qiick:loa:mfa`
-- `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false`
+- `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false` (Request Objects are not implemented; see Errors)
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
 - `authorization_response_iss_parameter_supported`: `true` (RFC 9207)
@@ -189,6 +189,8 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 | Situation                                                                                           | Behaviour                                                                                  |
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | PKCE / nonce / consent deny / `prompt=none` without session / `max_age` exceeded with `prompt=none` | Redirect to the registered `redirect_uri` with `error`, echoed `state`, and RFC 9207 `iss` |
+| `request` parameter present (OIDC Core §6.1 / §3.1.2.6)                                             | Redirect with `error=request_not_supported`, `state`, `iss`; never a `code`                |
+| `request_uri` parameter present (OIDC Core §6.1 / §3.1.2.6)                                         | Redirect with `error=request_uri_not_supported`, `state`, `iss`; never a `code`            |
 | `max_age` exceeded (no `prompt=none`) or `prompt=login`                                             | Redirect to Signaculum `/login` (then back to authorize)                                   |
 | Unknown client or unregistered `redirect_uri`                                                       | HTTP 401 (no redirect to an attacker URI)                                                  |
 | Bad token request (verifier, client secret, …)                                                      | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …)                 |

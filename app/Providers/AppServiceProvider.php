@@ -6,6 +6,7 @@ use App\Enums\EmailTemplateTypeEnum;
 use App\Enums\OidcScopeEnum;
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
+use App\Http\Middleware\RejectUnsupportedRequestObjectMiddleware;
 use App\Models\Client;
 use App\Models\User;
 use App\Oidc\IdTokenResponse;
@@ -73,6 +74,7 @@ class AppServiceProvider extends ServiceProvider
         $this->attachOidcRateLimitMiddleware();
         $this->attachAuthorizationResponseIssuerMiddleware();
         $this->attachMaximumAuthenticationAgeMiddleware();
+        $this->attachUnsupportedRequestObjectMiddleware();
     }
 
     /**
@@ -254,6 +256,23 @@ class AppServiceProvider extends ServiceProvider
             foreach (Route::getRoutes()->getRoutes() as $route) {
                 if ($route->getName() === 'passport.authorizations.authorize') {
                     $route->middleware(EnforceMaximumAuthenticationAgeMiddleware::class);
+                }
+            }
+        });
+    }
+
+    /**
+     * OIDC Core §6.1 / §3.1.2.6: reject `request` / `request_uri` when unsupported.
+     *
+     * Must run before Passport validates the authorization request so a Request Object
+     * never produces a code that ignored `state` / `nonce` from the JWT.
+     */
+    protected function attachUnsupportedRequestObjectMiddleware(): void
+    {
+        $this->app->booted(function (): void {
+            foreach (Route::getRoutes()->getRoutes() as $route) {
+                if ($route->getName() === 'passport.authorizations.authorize') {
+                    $route->middleware(RejectUnsupportedRequestObjectMiddleware::class);
                 }
             }
         });
