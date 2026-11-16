@@ -59,11 +59,15 @@ Every released version lists **Upgrade notes** under its heading in [CHANGELOG.m
 For `1.0.0-beta.1` (first tagged release):
 
 - Fresh installs: `create-project` then `signaculum:install` (migrate is no longer part of `create-project`).
-- Trees installed from earlier `develop` snapshots: put this tag's code in place, `composer install`, then `signaculum:upgrade` so migrations (including `activity_log` from `spatie/laravel-activitylog`) apply.
+- Trees installed from earlier `develop` snapshots: put this tag's code in place, `composer install`, then `signaculum:upgrade` so migrations apply (`activity_log`, `email_login_codes`, `organizations.is_mfa_required`, `webhooks` / `webhook_deliveries`, `api_keys`, and earlier OIDC / org tables).
 - New dependency: `spatie/laravel-activitylog`.
+- Authentication & security settings replace the old `weak` / `medium` / `strong` password presets with granular fields. Re-save that page after upgrade if you relied on a stored preset; enable “Reject breached passwords” explicitly if you want the HIBP check (it is never implied).
+- Email-code login and outbound webhooks need a **queue worker**. Mail (verification, reset, invitations, email codes) and webhook delivery are queued.
+- Admin REST API keys are created under Admin → API keys after upgrade; there is no seed key.
 
 ## After upgrade
 
 - Confirm `GET /health/ready` returns 200.
+- Confirm a queue worker is running if you use mail or webhooks.
 - Spot-check discovery (`/.well-known/openid-configuration`) and a test login from a registered client.
 - If you rotated signing keys as part of maintenance, leave the overlap window in place — [Key rotation and backup](./key-rotation-and-backup.md).

@@ -24,21 +24,28 @@ Every qiick app keeps working standalone with local login. Signaculum is one sta
 | --- | --- |
 | **Install** | `composer create-project qiick/signaculum-core` · [Install](./docs/install.md) · [Upgrade](./docs/upgrade.md) |
 | **OIDC** | [Protocol profile](./docs/oidc-profile.md) · [Clients](./docs/clients.md) · [Organisations](./docs/organizations.md) · [Keys & backup](./docs/key-rotation-and-backup.md) |
-| **Security** | [SECURITY.md](./SECURITY.md) |
+| **Security** | [SECURITY.md](./SECURITY.md) · [Password policy](./docs/password-policy.md) |
 | **Issues** | [GitHub Issues](https://github.com/qiick-io/signaculum-core/issues) |
 
 ## What you get
 
-- Local accounts: email and password, TOTP two-factor, passkeys, email verification
-- Organisations with members and roles `owner`, `admin`, `member`, `billing` (multi-role; never zero owners)
+- Local accounts: email and password, TOTP two-factor, passkeys, email verification, optional passwordless email one-time code (off by default)
+- Granular password policy (length and character classes); optional Have I Been Pwned check (off by default) — [Password policy](./docs/password-policy.md)
+- Organisations with members and roles `owner`, `admin`, `member`, `billing` (multi-role; never zero owners); optional per-organisation MFA enrolment gate and branding
 - OpenID Connect on Laravel Passport: authorization code + **PKCE S256** (required), RS256 `id_token`, discovery, JWKS with rotation, userinfo, RP-initiated and back-channel logout, token revocation and introspection, optional client credentials
 - Scopes `openid`, `profile`, `email`, `qiick.orgs` (`orgs` claim), plus `amr` / `acr` for MFA signalling
-- Admin screens for users, OIDC applications, activity log and instance settings
+- Admin UI for users, OIDC applications, activity log, email templates, API keys and instance settings
+- Admin REST API (`/api/v1`) with scoped Bearer API keys and OpenAPI — [Admin API](./docs/admin-api.md)
+- Outbound signed webhooks for domain events (SSRF-guarded delivery URLs) — [Webhooks](./docs/webhooks.md)
 - Self-registration **off by default** (closed IdP); instance admins enable it under Settings → Authentication & security
 
 Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social logins, front-channel logout.
 
 Password rules are configured under Settings → Authentication & security (length and character classes). Rejecting passwords found in known breaches is **off by default** and documented in [docs/password-policy.md](./docs/password-policy.md) (k-anonymity check against Have I Been Pwned when enabled).
+
+### Known limitations
+
+- Organisation MFA (#125) currently checks that a second factor is **enrolled**, not that the session `amr` contains one. Step-up against session `amr` is tracked in [#131](https://github.com/qiick-io/signaculum-core/issues/131).
 
 ## Requirements
 
@@ -48,6 +55,7 @@ Password rules are configured under Settings → Authentication & security (leng
 | **Composer 2** | |
 | **Node.js 24** | `.nvmrc` |
 | **Database** | SQLite (default); MySQL 8 or PostgreSQL 17 supported |
+| **Queue worker** | Required for outbound webhooks, email (verification, reset, invitations, email-code login) and back-channel logout |
 
 ## Quick start
 
@@ -60,9 +68,11 @@ php artisan signaculum:install
 
 `create-project` only copies `.env` and generates `APP_KEY`. **Finish with `signaculum:install`** (migrate, Passport keys, signing key, first admin).
 
-> **Install only — not the update channel.** After the first tree exists, put new code in place and run `php artisan signaculum:upgrade`. Do not run `create-project` again. Details: [Upgrade](./docs/upgrade.md).
+> **Install only — not the update channel.** After the first tree exists, put the new code in place and run `php artisan signaculum:upgrade`. Do not run `create-project` again. Details: [Upgrade](./docs/upgrade.md).
 
 Non-interactive: `php artisan signaculum:install --no-interaction --force`.
+
+Run a queue worker in every environment that sends mail or webhooks (`php artisan queue:work`, or `composer run dev` locally).
 
 ### Docker
 
@@ -102,9 +112,14 @@ The list Luca should set on `develop` and `main` is in [docs/required-checks.md]
 
 ## Docs
 
+- [Install](docs/install.md) · [Upgrade](docs/upgrade.md)
 - [OIDC profile](docs/oidc-profile.md) — implemented wire contract
+- [OIDC clients](docs/clients.md) · [Organisations](docs/organizations.md) · [Key rotation and backup](docs/key-rotation-and-backup.md)
 - [Admin REST API](docs/admin-api.md) — Bearer API keys, scopes, OpenAPI at `/api/v1/openapi.json`
-- [Outbound webhooks](docs/webhooks.md) — signed domain events (when enabled on your branch / release)
+- [Outbound webhooks](docs/webhooks.md) — signed domain events with SSRF guard
+- [Password policy](docs/password-policy.md) — granular rules and optional HIBP k-anonymity check
+- [Competitive parity](docs/COMPETITIVE-PARITY.md) — Signaculum vs common IdPs for beta scoping
+- [Required checks](docs/required-checks.md) — branch-protection job names for the maintainer
 
 ## License
 
