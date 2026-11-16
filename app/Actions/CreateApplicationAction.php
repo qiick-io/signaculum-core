@@ -5,19 +5,23 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Data\ApplicationData;
+use App\Enums\WebhookEventEnum;
 use App\Models\Client;
+use App\Services\WebhookDispatcherService;
 use Laravel\Passport\ClientRepository;
 
 /**
  * Registers an authorization-code OIDC application through Passport's ClientRepository.
  *
- * Side effects: creates an `oauth_clients` row (random secret when confidential).
+ * Side effects: creates an `oauth_clients` row (random secret when confidential);
+ * queues `application.created` webhooks when endpoints are subscribed.
  * Opt-in `client_credentials` is written onto `grant_types` after Passport's create.
  */
 final class CreateApplicationAction
 {
     public function __construct(
         private readonly ClientRepository $clientRepository,
+        private readonly WebhookDispatcherService $webhookDispatcher,
     ) {}
 
     public function execute(ApplicationData $applicationData): Client
@@ -39,6 +43,11 @@ final class CreateApplicationAction
         ])->save();
 
         $client->plainSecret = $plainSecret;
+
+        $this->webhookDispatcher->dispatch(WebhookEventEnum::ApplicationCreated, [
+            'id' => $client->getKey(),
+            'name' => $client->name,
+        ]);
 
         return $client;
     }

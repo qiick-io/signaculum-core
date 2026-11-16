@@ -48,7 +48,8 @@
         "clearFilters": "Filter zurücksetzen",
         "sortAscending": "Aufsteigend sortieren",
         "sortDescending": "Absteigend sortieren",
-        "back": "Zurück"
+        "back": "Zurück",
+        "edit": "Bearbeiten"
     },
     "confirmDestructive": {
         "typeToConfirm": "Tippe „{{name}}“ zur Bestätigung"
@@ -249,7 +250,8 @@
             "security": "Sicherheit",
             "sessions": "Sitzungen",
             "title": "Einstellungen",
-            "emailTemplates": "E-Mail-Vorlagen"
+            "emailTemplates": "E-Mail-Vorlagen",
+            "webhooks": "Webhooks"
         },
         "profile": {
             "breadcrumb": "Profileinstellungen",
@@ -304,6 +306,25 @@
             "signOutOthers": "Von allen anderen Browsern abmelden",
             "thisDevice": "Dieses Gerät",
             "title": "Angemeldete Browser"
+        },
+        "webhooks": {
+            "head": "Webhooks",
+            "title": "Webhooks",
+            "description": "Sende Signaculum-Domänenereignisse an eigene HTTPS-Endpunkte. Lieferungen sind mit HMAC-SHA256 signiert; das Format steht in der Doku.",
+            "add": "Endpunkt hinzufügen",
+            "empty": "Noch keine Webhook-Endpunkte.",
+            "secretTitle": "Signaturgeheimnis (nur einmal sichtbar)",
+            "allowPrivateUrls": "Private Webhook-URLs erlauben",
+            "allowPrivateUrlsDescription": "Standardmäßig aus. Wenn aktiv, dürfen Lieferungen Loopback- und private Netze erreichen (lokale QA). Cloud-Metadaten bleiben gesperrt. Keine Telemetrie: Signaculum POSTet nur an von dir registrierte URLs.",
+            "active": "Aktiv",
+            "inactive": "Inaktiv",
+            "recentDeliveries": "Letzte Lieferungen",
+            "editTitle": "Webhook bearbeiten",
+            "createTitle": "Webhook hinzufügen",
+            "formDescription": "Ereignisse abonnieren und signierte POSTs empfangen. Bevorzuge öffentliche HTTPS-URLs.",
+            "url": "Endpunkt-URL",
+            "urlDescription": "Exakte URL für POSTs. Private und Loopback-Hosts werden abgelehnt, außer die Einstellung oben ist aktiv.",
+            "events": "Ereignisse"
         }
     },
     "userMenu": {

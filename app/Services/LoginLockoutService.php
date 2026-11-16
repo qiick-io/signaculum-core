@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\WebhookEventEnum;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 
@@ -11,11 +12,14 @@ use Illuminate\Support\Carbon;
  * Temporary account lock after too many failed password logins (instance settings).
  *
  * Side effects: updates `failed_login_attempts` / `locked_until`; writes an `auth`
- * activity entry when a lock is applied.
+ * activity entry when a lock is applied; queues `user.locked` webhooks.
  */
 final class LoginLockoutService
 {
-    public function __construct(private readonly SettingsRepositoryService $settings) {}
+    public function __construct(
+        private readonly SettingsRepositoryService $settings,
+        private readonly WebhookDispatcherService $webhookDispatcher,
+    ) {}
 
     public function isLocked(User $user): bool
     {
@@ -68,6 +72,12 @@ final class LoginLockoutService
                     'threshold' => $threshold,
                 ])
                 ->log('Account locked after failed login attempts');
+
+            $this->webhookDispatcher->dispatch(WebhookEventEnum::UserLocked, [
+                'id' => $user->subject,
+                'email' => $user->email,
+                'locked_until' => $user->locked_until?->toIso8601String(),
+            ]);
         }
     }
 }

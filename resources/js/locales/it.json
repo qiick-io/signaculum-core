@@ -48,7 +48,8 @@
         "clearFilters": "Cancella filtri",
         "sortAscending": "Ordine crescente",
         "sortDescending": "Ordine decrescente",
-        "back": "Indietro"
+        "back": "Indietro",
+        "edit": "Modifica"
     },
     "confirmDestructive": {
         "typeToConfirm": "Digita \"{{name}}\" per confermare"
@@ -249,7 +250,8 @@
             "security": "Sicurezza",
             "sessions": "Sessioni",
             "title": "Impostazioni",
-            "emailTemplates": "Modelli email"
+            "emailTemplates": "Modelli email",
+            "webhooks": "Webhook"
         },
         "profile": {
             "breadcrumb": "Impostazioni profilo",
@@ -304,6 +306,25 @@
             "signOutOthers": "Esci da tutti gli altri browser",
             "thisDevice": "Questo dispositivo",
             "title": "Browser connessi"
+        },
+        "webhooks": {
+            "head": "Webhook",
+            "title": "Webhook",
+            "description": "Invia gli eventi di dominio di Signaculum ai tuoi endpoint HTTPS. Le consegne sono firmate con HMAC-SHA256; il formato è documentato.",
+            "add": "Aggiungi endpoint",
+            "empty": "Nessun endpoint webhook ancora.",
+            "secretTitle": "Segreto di firma (mostrato una sola volta)",
+            "allowPrivateUrls": "Consenti URL webhook privati",
+            "allowPrivateUrlsDescription": "Disattivato di default. Se attivo, le consegne possono puntare a reti locali o private (QA). I metadati cloud restano bloccati. Non è telemetria: Signaculum invia POST solo agli URL che registri.",
+            "active": "Attivo",
+            "inactive": "Inattivo",
+            "recentDeliveries": "Consegne recenti",
+            "editTitle": "Modifica webhook",
+            "createTitle": "Aggiungi webhook",
+            "formDescription": "Sottoscrivi gli eventi e ricevi POST firmati. Preferisci URL HTTPS pubblici.",
+            "url": "URL endpoint",
+            "urlDescription": "URL esatto a cui Signaculum invierà il POST. Host privati e loopback sono rifiutati salvo l’impostazione sopra.",
+            "events": "Eventi"
         }
     },
     "userMenu": {

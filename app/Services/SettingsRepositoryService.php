@@ -80,6 +80,8 @@ final class SettingsRepositoryService
             'activity_retention_days' => (int) config('activitylog.clean_after_days', 365),
             // Nested overrides for verification / reset / invitation × en/it/de; empty = lang defaults.
             'email_templates' => [],
+            // Off by default: webhook deliveries must not hit private/loopback hosts (SSRF).
+            'webhooks_allow_private_urls' => false,
         ];
     }
 
@@ -309,6 +311,15 @@ final class SettingsRepositoryService
     public function isTwoFactorRequired(): bool
     {
         return (bool) $this->all()['two_factor_required'];
+    }
+
+    /**
+     * When true, outbound webhook URLs may target private / loopback hosts (local QA only).
+     * Metadata endpoints stay blocked either way.
+     */
+    public function areWebhookPrivateUrlsAllowed(): bool
+    {
+        return (bool) $this->all()['webhooks_allow_private_urls'];
     }
 
     /**
