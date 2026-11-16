@@ -48,7 +48,7 @@ final class UserController extends Controller
 
     public function show(User $user): UserResource
     {
-        Gate::authorize('update', $user);
+        Gate::authorize('view', $user);
 
         return new UserResource($user);
     }

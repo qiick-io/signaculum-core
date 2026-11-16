@@ -6,6 +6,7 @@ use App\Actions\CreateApiKeyAction;
 use App\Enums\ApiKeyScopeEnum;
 use App\Models\ApiKey;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 
 function adminApiKey(array $scopes = [ApiKeyScopeEnum::UsersRead->value, ApiKeyScopeEnum::UsersWrite->value]): array
 {
@@ -34,6 +35,25 @@ it('lists users with a scoped api key', function (): void {
         ->getJson('/api/v1/users')
         ->assertOk()
         ->assertJsonStructure(['data', 'links', 'meta']);
+});
+
+it('shows a user when authorized with view', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    $user = User::factory()->create(['email' => 'shown@example.com']);
+
+    $abilities = [];
+    Gate::before(function ($actor, string $ability) use (&$abilities) {
+        $abilities[] = $ability;
+
+        return null;
+    });
+
+    $this->withToken($plain)
+        ->getJson('/api/v1/users/'.$user->getKey())
+        ->assertOk()
+        ->assertJsonPath('data.email', 'shown@example.com');
+
+    expect($abilities)->toContain('view')->not->toContain('update');
 });
 
 it('refuses users list without the read scope', function (): void {
