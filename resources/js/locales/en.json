@@ -96,7 +96,8 @@
         "users": "Users",
         "applications": "Applications",
         "activityLog": "Activity Log",
-        "organizations": "Organisations"
+        "organizations": "Organisations",
+        "apiKeys": "API keys"
     },
     "realtime": {
         "connected": "Realtime connected",
@@ -488,6 +489,20 @@
                 "filteredDescription": "Try another search or clear the filters.",
                 "cta": "New application"
             }
+        },
+        "apiKeys": {
+            "head": "API keys",
+            "title": "API keys",
+            "description": "Bearer keys for the Admin REST API. Secrets are shown once; scopes gate each resource.",
+            "add": "Create key",
+            "empty": "No API keys yet.",
+            "secretTitle": "API key secret (shown once)",
+            "createTitle": "Create API key",
+            "formDescription": "Choose scopes carefully. Prefer read scopes for automation that only lists data.",
+            "scopes": "Scopes",
+            "active": "Active",
+            "inactive": "Revoked or expired",
+            "revoke": "Revoke"
         }
     },
     "activityLog": {

@@ -96,7 +96,8 @@
         "users": "Benutzer",
         "applications": "Anwendungen",
         "activityLog": "Aktivitätsprotokoll",
-        "organizations": "Organisationen"
+        "organizations": "Organisationen",
+        "apiKeys": "API-Schlüssel"
     },
     "realtime": {
         "connected": "Realtime verbunden",
@@ -488,6 +489,20 @@
                 "filteredDescription": "Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.",
                 "cta": "Neue Anwendung"
             }
+        },
+        "apiKeys": {
+            "head": "API-Schlüssel",
+            "title": "API-Schlüssel",
+            "description": "Bearer-Schlüssel für die Admin-REST-API. Geheimnisse werden einmal angezeigt; Scopes steuern jede Ressource.",
+            "add": "Schlüssel erstellen",
+            "empty": "Noch keine API-Schlüssel.",
+            "secretTitle": "API-Schlüsselgeheimnis (nur einmal sichtbar)",
+            "createTitle": "API-Schlüssel erstellen",
+            "formDescription": "Scopes sorgfältig wählen. Lese-Scopes für Automationen bevorzugen, die nur listen.",
+            "scopes": "Scopes",
+            "active": "Aktiv",
+            "inactive": "Widerrufen oder abgelaufen",
+            "revoke": "Widerrufen"
         }
     },
     "activityLog": {

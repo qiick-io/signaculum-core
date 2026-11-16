@@ -1,0 +1,228 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Signaculum Admin API",
+        "version": "1.0.0",
+        "description": "Instance-admin REST API authenticated with Bearer API keys."
+    },
+    "servers": [{ "url": "/api/v1" }],
+    "components": {
+        "securitySchemes": {
+            "ApiKeyBearer": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "sk_"
+            }
+        }
+    },
+    "security": [{ "ApiKeyBearer": [] }],
+    "paths": {
+        "/openapi.json": {
+            "get": {
+                "summary": "OpenAPI document",
+                "security": [],
+                "responses": { "200": { "description": "OpenAPI 3.1 JSON" } }
+            }
+        },
+        "/users": {
+            "get": {
+                "summary": "List users",
+                "responses": { "200": { "description": "Paginated users" } }
+            },
+            "post": {
+                "summary": "Create user",
+                "responses": { "201": { "description": "Created user" } }
+            }
+        },
+        "/users/{user}": {
+            "get": {
+                "summary": "Show user",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": { "200": { "description": "User" } }
+            },
+            "patch": {
+                "summary": "Update user",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": { "200": { "description": "Updated user" } }
+            }
+        },
+        "/users/{user}/deactivate": {
+            "post": {
+                "summary": "Deactivate user",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": { "200": { "description": "Deactivated user" } }
+            }
+        },
+        "/users/{user}/reset-two-factor": {
+            "post": {
+                "summary": "Reset user two-factor",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": { "200": { "description": "User without 2FA" } }
+            }
+        },
+        "/organizations": {
+            "get": {
+                "summary": "List organisations",
+                "responses": {
+                    "200": { "description": "Paginated organisations" }
+                }
+            },
+            "post": {
+                "summary": "Create organisation",
+                "responses": {
+                    "201": { "description": "Created organisation" }
+                }
+            }
+        },
+        "/organizations/{organization}": {
+            "get": {
+                "summary": "Show organisation",
+                "parameters": [
+                    {
+                        "name": "organization",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "string" }
+                    }
+                ],
+                "responses": { "200": { "description": "Organisation" } }
+            }
+        },
+        "/organizations/{organization}/memberships": {
+            "get": {
+                "summary": "List memberships",
+                "parameters": [
+                    {
+                        "name": "organization",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "string" }
+                    }
+                ],
+                "responses": { "200": { "description": "Memberships" } }
+            },
+            "post": {
+                "summary": "Add membership",
+                "parameters": [
+                    {
+                        "name": "organization",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "string" }
+                    }
+                ],
+                "responses": { "201": { "description": "Membership" } }
+            }
+        },
+        "/organizations/{organization}/memberships/{userId}": {
+            "patch": {
+                "summary": "Update membership roles",
+                "parameters": [
+                    {
+                        "name": "organization",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "string" }
+                    }
+                ],
+                "responses": { "200": { "description": "Membership" } }
+            },
+            "delete": {
+                "summary": "Remove membership",
+                "parameters": [
+                    {
+                        "name": "organization",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "string" }
+                    }
+                ],
+                "responses": { "204": { "description": "Removed" } }
+            }
+        },
+        "/applications": {
+            "get": {
+                "summary": "List applications",
+                "responses": {
+                    "200": { "description": "Paginated applications" }
+                }
+            },
+            "post": {
+                "summary": "Create application",
+                "responses": { "201": { "description": "Created application" } }
+            }
+        },
+        "/applications/{application}": {
+            "get": {
+                "summary": "Show application",
+                "parameters": [
+                    {
+                        "name": "application",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "string" }
+                    }
+                ],
+                "responses": { "200": { "description": "Application" } }
+            }
+        },
+        "/applications/{application}/rotate-secret": {
+            "post": {
+                "summary": "Rotate application secret",
+                "parameters": [
+                    {
+                        "name": "application",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "string" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Application with plain_text_secret"
+                    }
+                }
+            }
+        }
+    }
+}

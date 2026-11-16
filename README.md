@@ -47,6 +47,12 @@ npm run lint && npm run types && npm run build
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
+## Docs
+
+- [OIDC profile](docs/oidc-profile.md) — implemented wire contract
+- [Admin REST API](docs/admin-api.md) — Bearer API keys, scopes, OpenAPI at `/api/v1/openapi.json`
+- [Outbound webhooks](docs/webhooks.md) — signed domain events (when enabled on your branch / release)
+
 ## License
 
 MIT, see [LICENSE](LICENSE).

@@ -96,7 +96,8 @@
         "users": "Utenti",
         "applications": "Applicazioni",
         "activityLog": "Registro attività",
-        "organizations": "Organizzazioni"
+        "organizations": "Organizzazioni",
+        "apiKeys": "Chiavi API"
     },
     "realtime": {
         "connected": "Realtime connesso",
@@ -488,6 +489,20 @@
                 "filteredDescription": "Prova un'altra ricerca o cancella i filtri.",
                 "cta": "Nuova applicazione"
             }
+        },
+        "apiKeys": {
+            "head": "Chiavi API",
+            "title": "Chiavi API",
+            "description": "Chiavi Bearer per l’Admin REST API. Il segreto è mostrato una sola volta; gli scope proteggono ogni risorsa.",
+            "add": "Crea chiave",
+            "empty": "Nessuna chiave API ancora.",
+            "secretTitle": "Segreto della chiave API (mostrato una sola volta)",
+            "createTitle": "Crea chiave API",
+            "formDescription": "Scegli gli scope con attenzione. Preferisci gli scope di lettura per le automazioni che solo elencano dati.",
+            "scopes": "Scope",
+            "active": "Attiva",
+            "inactive": "Revocata o scaduta",
+            "revoke": "Revoca"
         }
     },
     "activityLog": {
