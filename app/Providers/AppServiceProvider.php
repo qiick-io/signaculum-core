@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Enums\EmailTemplateTypeEnum;
 use App\Enums\OidcScopeEnum;
+use App\Enums\WebhookEventEnum;
 use App\Http\Controllers\Oidc\AuthorizationEndpointPostController;
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
@@ -20,6 +21,7 @@ use App\Policies\ApplicationPolicy;
 use App\Services\EmailTemplateService;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
+use App\Services\WebhookDispatcherService;
 use Carbon\CarbonImmutable;
 use DateInterval;
 use Illuminate\Auth\Events\Failed;
@@ -203,6 +205,10 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute((int) config('api.default_rate_limit_per_minute', 60))
                 ->by($identifier);
+        });
+
+        RateLimiter::for('email-login-code', function (Request $request) {
+            return Limit::perMinute(5)->by(strtolower((string) $request->input('email', '')).'|'.$request->ip());
         });
     }
 
@@ -442,6 +448,11 @@ class AppServiceProvider extends ServiceProvider
                 ->useLog('auth')
                 ->event('login')
                 ->log('User logged in');
+
+            app(WebhookDispatcherService::class)->dispatch(WebhookEventEnum::UserSignedIn, [
+                'id' => $event->user->subject,
+                'email' => $event->user->email,
+            ]);
         });
 
         Event::listen(Logout::class, function (Logout $event): void {

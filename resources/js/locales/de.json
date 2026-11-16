@@ -48,7 +48,8 @@
         "clearFilters": "Filter zurücksetzen",
         "sortAscending": "Aufsteigend sortieren",
         "sortDescending": "Absteigend sortieren",
-        "back": "Zurück"
+        "back": "Zurück",
+        "edit": "Bearbeiten"
     },
     "confirmDestructive": {
         "typeToConfirm": "Tippe „{{name}}“ zur Bestätigung"
@@ -180,20 +181,12 @@
             },
             "loginMaxAttempts": "Max. Login-Versuche pro Minute",
             "name": "Name",
-            "passwordPolicies": {
-                "medium": {
-                    "description": "Mindestens 8 Zeichen, mit Groß- und Kleinbuchstaben sowie mindestens einer Zahl.",
-                    "label": "Mittel"
-                },
-                "strong": {
-                    "description": "Mindestens 12 Zeichen, Groß-/Kleinbuchstaben, Buchstaben, Zahlen, Sonderzeichen und nicht in bekannten Datenlecks.",
-                    "label": "Stark"
-                },
-                "weak": {
-                    "description": "Mindestens 6 Zeichen. Keine Groß-/Kleinschreibung, Zahlen oder Sonderzeichen erforderlich.",
-                    "label": "Schwach"
-                }
-            },
+            "passwordMinLength": "Mindestlänge des Passworts",
+            "passwordRequireMixedCase": "Groß- und Kleinbuchstaben erforderlich",
+            "passwordRequireNumbers": "Mindestens eine Zahl erforderlich",
+            "passwordRequireSymbols": "Mindestens ein Sonderzeichen erforderlich",
+            "passwordRejectCompromised": "In bekannten Datenlecks gefundene Passwörter ablehnen",
+            "passwordRejectCompromisedHint": "Standardmäßig aus. Wenn aktiviert, sendet Signaculum nur ein kurzes SHA-1-Hash-Präfix des Passworts an Have I Been Pwned (k-Anonymity-API). Das Passwort selbst verlässt diesen Server nie. Siehe docs/password-policy.md.",
             "passwordPolicy": "Passwortsicherheit",
             "reportBugUrl": "URL für Bug melden",
             "reportBugUrlHint": "Leer lassen, um den Issue-Tracker von Signaculum zu verwenden.",
@@ -211,6 +204,8 @@
             "securityTitle": "Sicherheit",
             "twoFactorRequired": "Zwei-Faktor-Authentifizierung für alle Benutzer verlangen",
             "twoFactorRequiredHint": "Wenn aktiv, müssen Benutzer TOTP-2FA aktivieren oder einen Passkey auf der Sicherheitsseite registrieren, bevor sie die App nutzen.",
+            "emailCodeLoginEnabled": "Passwortlose Anmeldung mit E-Mail-Code erlauben",
+            "emailCodeLoginEnabledHint": "Standardmäßig aus. Gäste können einen sechsstelligen Code per E-Mail anfordern. Der Code allein setzt amr otp und zählt nie allein als MFA.",
             "retentionTitle": "Datenaufbewahrung",
             "retentionDescription": "Wie lange Signaculum das Aktivitätsprotokoll behält. Ältere Einträge werden täglich gelöscht.",
             "activityRetentionDays": "Aktivitätsprotokoll (Tage)",
@@ -236,7 +231,8 @@
                 "types": {
                     "verification": "Verifizierung",
                     "reset": "Passwortzurücksetzung",
-                    "invitation": "Einladung"
+                    "invitation": "Einladung",
+                    "email_login_code": "E-Mail-Anmeldecode"
                 }
             }
         },
@@ -255,7 +251,8 @@
             "security": "Sicherheit",
             "sessions": "Sitzungen",
             "title": "Einstellungen",
-            "emailTemplates": "E-Mail-Vorlagen"
+            "emailTemplates": "E-Mail-Vorlagen",
+            "webhooks": "Webhooks"
         },
         "profile": {
             "breadcrumb": "Profileinstellungen",
@@ -310,6 +307,25 @@
             "signOutOthers": "Von allen anderen Browsern abmelden",
             "thisDevice": "Dieses Gerät",
             "title": "Angemeldete Browser"
+        },
+        "webhooks": {
+            "head": "Webhooks",
+            "title": "Webhooks",
+            "description": "Sende Signaculum-Domänenereignisse an eigene HTTPS-Endpunkte. Lieferungen sind mit HMAC-SHA256 signiert; das Format steht in der Doku.",
+            "add": "Endpunkt hinzufügen",
+            "empty": "Noch keine Webhook-Endpunkte.",
+            "secretTitle": "Signaturgeheimnis (nur einmal sichtbar)",
+            "allowPrivateUrls": "Private Webhook-URLs erlauben",
+            "allowPrivateUrlsDescription": "Standardmäßig aus. Wenn aktiv, dürfen Lieferungen Loopback- und private Netze erreichen (lokale QA). Cloud-Metadaten bleiben gesperrt. Keine Telemetrie: Signaculum POSTet nur an von dir registrierte URLs.",
+            "active": "Aktiv",
+            "inactive": "Inaktiv",
+            "recentDeliveries": "Letzte Lieferungen",
+            "editTitle": "Webhook bearbeiten",
+            "createTitle": "Webhook hinzufügen",
+            "formDescription": "Ereignisse abonnieren und signierte POSTs empfangen. Bevorzuge öffentliche HTTPS-URLs.",
+            "url": "Endpunkt-URL",
+            "urlDescription": "Exakte URL für POSTs. Private und Loopback-Hosts werden abgelehnt, außer die Einstellung oben ist aktiv.",
+            "events": "Ereignisse"
         }
     },
     "userMenu": {
@@ -345,7 +361,17 @@
     },
     "auth": {
         "firstName": "Vorname",
-        "lastName": "Nachname"
+        "lastName": "Nachname",
+        "emailCode": {
+            "head": "Mit E-Mail-Code anmelden",
+            "orUseCode": "Oder mit einem einmaligen E-Mail-Code anmelden",
+            "email": "E-Mail-Adresse",
+            "sendCode": "Code per E-Mail senden",
+            "code": "Anmeldecode",
+            "verify": "Anmelden",
+            "resend": "Code erneut senden",
+            "backToLogin": "Zurück zur Passwort-Anmeldung"
+        }
     },
     "admin": {
         "users": {
@@ -605,7 +631,9 @@
         "settings": {
             "head": "Einstellungen — {{name}}",
             "title": "Einstellungen",
-            "description": "Name, Slug, Branding und Löschung der Organisation.",
+            "description": "Name, Slug, MFA-Richtlinie, Branding und Löschung der Organisation.",
+            "requireMfa": "Mitglieder müssen die Zwei-Faktor-Authentifizierung nutzen",
+            "requireMfaHint": "Mitglieder ohne TOTP oder Passkey werden zur Sicherheit geleitet, bevor sie eine Anwendung autorisieren können. Signaculum behauptet MFA in amr oder acr nie, wenn kein zweiter Faktor verwendet wurde.",
             "brandingTitle": "Branding",
             "brandingDescription": "Logo und Farben auf Login und Zustimmung, wenn diese Organisation im Kontext ist.",
             "brandColor": "Markenfarbe",

@@ -12,5 +12,6 @@ final readonly class OrganizationData
     public function __construct(
         public string $name,
         public string $slug,
+        public bool $isMfaRequired = false,
     ) {}
 }

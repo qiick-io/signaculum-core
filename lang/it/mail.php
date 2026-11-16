@@ -25,4 +25,10 @@ return [
         'action_label' => 'Accetta invito',
     ],
 
+    'email_login_code' => [
+        'subject' => 'Il tuo codice di accesso per {{app_name}}',
+        'body' => "Il tuo codice monouso per {{app_name}} è {{code}}.\n\nScade tra {{expire_minutes}} minuti. Se non hai richiesto questo codice, puoi ignorare l'email.",
+        'action_label' => '',
+    ],
+
 ];
