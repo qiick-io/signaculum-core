@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Fortify\Features;
+use PragmaRX\Google2FA\Google2FA;
 
 beforeEach(function () {
     app(SettingsRepositoryService::class)->save(['email_code_login_enabled' => true]);
@@ -101,18 +103,21 @@ test('expired and wrong codes are refused', function () {
     ])->assertSessionHasErrors('code');
 });
 
-test('locked accounts cannot request or redeem an email code', function () {
+test('locked accounts get the generic send response and still cannot redeem a code', function () {
     Notification::fake();
 
-    $user = User::factory()->create([
+    User::factory()->create([
         'email' => 'locked@example.test',
         'locked_until' => Date::now()->addHour(),
     ]);
 
     $this->post(route('login.email-code.store'), ['email' => 'locked@example.test'])
-        ->assertSessionHasErrors('email');
+        ->assertRedirect(route('login.email-code.show', ['email' => 'locked@example.test']))
+        ->assertSessionHas('status')
+        ->assertSessionDoesntHaveErrors();
 
     Notification::assertNothingSent();
+    expect(EmailLoginCode::query()->count())->toBe(0);
 
     EmailLoginCode::query()->create([
         'email' => 'locked@example.test',
@@ -136,6 +141,117 @@ test('unknown emails do not reveal whether the account exists', function () {
 
     Notification::assertNothingSent();
     expect(EmailLoginCode::query()->count())->toBe(0);
+});
+
+test('a user with two-factor enabled is challenged after a valid email code', function () {
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+
+    Features::twoFactorAuthentication([
+        'confirm' => true,
+        'confirmPassword' => true,
+    ]);
+
+    Notification::fake();
+
+    $google2fa = app(Google2FA::class);
+    $secret = $google2fa->generateSecretKey();
+    $user = User::factory()->withTwoFactor()->create([
+        'email' => 'mfa-otp@example.test',
+        'two_factor_secret' => encrypt($secret),
+    ]);
+
+    $this->post(route('login.email-code.store'), ['email' => 'mfa-otp@example.test']);
+
+    $plainCode = '';
+    Notification::assertSentTo(
+        $user,
+        EmailLoginCodeNotification::class,
+        function (EmailLoginCodeNotification $notification) use (&$plainCode): bool {
+            $plainCode = $notification->plainCode;
+
+            return true;
+        },
+    );
+
+    $this->post(route('login.email-code.verify'), [
+        'email' => 'mfa-otp@example.test',
+        'code' => $plainCode,
+    ])
+        ->assertRedirect(route('two-factor.login'))
+        ->assertSessionHas('login.id', $user->id);
+
+    $this->assertGuest();
+
+    expect(app(AuthenticationContextService::class)->methods())
+        ->toBe([AuthenticationMethodEnum::OneTimePassword->value]);
+
+    $this->post('/two-factor-challenge', [
+        'code' => $google2fa->getCurrentOtp($secret),
+    ])->assertRedirect();
+
+    $this->assertAuthenticatedAs($user);
+
+    expect(app(AuthenticationContextService::class)->methods())
+        ->toBe([
+            AuthenticationMethodEnum::OneTimePassword->value,
+            AuthenticationMethodEnum::MultipleFactors->value,
+        ]);
+});
+
+test('a successful email code login regenerates the session id', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['email' => 'session@example.test']);
+
+    $this->get(route('login.email-code.show', ['email' => 'session@example.test']));
+    $sessionIdBefore = session()->getId();
+
+    $this->post(route('login.email-code.store'), ['email' => 'session@example.test']);
+
+    $plainCode = '';
+    Notification::assertSentTo(
+        $user,
+        EmailLoginCodeNotification::class,
+        function (EmailLoginCodeNotification $notification) use (&$plainCode): bool {
+            $plainCode = $notification->plainCode;
+
+            return true;
+        },
+    );
+
+    $this->post(route('login.email-code.verify'), [
+        'email' => 'session@example.test',
+        'code' => $plainCode,
+    ])->assertRedirect(route('dashboard'));
+
+    expect(session()->getId())->not->toBe($sessionIdBefore);
+    $this->assertAuthenticatedAs($user);
+});
+
+test('expired and consumed email login codes are pruned', function () {
+    EmailLoginCode::query()->create([
+        'email' => 'old@example.test',
+        'code_hash' => Hash::make('111111'),
+        'expires_at' => Date::now()->subHour(),
+    ]);
+
+    EmailLoginCode::query()->create([
+        'email' => 'used@example.test',
+        'code_hash' => Hash::make('222222'),
+        'expires_at' => Date::now()->addMinutes(10),
+        'consumed_at' => Date::now()->subMinute(),
+    ]);
+
+    $keep = EmailLoginCode::query()->create([
+        'email' => 'keep@example.test',
+        'code_hash' => Hash::make('333333'),
+        'expires_at' => Date::now()->addMinutes(10),
+    ]);
+
+    $this->artisan('model:prune', ['--model' => EmailLoginCode::class])
+        ->assertSuccessful();
+
+    expect(EmailLoginCode::query()->pluck('id')->all())->toBe([$keep->id]);
 });
 
 test('an instance admin can enable email code login from security settings', function () {

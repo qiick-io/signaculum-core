@@ -11,7 +11,6 @@ use App\Services\LoginLockoutService;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 /**
  * Issues a 6-digit email sign-in code when the instance allows it.
@@ -38,14 +37,10 @@ final class SendEmailLoginCodeAction
         $normalizedEmail = strtolower(trim($email));
         $user = User::query()->where('email', $normalizedEmail)->first();
 
-        if ($user === null || ! (bool) $user->is_active) {
+        // Same silent path for missing, inactive, and locked accounts so send never
+        // reveals whether the address exists; verify still enforces lockout.
+        if ($user === null || ! (bool) $user->is_active || $this->loginLockoutService->isLocked($user)) {
             return;
-        }
-
-        if ($this->loginLockoutService->isLocked($user)) {
-            throw ValidationException::withMessages([
-                'email' => __('This account is temporarily locked. Try again later.'),
-            ]);
         }
 
         $plainCode = str_pad((string) random_int(0, 999_999), self::CODE_LENGTH, '0', STR_PAD_LEFT);

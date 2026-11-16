@@ -10,15 +10,18 @@ use App\Models\User;
 use App\Services\AuthenticationContextService;
 use App\Services\LoginLockoutService;
 use App\Services\SettingsRepositoryService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Redeems a single-use email sign-in code and starts a web session with `amr` = `otp` only.
+ * Redeems a single-use email sign-in code and either starts a web session or stages
+ * Fortify's two-factor challenge when the user has TOTP enabled.
  *
- * Side effects: marks the code consumed; Auth::login; records `otp` (never invents `mfa`);
+ * Side effects: marks the code consumed; records `otp`; Auth::login + session regenerate
+ * when no second factor, otherwise `login.id` / `login.remember` for `two-factor.login`;
  * clears lockout counters on success.
  */
 final class VerifyEmailLoginCodeAction
@@ -29,7 +32,10 @@ final class VerifyEmailLoginCodeAction
         private readonly AuthenticationContextService $authenticationContextService,
     ) {}
 
-    public function execute(string $email, string $code): User
+    /**
+     * @return bool True when the caller must redirect to the Fortify two-factor challenge.
+     */
+    public function execute(Request $request, string $email, string $code): bool
     {
         if (! $this->settings->isEmailCodeLoginEnabled()) {
             abort(404);
@@ -69,10 +75,20 @@ final class VerifyEmailLoginCodeAction
 
         $this->authenticationContextService->reset();
         $this->authenticationContextService->record(AuthenticationMethodEnum::OneTimePassword);
-
-        Auth::login($user, remember: false);
         $this->loginLockoutService->clear($user);
 
-        return $user;
+        if ($user->hasEnabledTwoFactorAuthentication()) {
+            $request->session()->put([
+                'login.id' => $user->getKey(),
+                'login.remember' => false,
+            ]);
+
+            return true;
+        }
+
+        Auth::login($user, remember: false);
+        $request->session()->regenerate();
+
+        return false;
     }
 }

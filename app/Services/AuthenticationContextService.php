@@ -32,7 +32,8 @@ final class AuthenticationContextService
 
     /**
      * Append an authentication method. When two concrete factors are present, also
-     * append `mfa` (RFC 8176).
+     * append `mfa` (RFC 8176). `MultipleFactors` may also be recorded directly when
+     * two proofs share one `amr` value (email OTP + TOTP are both `otp`).
      */
     public function record(AuthenticationMethodEnum $authenticationMethod): void
     {

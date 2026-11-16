@@ -45,10 +45,15 @@ final class EmailLoginCodeController extends Controller
         VerifyEmailLoginCodeRequest $request,
         VerifyEmailLoginCodeAction $verifyEmailLoginCodeAction,
     ): RedirectResponse {
-        $verifyEmailLoginCodeAction->execute(
+        $needsTwoFactorChallenge = $verifyEmailLoginCodeAction->execute(
+            $request,
             (string) $request->validated('email'),
             (string) $request->validated('code'),
         );
+
+        if ($needsTwoFactorChallenge) {
+            return redirect()->route('two-factor.login');
+        }
 
         return redirect()->intended(route('dashboard'));
     }
