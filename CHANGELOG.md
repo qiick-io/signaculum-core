@@ -8,6 +8,7 @@
 
 ### Added
 
+- Optional passwordless sign-in with a six-digit email code (off by default): queued mail, editable template, hashed at rest, rate limited, lockout-aware; `amr` = `otp` only (#121).
 - Instance-admin editable email templates (verification, password reset, organisation invitation) with en/it/de defaults, preview and fallback to packaged copy.
 - RFC 7662 token introspection at `POST /oauth/introspect` (confidential clients), advertised as `introspection_endpoint` in discovery; inactive / revoked / expired tokens return `{ "active": false }`.
 - OAuth 2.0 `client_credentials` for confidential applications that opt in (Admin → Applications): machine access tokens without `id_token`; discovery `grant_types_supported` includes `client_credentials`.
@@ -31,6 +32,7 @@
 
 ### Upgrade notes
 
+- New migration creates `email_login_codes`. Run `php artisan signaculum:upgrade` (or `migrate --force`). Enable email-code login under Settings → Authentication & security when needed.
 - `composer create-project` no longer migrates. Run `php artisan signaculum:install` (or `php artisan migrate --force` on a tree that was already installed before this change).
 - Later updates: put the new code in place, install dependencies, then `php artisan signaculum:upgrade`. Do not run `create-project` again.
 - New dependency: `spatie/laravel-activitylog`. Run `composer update` and migrate so the `activity_log` table exists.

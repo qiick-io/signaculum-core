@@ -26,4 +26,5 @@ export type InstanceSettingsForm = {
     login_lockout_minutes: number;
     registration_enabled: boolean;
     two_factor_required: boolean;
+    email_code_login_enabled: boolean;
 };

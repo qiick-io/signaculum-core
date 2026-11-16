@@ -40,6 +40,7 @@ function securitySettingsPayload(array $overrides = []): array
         'login_lockout_minutes' => 15,
         'registration_enabled' => '0',
         'two_factor_required' => '0',
+        'email_code_login_enabled' => '0',
         ...$overrides,
     ];
 }

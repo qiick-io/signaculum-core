@@ -66,6 +66,8 @@ final class SettingsRepositoryService
             // (qiick Cloud can enable it). Decision of 2026-11-13 on #23.
             'registration_enabled' => false,
             'two_factor_required' => false,
+            // Passwordless email one-time code (#121). Off by default.
+            'email_code_login_enabled' => false,
             'activity_retention_days' => (int) config('activitylog.clean_after_days', 365),
             // Nested overrides for verification / reset / invitation × en/it/de; empty = lang defaults.
             'email_templates' => [],
@@ -255,6 +257,14 @@ final class SettingsRepositoryService
     public function isTwoFactorRequired(): bool
     {
         return (bool) $this->all()['two_factor_required'];
+    }
+
+    /**
+     * Whether guests may sign in with a one-time code emailed to them (#121).
+     */
+    public function isEmailCodeLoginEnabled(): bool
+    {
+        return (bool) $this->all()['email_code_login_enabled'];
     }
 
     /**

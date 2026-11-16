@@ -34,6 +34,7 @@ final class InstanceSecuritySettingsController extends Controller
                 'login_lockout_minutes',
                 'registration_enabled',
                 'two_factor_required',
+                'email_code_login_enabled',
             ]),
             'passwordPolicies' => SettingsRepositoryService::PASSWORD_POLICIES,
         ]);
