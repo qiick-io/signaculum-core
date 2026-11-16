@@ -1,0 +1,4 @@
+{
+    "resources/js/components/admin/truncated-text.tsx": "Renames abbreviated locals (`el` → `element`) to match the qiick full-word naming rule (#115). Propose upstream in app-ui; drop this entry when the registry ships the rename.",
+    "resources/js/components/admin/data-table-toolbar.tsx": "Renames abbreviated change-handler parameter (`e` → `event`) to match the qiick full-word naming rule (#115). Propose upstream in app-ui; drop this entry when the registry ships the rename."
+}

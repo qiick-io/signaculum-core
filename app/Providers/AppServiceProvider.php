@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use App\Enums\EmailTemplateTypeEnum;
@@ -47,6 +49,10 @@ use Spatie\Activitylog\Facades\Activity;
 use Spatie\Activitylog\Models\Activity as ActivityModel;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Boots Signaculum application defaults: Passport OIDC wiring, rate limits,
+ * activity logging, transactional mail templates, and shared auth listeners.
+ */
 class AppServiceProvider extends ServiceProvider
 {
     /**

@@ -20,7 +20,11 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
 
             <Form
                 {...update.form()}
-                transform={(data) => ({ ...data, token, email })}
+                transform={(formValues) => ({
+                    ...formValues,
+                    token,
+                    email,
+                })}
                 resetOnSuccess={['password', 'password_confirmation']}
             >
                 {({ processing, errors }) => (
