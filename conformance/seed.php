@@ -13,10 +13,11 @@ declare(strict_types=1);
 use App\Models\Client;
 use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Foundation\Application;
 
 require __DIR__.'/../vendor/autoload.php';
 
-/** @var \Illuminate\Foundation\Application $application */
+/** @var Application $application */
 $application = require __DIR__.'/../bootstrap/app.php';
 $application->make(Kernel::class)->bootstrap();
 

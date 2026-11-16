@@ -44,11 +44,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'oauth/end-session',
         ]);
 
-        // env() here on purpose: withMiddleware runs during package:discover before
-        // the config repository is bound, so config('app.trusted_proxies') would throw.
+        // Prefer getenv(): env() can be empty during early withMiddleware in some
+        // bootstrap paths; the Docker conformance stack always sets TRUSTED_PROXIES.
         // Omit HEADER_X_FORWARDED_AWS_ELB so X-Forwarded-Proto/Host/Port are trusted
         // cleanly behind the conformance TLS nginx proxy.
-        $trustedProxies = env('TRUSTED_PROXIES');
+        $trustedProxies = getenv('TRUSTED_PROXIES');
+
+        if ($trustedProxies === false || $trustedProxies === '') {
+            $trustedProxies = $_ENV['TRUSTED_PROXIES'] ?? $_SERVER['TRUSTED_PROXIES'] ?? null;
+        }
 
         if (is_string($trustedProxies) && $trustedProxies !== '') {
             $middleware->trustProxies(
