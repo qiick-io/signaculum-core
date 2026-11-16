@@ -19,6 +19,7 @@ import { edit as editInstance } from '@/routes/instance';
 import { edit as editEmailTemplates } from '@/routes/instance/email-templates';
 import { edit as editLocalization } from '@/routes/instance/localization';
 import { edit as editInstanceSecurity } from '@/routes/instance/security';
+import { index as webhooksIndex } from '@/routes/instance/webhooks';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as sessions } from '@/routes/sessions';
@@ -88,6 +89,11 @@ export default function SettingsLayout({
               {
                   title: t('settings.layout.emailTemplates'),
                   href: editEmailTemplates(),
+                  icon: null,
+              },
+              {
+                  title: t('settings.layout.webhooks'),
+                  href: webhooksIndex(),
                   icon: null,
               },
               {

@@ -48,7 +48,8 @@
         "clearFilters": "Clear filters",
         "sortAscending": "Sort ascending",
         "sortDescending": "Sort descending",
-        "back": "Back"
+        "back": "Back",
+        "edit": "Edit"
     },
     "confirmDestructive": {
         "typeToConfirm": "Type \"{{name}}\" to confirm"
@@ -254,7 +255,8 @@
             "security": "Security",
             "sessions": "Sessions",
             "title": "Settings",
-            "emailTemplates": "Email templates"
+            "emailTemplates": "Email templates",
+            "webhooks": "Webhooks"
         },
         "profile": {
             "breadcrumb": "Profile settings",
@@ -309,6 +311,25 @@
             "signOutOthers": "Sign out of all other browsers",
             "thisDevice": "This device",
             "title": "Signed-in browsers"
+        },
+        "webhooks": {
+            "head": "Webhooks",
+            "title": "Webhooks",
+            "description": "Push Signaculum domain events to your own HTTPS endpoints. Deliveries are signed with HMAC-SHA256; see the docs for the wire format.",
+            "add": "Add endpoint",
+            "empty": "No webhook endpoints yet.",
+            "secretTitle": "Signing secret (shown once)",
+            "allowPrivateUrls": "Allow private webhook URLs",
+            "allowPrivateUrlsDescription": "Off by default. When on, deliveries may target loopback and private networks (local QA). Cloud metadata hosts stay blocked. This is not telemetry; Signaculum only POSTs to URLs you register.",
+            "active": "Active",
+            "inactive": "Inactive",
+            "recentDeliveries": "Recent deliveries",
+            "editTitle": "Edit webhook",
+            "createTitle": "Add webhook",
+            "formDescription": "Subscribe to events and receive signed POSTs. Prefer HTTPS public URLs.",
+            "url": "Endpoint URL",
+            "urlDescription": "Exact URL Signaculum will POST to. Private and loopback hosts are refused unless the setting above is on.",
+            "events": "Events"
         }
     },
     "userMenu": {
