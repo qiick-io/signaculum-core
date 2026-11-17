@@ -30,7 +30,7 @@ function activityNamesWrittenByTheApp(): array
         $source = $sourceFile->getContents();
 
         preg_match_all("/->event\\('([a-z_]+)'\\)/", $source, $eventMatches);
-        preg_match_all("/(?:useLog|useLogName|activity)\\('([a-z_]+)'\\)/", $source, $logMatches);
+        preg_match_all("/(?:useLog|useLogName|activity)\\('([a-z_-]+)'\\)/", $source, $logMatches);
 
         $events = [...$events, ...$eventMatches[1]];
         $logs = [...$logs, ...$logMatches[1]];

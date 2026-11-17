@@ -11,7 +11,7 @@
             "ApiKeyBearer": {
                 "type": "http",
                 "scheme": "bearer",
-                "bearerFormat": "sk_"
+                "bearerFormat": "sig_<live|test>_<id><secret>"
             }
         }
     },

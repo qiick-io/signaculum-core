@@ -656,6 +656,8 @@
             "consent_granted": "Zustimmung erteilt",
             "token_revoked": "Zugriff widerrufen",
             "secret_rotated": "Geheimnis rotiert",
+            "rotated": "Rotiert",
+            "revoked": "Widerrufen",
             "user_impersonation_started": "Imitation gestartet",
             "user_impersonation_stopped": "Imitation beendet",
             "user_impersonation_expired": "Imitation abgelaufen",
@@ -666,7 +668,8 @@
             "default": "Anwendung",
             "auth": "Authentifizierung",
             "settings": "Einstellungen",
-            "organizations": "Organisationen"
+            "organizations": "Organisationen",
+            "api-keys": "API-Schlüssel"
         },
         "ipAddress": "IP"
     },

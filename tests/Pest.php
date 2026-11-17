@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Actions\CreateApiKeyAction;
+use App\Data\ApiKeyData;
+use App\Enums\ApiKeyScopeEnum;
+use App\Models\ApiKey;
 use App\Models\SigningKey;
 use App\Models\User;
 use App\Services\SigningKeyService;
@@ -222,4 +226,22 @@ function mintSignedHint(User $user, string $audience, array $claimOverrides = []
     return $tokenBuilder
         ->getToken($jwtConfiguration->signer(), $jwtConfiguration->signingKey())
         ->toString();
+}
+
+/**
+ * An instance admin and a key they issued, with its plain-text token.
+ *
+ * @param  list<string>  $scopes
+ * @return array{admin: User, plain: string, apiKey: ApiKey}
+ */
+function adminApiKey(array $scopes = [ApiKeyScopeEnum::UsersWrite->value], ?ApiKeyData $apiKeyData = null): array
+{
+    $admin = User::factory()->create(['is_instance_admin' => true]);
+    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, $apiKeyData ?? new ApiKeyData('Test key', $scopes));
+
+    return [
+        'admin' => $admin,
+        'plain' => $issuedApiKey->plainTextToken,
+        'apiKey' => $issuedApiKey->apiKey,
+    ];
 }

@@ -656,6 +656,8 @@
             "consent_granted": "Consent granted",
             "token_revoked": "Access revoked",
             "secret_rotated": "Secret rotated",
+            "rotated": "Rotated",
+            "revoked": "Revoked",
             "user_impersonation_started": "Impersonation started",
             "user_impersonation_stopped": "Impersonation stopped",
             "user_impersonation_expired": "Impersonation expired",
@@ -666,7 +668,8 @@
             "default": "Application",
             "auth": "Authentication",
             "settings": "Settings",
-            "organizations": "Organisations"
+            "organizations": "Organisations",
+            "api-keys": "API keys"
         },
         "ipAddress": "IP"
     },

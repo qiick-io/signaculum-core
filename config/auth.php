@@ -50,6 +50,13 @@ return [
             'driver' => 'passport',
             'provider' => 'users',
         ],
+
+        // Admin REST API keys (AuthenticateApiKeyMiddleware). Kept apart from `web` so a key can
+        // never establish or ride a session.
+        'api-key' => [
+            'driver' => 'api-key',
+            'provider' => 'users',
+        ],
     ],
 
     /*

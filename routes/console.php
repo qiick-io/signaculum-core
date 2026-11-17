@@ -24,3 +24,6 @@ Schedule::call(fn () => Artisan::call('activitylog:clean', [
 Schedule::command('model:prune', [
     '--model' => [EmailLoginCode::class],
 ])->daily();
+
+// API keys expiring in seven days: one warning per key (app-ui docs/api-keys.md, behaviour 5).
+Schedule::command('signaculum:notify-expiring-api-keys')->daily();

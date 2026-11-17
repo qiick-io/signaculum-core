@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Data\ApiKeyScopesData;
 use App\Enums\ApiKeyScopeEnum;
+use App\Services\ApiKeySecretService;
 use App\Traits\LogsApplicationActivityTrait;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
 use Spatie\Activitylog\Support\LogOptions;
 use Symfony\Component\HttpFoundation\IpUtils;
 
 /**
- * Admin REST API key: Bearer secret shown once, stored as SHA-256 hash + display prefix.
+ * Admin REST API key on the shared qiick baseline (app-ui docs/api-keys.md): looked up by its
+ * public `key_prefix`, the full token stored only as a SHA-256 hash, and the secret replaced by the
+ * last rotation kept in `previous_key_hash` until `previous_key_valid_until`. Token handling
+ * lives in {@see ApiKeySecretService}; the plain-text token is never an attribute.
  *
  * @property int $id
  * @property string $uuid
@@ -23,12 +27,16 @@ use Symfony\Component\HttpFoundation\IpUtils;
  * @property string $key_prefix
  * @property string $key_hash
  * @property int $owner_id
- * @property list<string> $scopes
+ * @property int|null $created_by
+ * @property list<string>|null $scopes
  * @property list<string>|null $ip_allowlist
  * @property int|null $rate_limit_per_minute
  * @property Carbon|null $expires_at
  * @property Carbon|null $last_used_at
+ * @property string|null $last_used_ip
  * @property Carbon|null $revoked_at
+ * @property string|null $previous_key_hash
+ * @property Carbon|null $previous_key_valid_until
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -44,12 +52,16 @@ class ApiKey extends Model
         'key_prefix',
         'key_hash',
         'owner_id',
+        'created_by',
         'scopes',
         'ip_allowlist',
         'rate_limit_per_minute',
         'expires_at',
         'last_used_at',
+        'last_used_ip',
         'revoked_at',
+        'previous_key_hash',
+        'previous_key_valid_until',
     ];
 
     /**
@@ -57,6 +69,7 @@ class ApiKey extends Model
      */
     protected $hidden = [
         'key_hash',
+        'previous_key_hash',
     ];
 
     /**
@@ -80,57 +93,79 @@ class ApiKey extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
+    /**
+     * Who issued the key; kept apart from the owner the key acts as.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function isRevoked(): bool
+    {
+        return $this->revoked_at !== null;
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && ! $this->expires_at->isFuture();
+    }
+
     public function isActive(): bool
     {
-        if ($this->revoked_at !== null) {
-            return false;
-        }
-
-        return $this->expires_at === null || $this->expires_at->isFuture();
-    }
-
-    public function hasScope(ApiKeyScopeEnum|string $scope): bool
-    {
-        $value = $scope instanceof ApiKeyScopeEnum ? $scope->value : $scope;
-
-        return in_array($value, $this->scopes, true);
-    }
-
-    public function allowsIp(string $ipAddress): bool
-    {
-        $allowlist = $this->ip_allowlist;
-
-        if ($allowlist === null || $allowlist === []) {
-            return true;
-        }
-
-        return IpUtils::checkIp($ipAddress, $allowlist);
+        return ! $this->isRevoked() && ! $this->isExpired();
     }
 
     /**
-     * @return array{plain: string, prefix: string, hash: string}
+     * The stored scopes parsed against this product's vocabulary, or null when they do not
+     * parse (missing, empty, malformed or no longer known): such a key may do nothing.
      */
-    public static function generateSecret(): array
+    public function grantedScopes(): ?ApiKeyScopesData
     {
-        $prefix = (string) config('api.key_prefix', 'sk_');
-        $plain = $prefix.Str::random(40);
-
-        return [
-            'plain' => $plain,
-            'prefix' => substr($plain, 0, 12),
-            'hash' => self::hashSecret($plain),
-        ];
+        return ApiKeyScopesData::fromStored($this->getAttribute('scopes'), ApiKeyScopeEnum::values());
     }
 
-    public static function hashSecret(string $plain): string
+    /**
+     * `write` implies `read` on the same resource (see {@see ApiKeyScopesData::allows()}).
+     */
+    public function hasScope(ApiKeyScopeEnum|string $scope): bool
     {
-        return hash('sha256', $plain);
+        $requiredScope = $scope instanceof ApiKeyScopeEnum ? $scope->value : $scope;
+
+        return $this->grantedScopes()?->allows($requiredScope) ?? false;
+    }
+
+    /**
+     * A null (or empty) allowlist allows every address. A stored allowlist that does not decode
+     * to a list of strings allows none: an unreadable restriction is not "no restriction".
+     */
+    public function allowsIp(string $ipAddress): bool
+    {
+        if (($this->getAttributes()['ip_allowlist'] ?? null) === null) {
+            return true;
+        }
+
+        $allowlist = $this->getAttribute('ip_allowlist');
+
+        if (! is_array($allowlist) || ! array_is_list($allowlist)) {
+            return false;
+        }
+
+        foreach ($allowlist as $allowedAddress) {
+            if (! is_string($allowedAddress)) {
+                return false;
+            }
+        }
+
+        return $allowlist === [] || IpUtils::checkIp($ipAddress, $allowlist);
     }
 
     public function getActivitylogOptions(): LogOptions
     {
         return $this->applicationActivityLogOptions()
-            ->logExcept(['key_hash']);
+            ->logExcept(['key_hash', 'previous_key_hash']);
     }
 
     /**
@@ -145,6 +180,7 @@ class ApiKey extends Model
             'expires_at' => 'datetime',
             'last_used_at' => 'datetime',
             'revoked_at' => 'datetime',
+            'previous_key_valid_until' => 'datetime',
         ];
     }
 }
