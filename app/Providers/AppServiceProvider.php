@@ -11,6 +11,7 @@ use App\Http\Controllers\Oidc\AuthorizationEndpointPostController;
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
 use App\Http\Middleware\RejectUnsupportedRequestObjectMiddleware;
+use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\User;
 use App\Oidc\IdTokenResponse;
@@ -34,6 +35,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -82,6 +84,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         $this->configureOpenIdConnect();
         $this->configureActivityLogging();
+        $this->configureApiKeyGuard();
         $this->registerAuthActivityListeners();
         $this->attachOidcRateLimitMiddleware();
         $this->attachAuthorizationResponseIssuerMiddleware();
@@ -466,11 +469,28 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(ActivityModel::class, ActivityPolicy::class);
 
+        // An entry written during an Admin API request names the key that authorised it.
         Activity::beforeLogging(function (ActivityModel $activity): void {
+            $apiKey = request()->attributes->get('apiKey');
+
             $activity->properties = ($activity->properties ?? collect())->merge([
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent(),
+                ...($apiKey instanceof ApiKey ? ['api_key_uuid' => $apiKey->uuid] : []),
             ]);
+        });
+    }
+
+    /**
+     * The `api-key` guard: the user is the owner of the key AuthenticateApiKeyMiddleware put on
+     * the request, and nobody on any request it did not authenticate.
+     */
+    protected function configureApiKeyGuard(): void
+    {
+        Auth::viaRequest('api-key', static function (Request $request): ?User {
+            $apiKey = $request->attributes->get('apiKey');
+
+            return $apiKey instanceof ApiKey ? $apiKey->owner : null;
         });
     }
 

@@ -2,23 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Actions\CreateApiKeyAction;
 use App\Enums\ApiKeyScopeEnum;
 use App\Models\ApiKey;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
-
-function adminApiKey(array $scopes = [ApiKeyScopeEnum::UsersRead->value, ApiKeyScopeEnum::UsersWrite->value]): array
-{
-    $admin = User::factory()->create(['is_instance_admin' => true]);
-    $apiKey = app(CreateApiKeyAction::class)->execute($admin, 'Test key', $scopes);
-
-    return [
-        'admin' => $admin,
-        'plain' => (string) $apiKey->getAttribute('plain_secret'),
-        'apiKey' => $apiKey,
-    ];
-}
 
 it('serves the openapi document without a key', function (): void {
     $this->getJson('/api/v1/openapi.json')
@@ -61,7 +48,8 @@ it('refuses users list without the read scope', function (): void {
 
     $this->withToken($plain)
         ->getJson('/api/v1/users')
-        ->assertForbidden();
+        ->assertForbidden()
+        ->assertJsonPath('error', 'insufficient_scope');
 });
 
 it('creates a user through the admin api', function (): void {

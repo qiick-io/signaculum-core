@@ -653,6 +653,8 @@
             "consent_granted": "Consenso concesso",
             "token_revoked": "Accesso revocato",
             "secret_rotated": "Segreto ruotato",
+            "rotated": "Ruotata",
+            "revoked": "Revocata",
             "user_impersonation_started": "Impersonazione avviata",
             "user_impersonation_stopped": "Impersonazione interrotta",
             "user_impersonation_expired": "Impersonazione scaduta",
@@ -663,7 +665,8 @@
             "default": "Applicazione",
             "auth": "Autenticazione",
             "settings": "Impostazioni",
-            "organizations": "Organizzazioni"
+            "organizations": "Organizzazioni",
+            "api-keys": "Chiavi API"
         },
         "ipAddress": "IP"
     },
