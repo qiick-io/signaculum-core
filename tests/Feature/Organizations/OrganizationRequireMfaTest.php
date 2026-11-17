@@ -288,6 +288,76 @@ test('organisation MFA step-up does not fan out back-channel logout', function (
     Queue::assertNothingPushed();
 });
 
+test('prompt=none when organisation MFA is unsatisfied returns interaction_required and keeps the session', function () {
+    config(['oidc.issuer' => 'https://id.example.test']);
+    Queue::fake();
+
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'prompt-none-mfa-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $client = createOidcClient();
+    $sid = 'sid-prompt-none-org-mfa';
+
+    $this->actingAs($member);
+    session([
+        OidcSessionService::SESSION_KEY => $sid,
+        'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value],
+    ]);
+
+    $response = $this->get(authorizeUrl($client, pkcePair()['challenge'], [
+        'prompt' => 'none',
+    ]));
+
+    $query = redirectQuery($response->headers->get('Location'));
+
+    expect($query['error'])->toBe('interaction_required')
+        ->and($query['state'])->toBe('state-123')
+        ->and($query['iss'])->toBe('https://id.example.test')
+        ->and(auth()->check())->toBeTrue()
+        ->and(auth()->id())->toBe($member->id)
+        ->and(session(OidcSessionService::SESSION_KEY))->toBe($sid);
+
+    Queue::assertNothingPushed();
+});
+
+test('organisation MFA step-up shows that a second factor is required', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'step-up-message-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $client = createOidcClient();
+
+    $this->actingAs($member);
+    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value]]);
+
+    $this->get(authorizeUrl($client, pkcePair()['challenge']))
+        ->assertRedirect('/login')
+        ->assertInertiaFlash('toast.type', 'error')
+        ->assertInertiaFlash(
+            'toast.message',
+            __('An organisation you belong to requires a second factor. Sign in with your authenticator or a passkey.'),
+        );
+});
+
 test('authorization is not blocked by org MFA when the user has no membership in a requiring org', function () {
     $owner = User::factory()->create();
     createOrganizationWithOwner($owner, [

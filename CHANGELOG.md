@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `signaculum:install` checks for and generates the Passport keys at `Passport::keyPath()`, so a key directory set with `Passport::loadKeysFrom()` is honoured; its tests use their own key directory instead of deleting the shared pair, which made the parallel suite flaky (#144).
 - Organisation MFA now requires the current session `amr` to prove a second factor (`mfa`, or passkey `hwk`/`swk`); enrolled users with email-code-only or password-only sessions are stepped up like `max_age` / `prompt=login` (#131).
+- Organisation MFA with `prompt=none` returns `interaction_required` (keeps the session); interactive step-up flashes a second-factor toast on login (#131).
 - Webhook `CURLOPT_RESOLVE` pins wrap IPv6 addresses in brackets (`host:443:[2001:db8::1]`) (#131).
 
 ### Security
