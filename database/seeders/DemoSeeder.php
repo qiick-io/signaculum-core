@@ -54,6 +54,11 @@ final class DemoSeeder extends Seeder
             'two_factor_confirmed_at' => now(),
         ])->save();
 
+        // Sign-ins first, so the newest activity entries are the organisation and
+        // application changes the screenshots want on the first page.
+        $this->recordSignIns($instanceAdministrator, $acmeAdministrator, $acmeMember, $globexOwner);
+        event(new Failed('web', null, ['email' => 'priya.nair@acme.example']));
+
         $acme = $createOrganization->execute(new OrganizationData('Acme Corp', 'acme'), $instanceAdministrator);
         $updateOrganization->execute($acme, new OrganizationData('Acme Corp', 'acme', isMfaRequired: true), $instanceAdministrator);
         $updateOrganizationBranding->execute(
@@ -84,9 +89,6 @@ final class DemoSeeder extends Seeder
             isFirstParty: true,
         ));
         $regenerateApplicationSecret->execute($externa, $instanceAdministrator);
-
-        $this->recordSignIns($instanceAdministrator, $acmeAdministrator, $acmeMember, $globexOwner);
-        event(new Failed('web', null, ['email' => 'priya.nair@acme.example']));
     }
 
     private function createDemoUser(string $firstName, string $lastName, string $email, bool $isInstanceAdmin = false): User
