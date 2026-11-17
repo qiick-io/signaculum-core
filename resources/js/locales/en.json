@@ -140,15 +140,12 @@
                 "head": "Sidebar settings"
             },
             "system": "System",
-            "themePresetBlue": "Blue",
+            "themePresetAmetista": "Ametista",
+            "themePresetArdesia": "Ardesia",
+            "themePresetCiclamino": "Ciclamino (default)",
             "themePresetDescription": "Pick a built-in palette. A custom brand colour still overrides primary.",
-            "themePresetIndigo": "Indigo",
-            "themePresetRose": "Rose",
-            "themePresetSignaculum": "Signaculum (default)",
-            "themePresetSlate": "Slate",
-            "themePresetTeal": "Teal",
+            "themePresetIndaco": "Indaco",
             "themePresetTitle": "Theme preset",
-            "themePresetViolet": "Violet",
             "title": "Appearance settings"
         },
         "connectedApplications": {

@@ -1,17 +1,11 @@
 import type { DefaultAppearance } from '@/types/instance-settings';
 
-export type ThemePresetSlug =
-    | 'signaculum'
-    | 'teal'
-    | 'blue'
-    | 'indigo'
-    | 'violet'
-    | 'rose'
-    | 'slate';
+export type ThemePresetSlug = 'ciclamino' | 'indaco' | 'ametista' | 'ardesia';
 
 /** One preset offered by the Appearance picker (ThemePresetService::catalog()). */
 export type ThemePresetCatalogItem = {
     slug: ThemePresetSlug;
+    /** Translation key of the preset name (config/theme-presets.php). */
     name: string;
     aiOverride: boolean;
     swatchLight: string;

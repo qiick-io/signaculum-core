@@ -18,7 +18,7 @@ beforeEach(function () {
 
 function brandingPayload(array $overrides = []): array
 {
-    return ['theme_preset' => 'signaculum', 'default_appearance' => 'system', ...$overrides];
+    return ['theme_preset' => 'ciclamino', 'default_appearance' => 'system', ...$overrides];
 }
 
 function brandingManager(): User

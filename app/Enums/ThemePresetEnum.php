@@ -5,18 +5,17 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * Built-in appearance theme presets (config/theme-presets.php), as in qiick-io/externa-core,
- * plus Signaculum's own brand preset.
+ * Built-in appearance theme presets (config/theme-presets.php), named after Italian pigments
+ * and stones. Ciclamino is Signaculum's own brand hue (348°) and the default; the others are
+ * the generic presets. A sibling product's brand colour is never offered here, and the generic
+ * Robbia preset is left out because it sits 5° from Ciclamino.
  */
 enum ThemePresetEnum: string
 {
-    case Signaculum = 'signaculum';
-    case Teal = 'teal';
-    case Blue = 'blue';
-    case Indigo = 'indigo';
-    case Violet = 'violet';
-    case Rose = 'rose';
-    case Slate = 'slate';
+    case Ciclamino = 'ciclamino';
+    case Indaco = 'indaco';
+    case Ametista = 'ametista';
+    case Ardesia = 'ardesia';
 
     /**
      * @return list<string>
@@ -31,7 +30,7 @@ enum ThemePresetEnum: string
      */
     public static function default(): self
     {
-        return self::Signaculum;
+        return self::Ciclamino;
     }
 
     public static function tryFromNullable(?string $value): self
