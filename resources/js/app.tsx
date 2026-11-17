@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { AppErrorBoundary } from '@/components/app-error-boundary';
 import { AppToaster } from '@/components/app-toaster';
@@ -8,6 +8,7 @@ import { initializeAccessibilityPreferences } from '@/hooks/use-accessibility-pr
 import { initializeTheme } from '@/hooks/use-appearance';
 import AuthLayout from '@/layouts/auth-layout';
 import { initI18n } from '@/lib/i18n';
+import { applyThemeCss } from '@/lib/theme-css';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -42,3 +43,14 @@ void createInertiaApp({
 
 initializeTheme();
 initializeAccessibilityPreferences();
+
+// The server renders the theme CSS once per full page load. Organisation brand colours
+// apply only on sign-in and consent, so re-apply the shared theme on every Inertia visit:
+// otherwise the organisation colour would stay on the dashboard after signing in.
+router.on('navigate', (event) => {
+    const themeCss = event.detail.page.props.projectAppearance?.themeCss;
+
+    if (themeCss) {
+        applyThemeCss(themeCss);
+    }
+});

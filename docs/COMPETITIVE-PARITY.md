@@ -1,6 +1,6 @@
 # Competitive parity — Signaculum vs alternatives
 
-Written 2026-11-13 for scoping **`v1.0.0-beta.1`**. Sources: public docs of each product (Keycloak specs and admin guide, Zitadel features/docs, authentik docs, Authelia overview, Logto docs, Ory Hydra/Kratos docs, Auth0 and Clerk product docs), plus the accepted Signaculum design (`knowledge/projects/qiick/research/2026-11-05-signaculum-sso-design.md`) and `docs/oidc-profile.md`.
+Written 2026-11-13 for scoping **`v1.0.0-beta.1`**; Signaculum column refreshed on 2026-11-17 against `develop`. Sources: public docs of each product (Keycloak specs and admin guide, Zitadel features/docs, authentik docs, Authelia overview, Logto docs, Ory Hydra/Kratos docs, Auth0 and Clerk product docs), plus the accepted Signaculum design (`knowledge/projects/qiick/research/2026-11-05-signaculum-sso-design.md`) and `docs/oidc-profile.md`.
 
 **How to read the table**
 
@@ -29,43 +29,43 @@ Written 2026-11-13 for scoping **`v1.0.0-beta.1`**. Sources: public docs of each
 
 ## 1. OIDC / OAuth core
 
-| Feature                            | Signaculum (beta)     | Keycloak | Zitadel | Authentik | Authelia | Logto   | Ory     | Auth0 | Clerk   |
-| ---------------------------------- | --------------------- | -------- | ------- | --------- | -------- | ------- | ------- | ----- | ------- |
-| Authorization code + PKCE S256     | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
-| Discovery (`openid-configuration`) | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
-| JWKS + key rotation with overlap   | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
-| Userinfo                           | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
-| Refresh tokens                     | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
-| Token revocation (RFC 7009)        | partial → **in beta** | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
-| Token introspection (RFC 7662)     | ✓ (beta)              | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | partial |
-| RP-initiated logout                | ✓                     | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | ✓       |
-| Back-channel logout                | ✓                     | ✓        | ✓       | ✓         | ✗        | partial | ✓       | ✓     | partial |
-| Front-channel logout               | ✗ **never**           | ✓        | partial | ✓         | ✗        | ✗       | partial | ✓     | ✗       |
-| `prompt` / `max_age` / `acr`       | ✓ (S2)                | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | partial |
-| PAR (RFC 9126)                     | ✗ **later**           | ✓        | partial | partial   | ✗        | ✗       | ✓       | ✓     | ✗       |
-| DPoP (RFC 9449)                    | ✗ **later**           | ✓        | partial | partial   | ✗        | ✗       | ✓       | ✓     | ✗       |
-| Device authorization flow          | ✗ **later**           | ✓        | ✓       | ✓         | ✗        | ✓       | ✓       | ✓     | ✗       |
-| Client credentials (M2M)           | ✓ (opt-in, #51)       | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | ✓       |
-| Dynamic client registration        | ✗ **later**           | ✓        | ✗       | ✓         | ✗        | partial | ✓       | ✓     | ✗       |
+| Feature                            | Signaculum (beta) | Keycloak | Zitadel | Authentik | Authelia | Logto   | Ory     | Auth0 | Clerk   |
+| ---------------------------------- | ----------------- | -------- | ------- | --------- | -------- | ------- | ------- | ----- | ------- |
+| Authorization code + PKCE S256     | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
+| Discovery (`openid-configuration`) | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
+| JWKS + key rotation with overlap   | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
+| Userinfo                           | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
+| Refresh tokens                     | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
+| Token revocation (RFC 7009)        | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓       | ✓     | ✓       |
+| Token introspection (RFC 7662)     | ✓                 | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | partial |
+| RP-initiated logout                | ✓                 | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | ✓       |
+| Back-channel logout                | ✓                 | ✓        | ✓       | ✓         | ✗        | partial | ✓       | ✓     | partial |
+| Front-channel logout               | ✗ **never**       | ✓        | partial | ✓         | ✗        | ✗       | partial | ✓     | ✗       |
+| `prompt` / `max_age` / `acr`       | ✓ (S2)            | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | partial |
+| PAR (RFC 9126)                     | ✗ **later**       | ✓        | partial | partial   | ✗        | ✗       | ✓       | ✓     | ✗       |
+| DPoP (RFC 9449)                    | ✗ **later**       | ✓        | partial | partial   | ✗        | ✗       | ✓       | ✓     | ✗       |
+| Device authorization flow          | ✗ **later**       | ✓        | ✓       | ✓         | ✗        | ✓       | ✓       | ✓     | ✗       |
+| Client credentials (M2M)           | ✓ (opt-in, #51)   | ✓        | ✓       | ✓         | partial  | ✓       | ✓       | ✓     | ✓       |
+| Dynamic client registration        | ✗ **later**       | ✓        | ✗       | ✓         | ✗        | partial | ✓       | ✓     | ✗       |
 
 ---
 
 ## 2. Accounts
 
-| Feature                            | Signaculum (beta)     | Keycloak | Zitadel | Authentik | Authelia | Logto   | Ory (Kratos) | Auth0 | Clerk |
-| ---------------------------------- | --------------------- | -------- | ------- | --------- | -------- | ------- | ------------ | ----- | ----- |
-| Local email/password login         | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
-| MFA TOTP                           | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
-| Passkeys / WebAuthn                | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
-| Recovery codes                     | ✓                     | ✓        | ✓       | ✓         | ✓        | partial | ✓            | ✓     | ✓     |
-| Email verification                 | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
-| Password reset                     | ✓                     | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
-| Password policy                    | ✓                     | ✓        | ✓       | ✓         | partial  | ✓       | ✓            | ✓     | ✓     |
-| Brute-force / lockout              | partial → **in beta** | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
-| Session management (list / revoke) | ✓                     | ✓        | ✓       | ✓         | partial  | ✓       | ✓            | ✓     | ✓     |
-| Account self-service               | ✓                     | ✓        | ✓       | ✓         | partial  | ✓       | ✓            | ✓     | ✓     |
-| Account deletion                   | ✓                     | ✓        | ✓       | ✓         | partial  | ✓       | ✓            | ✓     | ✓     |
-| Account data export                | ✗ → **in beta**       | partial  | partial | partial   | ✗        | partial | partial      | ✓     | ✓     |
+| Feature                            | Signaculum (beta) | Keycloak | Zitadel | Authentik | Authelia | Logto   | Ory (Kratos) | Auth0 | Clerk |
+| ---------------------------------- | ----------------- | -------- | ------- | --------- | -------- | ------- | ------------ | ----- | ----- |
+| Local email/password login         | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
+| MFA TOTP                           | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
+| Passkeys / WebAuthn                | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
+| Recovery codes                     | ✓                 | ✓        | ✓       | ✓         | ✓        | partial | ✓            | ✓     | ✓     |
+| Email verification                 | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
+| Password reset                     | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
+| Password policy                    | ✓                 | ✓        | ✓       | ✓         | partial  | ✓       | ✓            | ✓     | ✓     |
+| Brute-force / lockout              | ✓                 | ✓        | ✓       | ✓         | ✓        | ✓       | ✓            | ✓     | ✓     |
+| Session management (list / revoke) | ✓                 | ✓        | ✓       | ✓         | partial  | ✓       | ✓            | ✓     | ✓     |
+| Account self-service               | ✓                 | ✓        | ✓       | ✓         | partial  | ✓       | ✓            | ✓     | ✓     |
+| Account deletion                   | ✓                 | ✓        | ✓       | ✓         | partial  | ✓       | ✓            | ✓     | ✓     |
+| Account data export                | ✓                 | partial  | partial | partial   | ✗        | partial | partial      | ✓     | ✓     |
 
 ---
 
@@ -78,10 +78,10 @@ Written 2026-11-13 for scoping **`v1.0.0-beta.1`**. Sources: public docs of each
 | Organisations / tenants     | ✓                 | ✓ (realms) | ✓       | ✓         | ✗        | ✓     | partial | ✓     | ✓     |
 | Roles (org roles in claims) | ✓                 | ✓          | ✓       | ✓         | partial  | ✓     | partial | ✓     | ✓     |
 | Invitations                 | ✓                 | ✓          | ✓       | ✓         | ✗        | ✓     | ✓       | ✓     | ✓     |
-| Impersonation               | ✗ **later**       | ✓          | ✓       | ✓         | ✗        | ✓     | partial | ✓     | ✓     |
+| Impersonation               | ✓                 | ✓          | ✓       | ✓         | ✗        | ✓     | partial | ✓     | ✓     |
 | Audit / activity log        | ✓                 | ✓          | ✓       | ✓         | ✓        | ✓     | partial | ✓     | ✓     |
 | Branding (instance)         | ✓                 | ✓          | ✓       | ✓         | partial  | ✓     | BYO UI  | ✓     | ✓     |
-| Branding per tenant/org     | ✗ **later**       | ✓          | ✓       | partial   | ✗        | ✓     | BYO UI  | ✓     | ✓     |
+| Branding per tenant/org     | ✓                 | ✓          | ✓       | partial   | ✗        | ✓     | BYO UI  | ✓     | ✓     |
 | Editable email templates    | ✓                 | ✓          | ✓       | ✓         | partial  | ✓     | ✓       | ✓     | ✓     |
 | i18n (en / it / de+)        | ✓                 | ✓          | ✓       | ✓         | partial  | ✓     | BYO UI  | ✓     | ✓     |
 
@@ -125,14 +125,16 @@ Already in the design or checklist: OIDC core (code+PKCE, discovery, JWKS rotati
 
 **New proposals** (issues labelled `needs-decision`, `priority:P2` until the maintainer confirms):
 
-| Gap                                             | Issue | Why parity needs it                                                                                                              |
-| ----------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Token revocation RFC 7009 (advertised + tested) | #49   | Passport can revoke; customers and RFC 9700 expect a standard `/oauth/revoke` and discovery. Design §5 already names revocation. |
-| Token introspection RFC 7662                    | #50   | Resource servers and API gateways validate opaque access tokens this way; every serious IdP ships it.                            |
-| Client credentials grant                        | #51   | **Shipped** — opt-in on confidential apps; discovery advertises the grant; no `id_token` on this flow.                           |
-| Brute-force lockout                             | #52   | Instance settings already track login attempts; a real lockout matches Keycloak/Logto/Authelia regulation.                       |
-| Editable email templates                        | #53   | **Shipped:** Settings → Email templates (verification / reset / invitation), en/it/de defaults, preview, fallback.               |
-| Account data export                             | #54   | GDPR portability; Auth0/Clerk treat export as table stakes for account self-service.                                             |
+| Gap                                             | Issue | Why parity needs it                                                                                                  |
+| ----------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------- |
+| Token revocation RFC 7009 (advertised + tested) | #49   | **Shipped:** `/oauth/revoke`, advertised in discovery.                                                               |
+| Token introspection RFC 7662                    | #50   | **Shipped:** `/oauth/introspect` for resource servers.                                                               |
+| Client credentials grant                        | #51   | **Shipped** — opt-in on confidential apps; discovery advertises the grant; no `id_token` on this flow.               |
+| Brute-force lockout                             | #52   | **Shipped:** per-account lockout after repeated failures, with an admin unlock.                                      |
+| Editable email templates                        | #53   | **Shipped:** Settings → Email templates (verification / reset / invitation), en/it/de defaults, preview, fallback.   |
+| Account data export                             | #54   | **Shipped:** Settings → Profile → export your account data as JSON.                                                  |
+| Impersonation                                   | #66   | **Shipped:** instance admins can act as a user for support, with an audit entry and a visible banner to stop.        |
+| Per-organisation branding                       | #67   | **Shipped:** organisation owners and admins set a logo and colours shown on login and consent for that organisation. |
 
 ### Later (milestone `Later`, not beta without the maintainer’s OK)
 
@@ -148,8 +150,6 @@ Already in the design or checklist: OIDC core (code+PKCE, discovery, JWKS rotati
 | PAR / DPoP                   | #62 / #63 | FAPI-oriented; no qiick RP needs them for beta.                                      |
 | Device authorization flow    | #64       | Explicitly disabled in the profile today; TV/CLI can wait.                           |
 | Front-channel logout         | #65       | Design: never rely on iframes/third-party cookies; back-channel + RP-initiated only. |
-| Impersonation                | #66       | Support tooling; not required to run qiick SSO.                                      |
-| Per-organisation branding    | #67       | Instance branding covers beta; multi-tenant themes wait for Cloud.                   |
 | Prometheus metrics           | #68       | Nice for ops; health endpoints cover install smoke.                                  |
 
 ### Never (for Signaculum’s product intent)

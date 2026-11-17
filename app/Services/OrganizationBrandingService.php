@@ -129,16 +129,7 @@ final class OrganizationBrandingService
         $instanceUrls = $this->settingsRepositoryService->brandingUrls();
         $organization = $this->currentOrganization($request);
 
-        $brandColor = $organization?->brand_color;
-        $brandColorDark = $organization?->brand_color_dark;
-
-        $theme = ($brandColor !== null && $brandColor !== '') || ($brandColorDark !== null && $brandColorDark !== '')
-            ? $this->themePresetService->resolve(
-                $this->settingsRepositoryService->themePreset(),
-                is_string($brandColor) && $brandColor !== '' ? $brandColor : $this->settingsRepositoryService->projectColor(),
-                is_string($brandColorDark) && $brandColorDark !== '' ? $brandColorDark : $this->settingsRepositoryService->projectColorDark(),
-            )
-            : $this->themePresetService->current();
+        $theme = $this->organizationTheme($request, $organization) ?? $this->themePresetService->current();
 
         $organizationUrls = $organization instanceof Organization
             ? $this->brandingUrls($organization)
@@ -160,6 +151,45 @@ final class OrganizationBrandingService
             'organizationSlug' => $organization?->slug,
             'organizationName' => $organization?->name,
         ];
+    }
+
+    /**
+     * Theme with the organisation's brand colours, or null to keep the instance theme.
+     *
+     * The colours only apply where the organisation context belongs: the guest auth
+     * screens (sign-in, two-factor, email code) and the consent screen. After sign-in
+     * the account and admin areas keep the instance theme even though the slug stays
+     * in the session. A colour that fails WCAG AA (4.5:1 for button text, 3:1 for the
+     * focus ring) is dropped in favour of the instance theme, so an organisation can
+     * never make its own sign-in unreadable.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function organizationTheme(Request $request, ?Organization $organization): ?array
+    {
+        $isBrandedAuthScreen = $request->user() === null
+            || $request->routeIs('passport.authorizations.authorize');
+
+        if (! $organization instanceof Organization || ! $isBrandedAuthScreen) {
+            return null;
+        }
+
+        $brandColor = $organization->brand_color;
+        $brandColorDark = $organization->brand_color_dark;
+        $hasBrandColor = is_string($brandColor) && $brandColor !== '';
+        $hasBrandColorDark = is_string($brandColorDark) && $brandColorDark !== '';
+
+        if (! $hasBrandColor && ! $hasBrandColorDark) {
+            return null;
+        }
+
+        $theme = $this->themePresetService->resolve(
+            $this->settingsRepositoryService->themePreset(),
+            $hasBrandColor ? $brandColor : $this->settingsRepositoryService->projectColor(),
+            $hasBrandColorDark ? $brandColorDark : $this->settingsRepositoryService->projectColorDark(),
+        );
+
+        return $theme['brandPassesAa'] === true ? $theme : null;
     }
 
     /**

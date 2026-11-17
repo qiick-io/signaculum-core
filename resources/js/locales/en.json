@@ -655,12 +655,15 @@
             "secret_rotated": "Secret rotated",
             "user_impersonation_started": "Impersonation started",
             "user_impersonation_stopped": "Impersonation stopped",
-            "user_impersonation_expired": "Impersonation expired"
+            "user_impersonation_expired": "Impersonation expired",
+            "locked": "Account locked",
+            "organization_mfa_requirement_updated": "Organisation MFA requirement updated"
         },
         "logs": {
             "default": "Application",
             "auth": "Authentication",
-            "settings": "Settings"
+            "settings": "Settings",
+            "organizations": "Organisations"
         },
         "ipAddress": "IP"
     },
