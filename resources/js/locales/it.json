@@ -658,12 +658,15 @@
             "secret_rotated": "Segreto ruotato",
             "user_impersonation_started": "Impersonazione avviata",
             "user_impersonation_stopped": "Impersonazione interrotta",
-            "user_impersonation_expired": "Impersonazione scaduta"
+            "user_impersonation_expired": "Impersonazione scaduta",
+            "locked": "Account bloccato",
+            "organization_mfa_requirement_updated": "Requisito MFA dell'organizzazione aggiornato"
         },
         "logs": {
             "default": "Applicazione",
             "auth": "Autenticazione",
-            "settings": "Impostazioni"
+            "settings": "Impostazioni",
+            "organizations": "Organizzazioni"
         },
         "ipAddress": "IP"
     },
