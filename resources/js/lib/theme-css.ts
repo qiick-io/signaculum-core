@@ -24,7 +24,7 @@ const FALLBACK_RING_LIGHT = 'var(--color-teal-600)';
 const FALLBACK_RING_DARK = 'var(--color-teal-400)';
 
 /** Id of the theme `<style>` element rendered by `app.blade.php`. */
-export const THEME_STYLE_ELEMENT_ID = 'excubia-theme-css';
+export const THEME_STYLE_ELEMENT_ID = 'instance-theme-css';
 
 /** Rejects values that could close the declaration block (`;`, `{`, `}`, `<`). */
 const SAFE_CSS_VALUE = /^[^;{}<>]+$/;
@@ -32,7 +32,7 @@ const SAFE_CSS_VALUE = /^[^;{}<>]+$/;
 /**
  * Apply resolved theme CSS variables to the document for live preview.
  *
- * Rewrites the same `<style id="externa-theme-css">` the server renders, as a
+ * Rewrites the same `<style id="instance-theme-css">` the server renders, as a
  * `:root { … }` light block and a `.dark { … }` block. Nothing is set inline on
  * `<html>`, so the `.dark` (and `html.high-contrast`) rules keep winning in
  * dark mode. Side effect: creates the style element in `<head>` if missing.
