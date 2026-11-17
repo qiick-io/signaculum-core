@@ -103,7 +103,9 @@ A remember-me **recaller** login (session restored from the cookie, `Auth::viaRe
 An organisation owner/admin may set **Members must use two-factor authentication** (`organizations.is_mfa_required`). Before `/oauth/authorize` can complete, a member of such an organisation must:
 
 1. **Enrol** TOTP or a passkey (otherwise redirect to Settings → Security, intended URL preserved).
-2. **Prove a second factor in this session's `amr`** (RFC 8176): `mfa`, or a passkey method (`hwk` / `swk`). Email-code-only (`otp`) or password-only (`pwd`) sessions are stepped up like `max_age` / `prompt=login` (local re-auth, same `sid`, no back-channel fan-out), then resume authorization.
+2. **Prove a second factor in this session's `amr`** (RFC 8176): `mfa`, or a passkey method (`hwk` / `swk`). Email-code-only (`otp`) or password-only (`pwd`) sessions are stepped up like `max_age` / `prompt=login` (local re-auth, same `sid`, no back-channel fan-out; login toast explains that a second factor is required), then resume authorization.
+
+With `prompt=none` (OIDC Core §3.1.2.1 / §3.1.2.6), an unsatisfied organisation MFA requirement returns `interaction_required` (with `state` and `iss`) **without** ending the Signaculum session or showing UI.
 
 Passkey-only sign-in satisfies the org gate via `hwk`/`swk` without inventing `mfa` in `amr`. `acr` stays as decided elsewhere (`urn:qiick:loa:mfa` only when `amr` includes `mfa`). Instance-wide `two_factor_required` remains a separate setting.
 
@@ -197,20 +199,20 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 
 ## Errors
 
-| Situation                                                                                           | Behaviour                                                                                  |
-| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| PKCE / nonce / consent deny / `prompt=none` without session / `max_age` exceeded with `prompt=none` | Redirect to the registered `redirect_uri` with `error`, echoed `state`, and RFC 9207 `iss` |
-| `request` parameter present (OIDC Core §6.1 / §3.1.2.6)                                             | Redirect with `error=request_not_supported`, `state`, `iss`; never a `code`                |
-| `request_uri` parameter present (OIDC Core §6.1 / §3.1.2.6)                                         | Redirect with `error=request_uri_not_supported`, `state`, `iss`; never a `code`            |
-| `max_age` exceeded (no `prompt=none`) or `prompt=login`                                             | Redirect to Signaculum `/login` (then back to authorize)                                   |
-| Unknown, revoked or unregistered `redirect_uri`                                                     | HTTP 401 (no redirect to an attacker URI)                                                  |
-| Bad token request (verifier, client secret, …)                                                      | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …)                 |
-| Revocation with a wrong client secret                                                               | HTTP 401 `invalid_client`                                                                  |
-| Userinfo without / with invalid Bearer                                                              | 401 `invalid_token` + `WWW-Authenticate`                                                   |
-| Userinfo without `openid` scope                                                                     | 403 `insufficient_scope`                                                                   |
-| Introspection without / with bad client auth                                                        | 401 `invalid_client`                                                                       |
-| Introspection missing `token`                                                                       | 400 `invalid_request`                                                                      |
-| Unregistered `post_logout_redirect_uri`                                                             | HTTP 400                                                                                   |
-| Forged / foreign `id_token_hint` while signed in                                                    | Confirmation page, then logout of the local session on confirm                             |
+| Situation                                                                                                                                    | Behaviour                                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| PKCE / nonce / consent deny / `prompt=none` without session / `max_age` exceeded with `prompt=none` / org MFA unsatisfied with `prompt=none` | Redirect to the registered `redirect_uri` with `error`, echoed `state`, and RFC 9207 `iss` |
+| `request` parameter present (OIDC Core §6.1 / §3.1.2.6)                                                                                      | Redirect with `error=request_not_supported`, `state`, `iss`; never a `code`                |
+| `request_uri` parameter present (OIDC Core §6.1 / §3.1.2.6)                                                                                  | Redirect with `error=request_uri_not_supported`, `state`, `iss`; never a `code`            |
+| `max_age` exceeded (no `prompt=none`) or `prompt=login`                                                                                      | Redirect to Signaculum `/login` (then back to authorize)                                   |
+| Unknown, revoked or unregistered `redirect_uri`                                                                                              | HTTP 401 (no redirect to an attacker URI)                                                  |
+| Bad token request (verifier, client secret, …)                                                                                               | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …)                 |
+| Revocation with a wrong client secret                                                                                                        | HTTP 401 `invalid_client`                                                                  |
+| Userinfo without / with invalid Bearer                                                                                                       | 401 `invalid_token` + `WWW-Authenticate`                                                   |
+| Userinfo without `openid` scope                                                                                                              | 403 `insufficient_scope`                                                                   |
+| Introspection without / with bad client auth                                                                                                 | 401 `invalid_client`                                                                       |
+| Introspection missing `token`                                                                                                                | 400 `invalid_request`                                                                      |
+| Unregistered `post_logout_redirect_uri`                                                                                                      | HTTP 400                                                                                   |
+| Forged / foreign `id_token_hint` while signed in                                                                                             | Confirmation page, then logout of the local session on confirm                             |
 
 Redirect URIs and post-logout redirect URIs match **exactly** (no prefix or wildcard matching).

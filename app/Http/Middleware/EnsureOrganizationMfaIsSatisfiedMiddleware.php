@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Client;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\AuthenticationContextService;
 use App\Services\OidcReauthenticationService;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -26,6 +28,11 @@ use Symfony\Component\HttpFoundation\Response;
  * `prompt=login` (local re-auth, same `sid`, no back-channel fan-out). Session
  * satisfaction is `mfa`, or a passkey method (`hwk` / `swk`); `acr` stays truthful
  * and is not invented here.
+ *
+ * With `prompt=none` (OIDC Core §3.1.2.1 / §3.1.2.6), an unsatisfied organisation MFA
+ * requirement returns `interaction_required` to the client's redirect URI with `state`
+ * and RFC 9207 `iss`, and leaves the Signaculum session intact (same pattern as
+ * {@see EnforceMaximumAuthenticationAgeMiddleware} for a stale `max_age`).
  *
  * Instance-wide 2FA (`EnsureTwoFactorIsEnabledMiddleware`) remains separate.
  */
@@ -81,12 +88,22 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
             return $next($request);
         }
 
+        $isPromptNone = $this->isPromptNone($request);
+
         if (! $this->userHasEnrolledSecondFactor($user)) {
+            if ($isPromptNone) {
+                return $this->interactionRequiredRedirect($request);
+            }
+
             return $this->redirectToEnrolment($request);
         }
 
         if ($this->authenticationContextService->sessionSatisfiesOrganizationMfa()) {
             return $next($request);
+        }
+
+        if ($isPromptNone) {
+            return $this->interactionRequiredRedirect($request);
         }
 
         $this->startOrganizationMfaStepUp($request);
@@ -100,6 +117,19 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
     private function isConsentApproval(Request $request): bool
     {
         return $request->isMethod('POST') && $request->filled('auth_token') && ! $request->filled('response_type');
+    }
+
+    /**
+     * OIDC Core §3.1.2.1 `prompt=none`: never show UI; return an error to the client.
+     */
+    private function isPromptNone(Request $request): bool
+    {
+        $promptValues = array_values(array_filter(array_map(
+            trim(...),
+            explode(' ', (string) $request->input('prompt', '')),
+        )));
+
+        return in_array('none', $promptValues, true);
     }
 
     private function userHasEnrolledSecondFactor(User $user): bool
@@ -138,6 +168,8 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
     /**
      * Clear the local web login for a fresh second-factor proof without ending SSO
      * (same pattern as {@see EnforceMaximumAuthenticationAgeMiddleware}).
+     *
+     * Flashes a toast so the login page explains why email-code alone loops (org MFA).
      */
     private function startOrganizationMfaStepUp(Request $request): void
     {
@@ -152,6 +184,11 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
         $this->oidcReauthenticationService->restoreAfterSessionRotation($preservedSid);
 
         $request->session()->put('url.intended', $this->authorizationRequestUrl($request));
+
+        Inertia::flash('toast', [
+            'type' => 'error',
+            'message' => __('An organisation you belong to requires a second factor. Sign in with your authenticator or a passkey.'),
+        ]);
     }
 
     /**
@@ -174,5 +211,41 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
         );
 
         return url('/oauth/authorize').'?'.http_build_query($parameters, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
+     * Silent failure for `prompt=none` when organisation MFA interaction would be
+     * required (OIDC Core §3.1.2.1 / §3.1.2.6): keep the browser session, redirect
+     * with `interaction_required`, `state`, and `iss` (RFC 9207).
+     */
+    private function interactionRequiredRedirect(Request $request): RedirectResponse|Response
+    {
+        $clientId = $request->input('client_id');
+        $redirectUri = $request->input('redirect_uri');
+
+        if (! is_string($clientId) || $clientId === '' || ! is_string($redirectUri) || $redirectUri === '') {
+            abort(401);
+        }
+
+        $client = Client::query()->find($clientId);
+
+        if ($client === null || ! in_array($redirectUri, $client->redirect_uris, true)) {
+            abort(401);
+        }
+
+        $query = [
+            'error' => 'interaction_required',
+            'iss' => (string) config('oidc.issuer'),
+        ];
+
+        $state = $request->input('state');
+
+        if (is_string($state) && $state !== '') {
+            $query['state'] = $state;
+        }
+
+        $separator = str_contains($redirectUri, '?') ? '&' : '?';
+
+        return redirect()->away($redirectUri.$separator.http_build_query($query));
     }
 }

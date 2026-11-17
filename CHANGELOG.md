@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Organisation MFA now requires the current session `amr` to prove a second factor (`mfa`, or passkey `hwk`/`swk`); enrolled users with email-code-only or password-only sessions are stepped up like `max_age` / `prompt=login` (#131).
+- Organisation MFA with `prompt=none` returns `interaction_required` (keeps the session); interactive step-up flashes a second-factor toast on login (#131).
 - Webhook `CURLOPT_RESOLVE` pins wrap IPv6 addresses in brackets (`host:443:[2001:db8::1]`) (#131).
 
 ### Security
