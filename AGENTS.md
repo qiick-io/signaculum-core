@@ -241,8 +241,9 @@ Signaculum is the optional, open-source (MIT), self-hosted **OpenID Connect iden
 - Discovery at `/.well-known/openid-configuration`; issuer = `APP_URL` without a trailing slash.
 - Scopes `openid profile email qiick.orgs`; claims `sub`, `email`, `email_verified`, `name`, `given_name`, `family_name`, `preferred_username`, `picture`, `locale`, `amr`, `acr`, `orgs` (`[{ id, slug, roles }]`, roles `owner` / `admin` / `member` / `billing`).
 - Person names (OIDC Core 5.1, scope `profile`): emit `given_name` and `family_name` alongside `name` (approved 2026-11-06). The shared client rule lives in `qiick/laravel-oidc` as `PersonNameData`.
-- Logout: RP-initiated (`end_session_endpoint`) and back-channel. No front-channel logout.
-- Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social logins.
+- Logout: RP-initiated (`end_session_endpoint`), back-channel, and front-channel (OIDC Front-Channel Logout 1.0; approved for v1.0.0 on 2026-11-17, #65).
+- In v1.0.0 (approved by the maintainer on 2026-11-17, #134): PAR (RFC 9126), device authorization (RFC 8628), SAML 2.0 IdP for SP-initiated SSO with `litesaml/lightsaml`, SCIM 2.0 provisioning, a read-only LDAP / AD user source with `directorytree/ldaprecord-laravel` (`ext-ldap`), and upstream IdPs brokered through `qiick/laravel-oidc`. These dependencies are approved; any other still needs the maintainer's OK.
+- Not in v1: IdP-initiated login, dynamic client registration, DPoP, high-availability clustering.
 - Living wire contract: `docs/oidc-profile.md` (what is implemented vs still planned).
 
 ## Stack (Zero-Snowflake, aligned with `qiick-io/excubia-app`)
