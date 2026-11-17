@@ -68,6 +68,9 @@ test('login with organization query uses that org branding and falls back to ins
 
     $organization = Organization::factory()->create([
         'brand_color' => '#112233',
+        // #112233 alone is too dark for the dark theme's focus ring; a lighter dark-mode
+        // colour keeps the pair within WCAG AA, so the organisation colours apply.
+        'brand_color_dark' => '#88AACC',
         'logo_path' => null,
     ]);
 
@@ -110,4 +113,38 @@ test('unknown organisation slug leaves instance branding', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('projectAppearance.organizationSlug', null));
+});
+
+test('the sign-in page renders the organisation brand colour in its theme css', function () {
+    $organization = Organization::factory()->create(['brand_color' => '#C2410C']);
+
+    // The first paint comes from app.blade.php, so the colour must be in the HTML itself.
+    $this->get(route('login', ['organization' => $organization->slug]))
+        ->assertOk()
+        ->assertSee('--brand-primary: #C2410C;', false);
+});
+
+test('an organisation colour that fails WCAG AA keeps the instance theme', function () {
+    // #777777 reaches 4.48:1 with white and about 4:1 with ink, below 4.5:1 for button text.
+    $organization = Organization::factory()->create(['brand_color' => '#777777']);
+
+    $this->get(route('login', ['organization' => $organization->slug]))
+        ->assertOk()
+        ->assertDontSee('--brand-primary: #777777;', false)
+        ->assertInertia(fn ($page) => $page
+            ->where('projectAppearance.organizationSlug', $organization->slug)
+            ->where('projectAppearance.themeCss.brandPrimary', null));
+});
+
+test('signed-in pages keep the instance theme while the organisation stays in the session', function () {
+    $organization = Organization::factory()->create(['brand_color' => '#C2410C']);
+    $user = User::factory()->create();
+
+    $this->withSession([OrganizationBrandingService::SESSION_SLUG_KEY => $organization->slug])
+        ->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertDontSee('--brand-primary: #C2410C;', false)
+        ->assertInertia(fn ($page) => $page
+            ->where('projectAppearance.themeCss.brandPrimary', null));
 });

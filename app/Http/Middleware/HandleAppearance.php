@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Services\OrganizationBrandingService;
 use App\Services\SettingsRepositoryService;
-use App\Services\ThemePresetService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
@@ -32,7 +32,8 @@ class HandleAppearance
         View::share('appearance', in_array($appearanceCookie, SettingsRepositoryService::APPEARANCES, true) ? $appearanceCookie : $settings->defaultAppearance());
         View::share('accessibilityHighContrast', $request->cookie('accessibility_high_contrast') === '1');
         View::share('accessibilityReduceMotion', $request->cookie('accessibility_reduce_motion') === '1');
-        View::share('projectThemeCss', app(ThemePresetService::class)->current());
+        // Organisation brand colours on sign-in and consent; the instance theme everywhere else.
+        View::share('projectThemeCss', app(OrganizationBrandingService::class)->effectiveAppearance($request)['themeCss']);
         View::share('projectFaviconUrl', $settings->brandingUrls()['faviconUrl']);
 
         return $next($request);
