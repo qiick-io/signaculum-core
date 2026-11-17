@@ -7,8 +7,9 @@ namespace App\Services;
 use App\Models\User;
 
 /**
- * Marks an in-browser re-authentication (OIDC Core §3.1.2.1 `max_age` / `prompt=login`)
- * so logout does not fan out back-channel logout and the same `sid` is kept.
+ * Marks an in-browser re-authentication (OIDC Core §3.1.2.1 `max_age` / `prompt=login`,
+ * or organisation MFA step-up when session `amr` lacks a second factor) so logout does
+ * not fan out back-channel logout and the same `sid` is kept.
  *
  * A full Signaculum logout still ends SSO sessions; this path only asks the user to
  * prove they are still present for one authorization request.

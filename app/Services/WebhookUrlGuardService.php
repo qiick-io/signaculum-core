@@ -153,8 +153,20 @@ final class WebhookUrlGuardService
 
         return [
             'ok' => true,
-            'curl_resolve' => [sprintf('%s:%d:%s', $host, $port, $pinnedAddress)],
+            'curl_resolve' => [sprintf('%s:%d:%s', $host, $port, $this->formatCurlResolveAddress($pinnedAddress))],
         ];
+    }
+
+    /**
+     * CURLOPT_RESOLVE needs brackets around an IPv6 pin (`host:443:[2001:db8::1]`).
+     */
+    private function formatCurlResolveAddress(string $address): string
+    {
+        if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
+            return '['.$address.']';
+        }
+
+        return $address;
     }
 
     /**

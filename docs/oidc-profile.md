@@ -100,7 +100,12 @@ A remember-me **recaller** login (session restored from the cookie, `Auth::viaRe
 
 #### Organisation MFA requirement
 
-An organisation owner/admin may set **Members must use two-factor authentication** (`organizations.is_mfa_required`). Members of such an organisation who have not enrolled TOTP or a passkey are redirected to Settings → Security **before** `/oauth/authorize` can complete (intended URL preserved). This does **not** invent `mfa` in `amr` or raise `acr`: those claims stay truthful to the factors used in the session. Instance-wide `two_factor_required` remains a separate setting.
+An organisation owner/admin may set **Members must use two-factor authentication** (`organizations.is_mfa_required`). Before `/oauth/authorize` can complete, a member of such an organisation must:
+
+1. **Enrol** TOTP or a passkey (otherwise redirect to Settings → Security, intended URL preserved).
+2. **Prove a second factor in this session's `amr`** (RFC 8176): `mfa`, or a passkey method (`hwk` / `swk`). Email-code-only (`otp`) or password-only (`pwd`) sessions are stepped up like `max_age` / `prompt=login` (local re-auth, same `sid`, no back-channel fan-out), then resume authorization.
+
+Passkey-only sign-in satisfies the org gate via `hwk`/`swk` without inventing `mfa` in `amr`. `acr` stays as decided elsewhere (`urn:qiick:loa:mfa` only when `amr` includes `mfa`). Instance-wide `two_factor_required` remains a separate setting.
 
 #### `acr` (OIDC Core §2 / §5.1)
 

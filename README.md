@@ -44,10 +44,6 @@ Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social 
 
 Password rules are configured under Settings → Authentication & security (length and character classes). Rejecting passwords found in known breaches is **off by default** and documented in [docs/password-policy.md](./docs/password-policy.md) (k-anonymity check against Have I Been Pwned when enabled).
 
-### Known limitations
-
-- Organisation MFA (#125) currently checks that a second factor is **enrolled**, not that the session `amr` contains one. Step-up against session `amr` is tracked in [#131](https://github.com/qiick-io/signaculum-core/issues/131).
-
 ## Requirements
 
 | Requirement      | Notes                                                                                                              |
