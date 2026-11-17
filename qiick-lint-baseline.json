@@ -1,0 +1,8 @@
+{
+    "eslint/no-restricted-imports": {},
+    "eslint/no-restricted-properties": {},
+    "eslint/id-length": {
+        "resources/js/lib/brand-contrast.ts": 2,
+        "resources/js/lib/contrasting-foreground.ts": 3
+    }
+}
