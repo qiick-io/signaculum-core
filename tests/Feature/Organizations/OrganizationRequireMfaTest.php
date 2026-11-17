@@ -330,6 +330,37 @@ test('prompt=none when organisation MFA is unsatisfied returns interaction_requi
     Queue::assertNothingPushed();
 });
 
+test('prompt=none interaction_required with a revoked client is refused with http 401', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'revoked-client-mfa-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $client = createOidcClient();
+    $client->forceFill(['revoked' => true])->save();
+
+    $this->actingAs($member);
+    session([
+        OidcSessionService::SESSION_KEY => 'sid-revoked-client-org-mfa',
+        'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value],
+    ]);
+
+    $response = $this->get(authorizeUrl($client, pkcePair()['challenge'], [
+        'prompt' => 'none',
+    ]));
+
+    expect($response->getStatusCode())->toBe(401)
+        ->and((string) $response->headers->get('Location'))->toBe('');
+});
+
 test('organisation MFA step-up shows that a second factor is required', function () {
     $owner = User::factory()->create();
     $member = User::factory()->withTwoFactor()->create();

@@ -129,6 +129,22 @@ test('max_age older than auth_time with prompt=none returns login_required', fun
         ->and($query['iss'])->toBe('https://id.example.test');
 });
 
+test('prompt=none login_required with a revoked client is refused with http 401', function () {
+    Date::setTestNow('2026-11-05 10:00:00');
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+
+    Date::setTestNow('2026-11-05 10:10:00');
+    $this->client->forceFill(['revoked' => true])->save();
+
+    $response = $this->get(authorizeUrl($this->client, $this->pkce['challenge'], [
+        'max_age' => '60',
+        'prompt' => 'none',
+    ]));
+
+    expect($response->getStatusCode())->toBe(401)
+        ->and((string) $response->headers->get('Location'))->toBe('');
+});
+
 test('prompt=none login_required preserves an existing query string on the redirect URI', function () {
     $redirectUriWithQuery = TEST_REDIRECT_URI.'?app=1';
     $this->client->forceFill(['redirect_uris' => [$redirectUriWithQuery]])->save();
