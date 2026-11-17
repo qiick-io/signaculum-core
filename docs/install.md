@@ -20,7 +20,7 @@ Queue, cache and session default to the `database` driver. Redis is optional (Ho
 ```bash
 composer create-project qiick/signaculum-core my-signaculum
 cd my-signaculum
-nvm use   # Node 24
+nvm use   # Node 26
 php artisan signaculum:install
 ```
 
