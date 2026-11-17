@@ -24,7 +24,7 @@ Every qiick app keeps working standalone with local login. Signaculum is one sta
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Install**  | `composer create-project qiick/signaculum-core` · [Install](./docs/install.md) · [Upgrade](./docs/upgrade.md)                                                             |
 | **OIDC**     | [Protocol profile](./docs/oidc-profile.md) · [Clients](./docs/clients.md) · [Organisations](./docs/organizations.md) · [Keys & backup](./docs/key-rotation-and-backup.md) |
-| **Security** | [SECURITY.md](./SECURITY.md) · [Password policy](./docs/password-policy.md)                                                                                               |
+| **Security** | [SECURITY.md](./SECURITY.md) · [Password policy](./docs/password-policy.md) · [LDAP sync](./docs/ldap.md)                                                                   |
 | **Issues**   | [GitHub Issues](https://github.com/qiick-io/signaculum-core/issues)                                                                                                       |
 
 ## What you get
@@ -37,6 +37,7 @@ Every qiick app keeps working standalone with local login. Signaculum is one sta
 - Admin UI for users, OIDC applications, activity log, email templates, API keys and instance settings
 - Admin REST API (`/api/v1`) with scoped Bearer API keys and OpenAPI — [Admin API](./docs/admin-api.md)
 - Outbound signed webhooks for domain events (SSRF-guarded delivery URLs) — [Webhooks](./docs/webhooks.md)
+- Optional read-only LDAP / Active Directory user sync (TLS required by default) — [LDAP](./docs/ldap.md); settings UI is a follow-up
 - Tested against the OpenID Foundation conformance suite (Basic OP, RP-initiated and back-channel logout) — [Conformance](./docs/oidc-conformance.md)
 - Self-registration **off by default** (closed IdP); instance admins enable it under Settings → Authentication & security
 
@@ -48,7 +49,7 @@ Password rules are configured under Settings → Authentication & security (leng
 
 | Requirement      | Notes                                                                                                              |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **PHP 8.4+**     | `.php-version` / `composer.json`                                                                                   |
+| **PHP 8.4+**     | `.php-version` / `composer.json`; `ext-ldap` when using LDAP sync                                                  |
 | **Composer 2**   |                                                                                                                    |
 | **Node.js 24**   | `.nvmrc`                                                                                                           |
 | **Database**     | SQLite (default); MySQL 8 or PostgreSQL 17 supported                                                               |

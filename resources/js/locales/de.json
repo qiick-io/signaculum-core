@@ -692,14 +692,17 @@
             "user_impersonation_expired": "Imitation abgelaufen",
             "locked": "Konto gesperrt",
             "organization_mfa_requirement_updated": "MFA-Pflicht der Organisation geändert",
-            "organization_member_tokens_revoked": "Mitglieder-Tokens widerrufen"
+            "organization_member_tokens_revoked": "Mitglieder-Tokens widerrufen",
+            "ldap_sync_completed": "LDAP-Synchronisierung abgeschlossen",
+            "ldap_sync_conflict": "LDAP-Synchronisierungskonflikt"
         },
         "logs": {
             "default": "Anwendung",
             "auth": "Authentifizierung",
             "settings": "Einstellungen",
             "organizations": "Organisationen",
-            "api-keys": "API-Schlüssel"
+            "api-keys": "API-Schlüssel",
+            "ldap": "LDAP"
         },
         "ipAddress": "IP"
     },

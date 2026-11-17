@@ -692,14 +692,17 @@
             "user_impersonation_expired": "Impersonation expired",
             "locked": "Account locked",
             "organization_mfa_requirement_updated": "Organisation MFA requirement updated",
-            "organization_member_tokens_revoked": "Member tokens revoked"
+            "organization_member_tokens_revoked": "Member tokens revoked",
+            "ldap_sync_completed": "LDAP sync completed",
+            "ldap_sync_conflict": "LDAP sync conflict"
         },
         "logs": {
             "default": "Application",
             "auth": "Authentication",
             "settings": "Settings",
             "organizations": "Organisations",
-            "api-keys": "API keys"
+            "api-keys": "API keys",
+            "ldap": "LDAP"
         },
         "ipAddress": "IP"
     },

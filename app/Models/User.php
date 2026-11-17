@@ -29,6 +29,8 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property string|null $last_name
  * @property-read string $name first and last name
  * @property string $email
+ * @property string|null $ldap_guid converted objectGUID / entryUUID when synced from LDAP
+ * @property string|null $ldap_dn directory distinguished name for bind-on-login later
  * @property string|null $locale UI language, also the OIDC `locale` claim
  * @property Carbon|null $email_verified_at
  * @property bool $is_instance_admin may edit instance settings (SettingPolicy)
@@ -43,7 +45,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['first_name', 'last_name', 'email', 'locale', 'password'])]
+#[Fillable(['first_name', 'last_name', 'email', 'locale', 'password', 'ldap_guid', 'ldap_dn'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail, OAuthenticatable, PasskeyUser
 {

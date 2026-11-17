@@ -6,9 +6,10 @@ FROM php:8.4-fpm-bookworm AS php-base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl git unzip \
-        libicu-dev libpq-dev libsqlite3-dev libzip-dev \
+        libicu-dev libldap2-dev libpq-dev libsqlite3-dev libzip-dev \
         $PHPIZE_DEPS \
-    && docker-php-ext-install -j$(nproc) bcmath intl opcache pcntl pdo_mysql pdo_pgsql pdo_sqlite zip \
+    && docker-php-ext-configure ldap --with-libdir=lib/$(uname -m)-linux-gnu \
+    && docker-php-ext-install -j$(nproc) bcmath intl ldap opcache pcntl pdo_mysql pdo_pgsql pdo_sqlite zip \
     && apt-get purge -y --auto-remove $PHPIZE_DEPS \
     && rm -rf /var/lib/apt/lists/*
 

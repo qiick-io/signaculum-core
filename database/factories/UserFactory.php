@@ -28,6 +28,8 @@ class UserFactory extends Factory
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
+            'ldap_guid' => null,
+            'ldap_dn' => null,
             // Keep nullable / default flags in the attribute bag for Model::shouldBeStrict().
             'locale' => null,
             'is_instance_admin' => false,

@@ -25,6 +25,10 @@ declare(strict_types=1);
  * shared suffix table does not cover `App\Oidc`, and renaming them would break the wiring in
  * `AppServiceProvider::configureOpenIdConnect()`.
  *
+ * LDAP directory models live under `App\Ldap` (LdapRecord `Model` subclasses, e.g. `DirectoryUser`).
+ * The shared suffix table does not cover that namespace; they are query models only and never
+ * write back to the directory (#77).
+ *
  * `App\Models\Client` extends Passport's Client (upstream noun, plus logout columns).
  */
 return [

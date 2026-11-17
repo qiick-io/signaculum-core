@@ -21,11 +21,11 @@ final class ActivityLogRequest extends FormRequest
     use ValidatesSearchQueryTrait;
 
     /**
-     * Log names written by the app: models (`default`), logins (`auth`) and settings.
+     * Log names written by the app: models (`default`), logins (`auth`), settings, LDAP sync.
      *
      * @var list<string>
      */
-    public const LOG_NAMES = ['default', 'auth', 'settings'];
+    public const LOG_NAMES = ['default', 'auth', 'settings', 'ldap'];
 
     public function authorize(): bool
     {

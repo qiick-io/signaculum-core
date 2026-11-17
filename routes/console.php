@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Jobs\SyncLdapUsersJob;
 use App\Models\EmailLoginCode;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Foundation\Inspiring;
@@ -27,3 +28,9 @@ Schedule::command('model:prune', [
 
 // API keys expiring in seven days: one warning per key (app-ui docs/api-keys.md, behaviour 5).
 Schedule::command('signaculum:notify-expiring-api-keys')->daily();
+
+/*
+ * LDAP read-only sync (#77). The job no-ops when disabled or when the configured
+ * interval since last_synced_at has not elapsed.
+ */
+Schedule::job(new SyncLdapUsersJob)->everyMinute()->name('ldap:sync');
