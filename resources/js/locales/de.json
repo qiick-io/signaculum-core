@@ -140,15 +140,12 @@
                 "head": "Seitenleisten-Einstellungen"
             },
             "system": "System",
-            "themePresetBlue": "Blau",
+            "themePresetAmetista": "Ametista",
+            "themePresetArdesia": "Ardesia",
+            "themePresetCiclamino": "Ciclamino (Standard)",
             "themePresetDescription": "Wähle eine integrierte Palette für das Admin. Eine eigene Markenfarbe überschreibt weiterhin Primary.",
-            "themePresetIndigo": "Indigo",
-            "themePresetRose": "Rose",
-            "themePresetSignaculum": "Signaculum (Standard)",
-            "themePresetSlate": "Schiefer",
-            "themePresetTeal": "Teal",
+            "themePresetIndaco": "Indaco",
             "themePresetTitle": "Theme-Preset",
-            "themePresetViolet": "Violett",
             "title": "Darstellungseinstellungen"
         },
         "connectedApplications": {

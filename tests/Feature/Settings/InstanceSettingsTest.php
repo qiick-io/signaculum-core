@@ -293,14 +293,52 @@ it('validates the default appearance', function () {
 it('offers the built-in theme presets on the appearance page', function () {
     $this->actingAs(instanceAdmin())->get(route('appearance.edit'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('appearance.theme_preset', 'signaculum')
+            ->where('appearance.theme_preset', 'ciclamino')
             ->where('appearance.project_color', null)
             ->where('appearance.brand_passes_aa', true)
             ->has('appearance.theme_presets', count(ThemePresetEnum::cases()))
-            ->where('appearance.theme_presets.0.slug', 'signaculum')
+            ->where('appearance.theme_presets.0.slug', 'ciclamino')
             ->where('appearance.theme_presets.0.light.primary', '#A24A7B')
             ->where('appearance.theme_presets.0.dark.primary', '#DC77AD')
             ->where('appearance.theme_presets.0.light.background', '#FFFFFF'));
+});
+
+it('offers only Ciclamino and the generic presets, never a sibling brand colour', function () {
+    // teal is Externa's brand (204°), blue Excubia's (238°), rose 5° from Ciclamino (#142).
+    $slugs = array_column(app(ThemePresetService::class)->catalog(), 'slug');
+
+    expect($slugs)->toBe(['ciclamino', 'indaco', 'ametista', 'ardesia']);
+
+    foreach (['teal', 'blue', 'rose', 'signaculum', 'indigo', 'violet', 'slate'] as $removedSlug) {
+        expect(config('theme-presets.presets.'.$removedSlug))->toBeNull();
+    }
+});
+
+it('names every preset with a translation key present in all locales', function () {
+    $locales = collect(['en', 'it', 'de'])->mapWithKeys(fn (string $locale) => [
+        $locale => json_decode((string) file_get_contents(resource_path("js/locales/{$locale}.json")), true),
+    ]);
+
+    foreach (app(ThemePresetService::class)->catalog() as $preset) {
+        expect($preset['name'])->toStartWith('settings.appearance.themePreset');
+
+        foreach ($locales as $locale => $messages) {
+            expect(data_get($messages, $preset['name']))
+                ->toBeString("{$preset['name']} is missing in {$locale}.json")
+                ->not->toBe($preset['name']);
+        }
+    }
+});
+
+it('falls back to Ciclamino for a stored slug that is no longer offered', function () {
+    Setting::query()->updateOrCreate(['key' => 'theme_preset'], ['value' => 'teal']);
+
+    expect(app(SettingsRepositoryService::class)->themePreset())->toBe('ciclamino')
+        ->and(app(ThemePresetService::class)->current()['light']['primary'])->toBe('#A24A7B');
+
+    $this->actingAs(instanceAdmin())
+        ->put(route('appearance.update'), ['theme_preset' => 'blue', 'default_appearance' => 'system'])
+        ->assertSessionHasErrors('theme_preset');
 });
 
 it('saves the theme preset and brand colours', function () {
@@ -308,7 +346,7 @@ it('saves the theme preset and brand colours', function () {
 
     $this->actingAs($manager)
         ->put(route('appearance.update'), [
-            'theme_preset' => 'indigo',
+            'theme_preset' => 'indaco',
             'project_color' => '#123456',
             'project_color_dark' => '',
             'default_appearance' => 'system',
@@ -318,25 +356,25 @@ it('saves the theme preset and brand colours', function () {
 
     $settings = app(SettingsRepositoryService::class);
 
-    expect($settings->themePreset())->toBe('indigo')
+    expect($settings->themePreset())->toBe('indaco')
         ->and($settings->projectColor())->toBe('#123456')
         ->and($settings->projectColorDark())->toBeNull();
 
     $this->actingAs($manager)->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('projectAppearance.themePreset', 'indigo')
+            ->where('projectAppearance.themePreset', 'indaco')
             ->where('projectAppearance.themeCss.brandPrimary', '#123456')
             ->where('projectAppearance.themeCss.brandPrimaryDark', '#123456'));
 });
 
 it('keeps the stored theme preset when the request omits it', function () {
-    app(SettingsRepositoryService::class)->save(['theme_preset' => 'rose']);
+    app(SettingsRepositoryService::class)->save(['theme_preset' => 'ardesia']);
 
     $this->actingAs(instanceAdmin())
         ->put(route('appearance.update'), ['default_appearance' => 'light'])
         ->assertSessionHasNoErrors();
 
-    expect(app(SettingsRepositoryService::class)->themePreset())->toBe('rose');
+    expect(app(SettingsRepositoryService::class)->themePreset())->toBe('ardesia');
 });
 
 it('rejects an unknown theme preset and invalid brand colours', function () {
@@ -349,35 +387,35 @@ it('rejects an unknown theme preset and invalid brand colours', function () {
         ])
         ->assertSessionHasErrors(['theme_preset', 'project_color', 'project_color_dark']);
 
-    expect(app(SettingsRepositoryService::class)->themePreset())->toBe('signaculum');
+    expect(app(SettingsRepositoryService::class)->themePreset())->toBe('ciclamino');
 });
 
 it('merges the shared base with the preset brand colours', function () {
-    $signaculum = app(ThemePresetService::class)->resolve(null, null, null);
-    $violet = app(ThemePresetService::class)->resolve('violet', null, null);
+    $ciclamino = app(ThemePresetService::class)->resolve(null, null, null);
+    $ametista = app(ThemePresetService::class)->resolve('ametista', null, null);
 
-    expect($signaculum['themePreset'])->toBe('signaculum')
-        ->and($signaculum['light']['primary'])->toBe('#A24A7B')
-        ->and($signaculum['light']['sidebar'])->toBe(config('theme-presets.base.light.sidebar'))
-        ->and($signaculum['dark']['background'])->toBe('#0E171E')
-        ->and($signaculum['light']['ai'])->toBe('#7F35BB')
-        ->and($violet['light']['ai'])->toBe(config('theme-presets.ai_override_light.ai'))
-        ->and($violet['dark']['ai'])->toBe(config('theme-presets.ai_override_dark.ai'));
+    expect($ciclamino['themePreset'])->toBe('ciclamino')
+        ->and($ciclamino['light']['primary'])->toBe('#A24A7B')
+        ->and($ciclamino['light']['sidebar'])->toBe(config('theme-presets.base.light.sidebar'))
+        ->and($ciclamino['dark']['background'])->toBe('#0E171E')
+        ->and($ciclamino['light']['ai'])->toBe('#7F35BB')
+        ->and($ametista['light']['ai'])->toBe(config('theme-presets.ai_override_light.ai'))
+        ->and($ametista['dark']['ai'])->toBe(config('theme-presets.ai_override_dark.ai'));
 });
 
 it('renders the theme variables of a non-default preset in the HTML', function () {
-    app(SettingsRepositoryService::class)->save(['theme_preset' => 'indigo']);
-    $indigo = config('theme-presets.presets.indigo');
+    app(SettingsRepositoryService::class)->save(['theme_preset' => 'indaco']);
+    $indaco = config('theme-presets.presets.indaco');
 
     $this->get(route('login'))
         ->assertSee('<style id="instance-theme-css">', false)
-        ->assertSee('--primary: '.$indigo['light']['primary'].';', false)
-        ->assertSee('--primary: '.$indigo['dark']['primary'].';', false)
+        ->assertSee('--primary: '.$indaco['light']['primary'].';', false)
+        ->assertSee('--primary: '.$indaco['dark']['primary'].';', false)
         ->assertDontSee('--brand-primary:', false);
 });
 
 it('renders the custom brand colour with an accessible foreground', function () {
-    app(SettingsRepositoryService::class)->save(['theme_preset' => 'indigo', 'project_color' => '#FFEE00']);
+    app(SettingsRepositoryService::class)->save(['theme_preset' => 'indaco', 'project_color' => '#FFEE00']);
 
     $this->get(route('login'))
         ->assertSee('--brand-primary: #FFEE00;', false)
@@ -386,14 +424,14 @@ it('renders the custom brand colour with an accessible foreground', function () 
 
 it('keeps a contrast-safe focus ring for a low-contrast brand colour', function () {
     // #0F172A is about 17:1 on white but about 1.1:1 on the dark background (externa-core#453).
-    $themeCss = app(ThemePresetService::class)->resolve('teal', '#0F172A', null);
+    $themeCss = app(ThemePresetService::class)->resolve('ardesia', '#0F172A', null);
 
     expect($themeCss['light']['ring'])->toBe('#0F172A')
         ->and($themeCss['light']['sidebar-ring'])->toBe('#0F172A')
         ->and($themeCss['dark']['ring'])->toBe('var(--color-teal-400)')
         ->and($themeCss['dark']['sidebar-ring'])->toBe('var(--color-teal-400)');
 
-    $faint = app(ThemePresetService::class)->resolve('teal', '#F5F5F5', '#38BDF8');
+    $faint = app(ThemePresetService::class)->resolve('ardesia', '#F5F5F5', '#38BDF8');
 
     expect($faint['light']['ring'])->toBe('var(--color-teal-600)')
         ->and($faint['dark']['ring'])->toBe('#38BDF8');

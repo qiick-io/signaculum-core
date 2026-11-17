@@ -140,15 +140,12 @@
                 "head": "Impostazioni barra laterale"
             },
             "system": "Sistema",
-            "themePresetBlue": "Blu",
+            "themePresetAmetista": "Ametista",
+            "themePresetArdesia": "Ardesia",
+            "themePresetCiclamino": "Ciclamino (predefinito)",
             "themePresetDescription": "Scegli una palette integrata per l’admin. Un colore brand personalizzato ha comunque priorità sul primary.",
-            "themePresetIndigo": "Indaco",
-            "themePresetRose": "Rosa",
-            "themePresetSignaculum": "Signaculum (predefinito)",
-            "themePresetSlate": "Ardesia",
-            "themePresetTeal": "Teal",
+            "themePresetIndaco": "Indaco",
             "themePresetTitle": "Preset tema",
-            "themePresetViolet": "Viola",
             "title": "Impostazioni aspetto"
         },
         "connectedApplications": {
