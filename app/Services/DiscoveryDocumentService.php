@@ -31,6 +31,7 @@ final class DiscoveryDocumentService
             'userinfo_endpoint' => $issuer.'/oauth/userinfo',
             'introspection_endpoint' => $issuer.'/oauth/introspect',
             'revocation_endpoint' => $issuer.'/oauth/revoke',
+            'pushed_authorization_request_endpoint' => $issuer.'/oauth/par',
             'end_session_endpoint' => $issuer.'/oauth/end-session',
             'jwks_uri' => $issuer.'/.well-known/jwks.json',
             'introspection_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post'],
@@ -59,6 +60,8 @@ final class DiscoveryDocumentService
             'claims_parameter_supported' => false,
             'request_parameter_supported' => false,
             'request_uri_parameter_supported' => false,
+            // RFC 9126 §5: PAR is optional; clients may still use plain authorize.
+            'require_pushed_authorization_requests' => false,
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,
             // RFC 9207 §3: clients that see true require `iss` on authorize redirects.

@@ -11,6 +11,7 @@ use App\Http\Controllers\Oidc\AuthorizationEndpointPostController;
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
 use App\Http\Middleware\RejectUnsupportedRequestObjectMiddleware;
+use App\Http\Middleware\ResolvePushedAuthorizationRequestMiddleware;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\User;
@@ -94,6 +95,7 @@ class AppServiceProvider extends ServiceProvider
         $this->attachAuthorizationResponseIssuerMiddleware();
         $this->attachMaximumAuthenticationAgeMiddleware();
         $this->attachUnsupportedRequestObjectMiddleware();
+        $this->attachPushedAuthorizationRequestMiddleware();
         $this->configureAuthorizationEndpointPost();
     }
 
@@ -346,6 +348,28 @@ class AppServiceProvider extends ServiceProvider
                     'passport.authorizations.approve',
                 ], true)) {
                     $route->middleware(RejectUnsupportedRequestObjectMiddleware::class);
+                }
+            }
+        });
+    }
+
+    /**
+     * RFC 9126 §4: expand PAR `request_uri` on the authorization endpoint.
+     *
+     * {@see RejectUnsupportedRequestObjectMiddleware} lets PAR URIs through; this
+     * middleware consumes them (or returns `invalid_request`) before Passport runs.
+     */
+    protected function attachPushedAuthorizationRequestMiddleware(): void
+    {
+        $this->app->booted(function (): void {
+            foreach (Route::getRoutes()->getRoutes() as $route) {
+                $routeName = $route->getName();
+
+                if (in_array($routeName, [
+                    'passport.authorizations.authorize',
+                    'passport.authorizations.approve',
+                ], true)) {
+                    $route->middleware(ResolvePushedAuthorizationRequestMiddleware::class);
                 }
             }
         });

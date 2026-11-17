@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\Client;
+use App\Services\PushedAuthorizationRequestService;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,10 +16,13 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Discovery advertises `request_parameter_supported` and
  * `request_uri_parameter_supported` as false (OpenID Connect Discovery 1.0 §3).
- * When a client still sends `request` or `request_uri`, OIDC Core 1.0 §6.1 and
- * §3.1.2.6 require `error=request_not_supported` or
+ * When a client still sends `request` or a non-PAR `request_uri`, OIDC Core 1.0
+ * §6.1 and §3.1.2.6 require `error=request_not_supported` or
  * `error=request_uri_not_supported` on the registered redirect URI — never a
  * code that ignored the Request Object. `state` and RFC 9207 `iss` are echoed.
+ *
+ * RFC 9126 PAR URIs (`urn:ietf:params:oauth:request_uri:…`) are handled by
+ * {@see ResolvePushedAuthorizationRequestMiddleware} and must pass through here.
  *
  * Registered on the authorization endpoint only (`passport.authorizations.authorize`).
  */
@@ -35,9 +39,13 @@ final class RejectUnsupportedRequestObjectMiddleware
         }
 
         $hasRequest = $this->hasNonEmptyParameter($request, 'request');
-        $hasRequestUri = $this->hasNonEmptyParameter($request, 'request_uri');
+        $requestUri = $request->input('request_uri');
+        $hasRequestUri = is_string($requestUri) && $requestUri !== '';
+        $isPushedAuthorizationRequestUri = $hasRequestUri
+            && PushedAuthorizationRequestService::isPushedAuthorizationRequestUri($requestUri);
 
-        if (! $hasRequest && ! $hasRequestUri) {
+        // PAR request_uri values are not OIDC Request Objects (#62 / RFC 9126).
+        if (! $hasRequest && (! $hasRequestUri || $isPushedAuthorizationRequestUri)) {
             return $next($request);
         }
 
