@@ -45,8 +45,9 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `require_pushed_authorization_requests`: `false` (the server does not require PAR for every client; an application can require it for itself, see below)
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
+- `frontchannel_logout_supported`: `true` (OIDC Front-Channel Logout 1.0 §4)
+- `frontchannel_logout_session_supported`: `true`
 - `authorization_response_iss_parameter_supported`: `true` (RFC 9207)
-- No front-channel logout fields
 
 ## Pushed Authorization Requests (RFC 9126)
 
@@ -198,6 +199,8 @@ On `oauth_clients` (beside Passport's columns):
 - `post_logout_redirect_uris` (JSON array, default `[]`): exact-match only
 - `backchannel_logout_uri` (nullable string)
 - `is_backchannel_logout_session_required` (boolean, default `true`): when true, the `logout_token` always carries `sid`
+- `frontchannel_logout_uri` (nullable string): absolute https URL (http only for localhost); exact value; no fragment
+- `is_frontchannel_logout_session_required` (boolean, default `false`): when true, the iframe URL includes `iss` and `sid` (Front-Channel Logout 1.0 §2–§3)
 
 ### RP-initiated logout
 
@@ -209,6 +212,11 @@ On `oauth_clients` (beside Passport's columns):
 - `state`: echoed on the post-logout redirect when present
 - Confirmation page (`oauth/logout`) when the hint is missing, forged, or belongs to another user than the signed-in one
 - Ends the Signaculum web session and fans out back-channel logout
+- When any client for the browser `sid` has `frontchannel_logout_uri`, renders `oauth/frontchannel-logout` with one hidden iframe per such client, then continues to the post-logout redirect (or login). CSP `frame-src` allows those RP origins on that page only.
+
+### Front-channel logout
+
+OIDC Front-Channel Logout 1.0: the OP logout interstitial loads each registered `frontchannel_logout_uri` in a hidden iframe. When `is_frontchannel_logout_session_required` is true, both `iss` and `sid` are appended (existing query retained). Triggers: RP-initiated end-session / confirm, and Signaculum web logout in the End-User browser. Admin deactivation of another user remains back-channel only (no User Agent of the target).
 
 ### Back-channel logout
 

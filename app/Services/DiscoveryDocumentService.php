@@ -65,6 +65,9 @@ final class DiscoveryDocumentService
             'require_pushed_authorization_requests' => false,
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,
+            // OIDC Front-Channel Logout 1.0 §4 (OP metadata).
+            'frontchannel_logout_supported' => true,
+            'frontchannel_logout_session_supported' => true,
             // RFC 9207 §3: clients that see true require `iss` on authorize redirects.
             'authorization_response_iss_parameter_supported' => true,
         ];

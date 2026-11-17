@@ -20,6 +20,8 @@ final readonly class ApplicationData
         public bool $isClientCredentialsEnabled = false,
         public bool $isDeviceAuthorizationEnabled = false,
         public bool $isPushedAuthorizationRequired = false,
+        public ?string $frontchannelLogoutUri = null,
+        public bool $isFrontchannelLogoutSessionRequired = false,
     ) {}
 
     /**

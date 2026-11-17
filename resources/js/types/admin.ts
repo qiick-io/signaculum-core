@@ -61,6 +61,8 @@ export type AdminApplicationRow = {
     is_client_credentials_enabled: boolean;
     is_device_authorization_enabled: boolean;
     is_pushed_authorization_required: boolean;
+    frontchannel_logout_uri: string | null;
+    is_frontchannel_logout_session_required: boolean;
     discovery_url: string;
     configure_command: string;
     created_at: string | null;

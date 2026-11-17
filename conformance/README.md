@@ -10,7 +10,7 @@ Self-hosted [OpenID Foundation conformance suite](https://gitlab.com/openid/conf
 | `oidcc-rp-initiated-logout-certification-test-plan`             | `[response_type=code][client_registration=static_client]`        |
 | `oidcc-backchannel-rp-initiated-logout-certification-test-plan` | `[response_type=code][client_registration=static_client]`        |
 
-Hybrid, implicit, front-channel and session-management plans stay out of scope (v1 is authorization code only; no front-channel logout).
+Hybrid, implicit and session-management plans stay out of scope (v1 is authorization code only). Front-channel logout is implemented in the product (#65); the conformance suite plan for it is optional.
 
 ## Local run
 

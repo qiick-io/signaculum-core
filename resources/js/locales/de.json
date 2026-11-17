@@ -414,6 +414,11 @@
             "title": "Abmelden",
             "description": "Bestätigen Sie, dass Sie sich von Signaculum abmelden möchten.",
             "confirm": "Abmelden"
+        },
+        "frontchannelLogout": {
+            "title": "Abmelden",
+            "description": "Abmeldung von verbundenen Anwendungen…",
+            "iframeTitle": "Anwendungsabmeldung"
         }
     },
     "errorBoundary": {
@@ -610,7 +615,11 @@
                 "deviceAuthorization": "Geräteautorisierung erlauben",
                 "deviceAuthorizationHint": "RFC-8628-Gerätefluss für CLI, TV und IoT. Benutzer geben einen Code unter /oauth/device ein.",
                 "pushedAuthorization": "Pushed Authorization Requests (PAR) verlangen",
-                "pushedAuthorizationHint": "Die Anwendung muss jede Anmeldeanfrage zuerst an den PAR-Endpunkt senden. Normale Autorisierungslinks werden abgelehnt. Nur aktivieren, wenn die Anwendung PAR unterstützt."
+                "pushedAuthorizationHint": "Die Anwendung muss jede Anmeldeanfrage zuerst an den PAR-Endpunkt senden. Normale Autorisierungslinks werden abgelehnt. Nur aktivieren, wenn die Anwendung PAR unterstützt.",
+                "frontchannelLogoutUri": "Front-Channel-Logout-URI",
+                "frontchannelLogoutUriHint": "Absolute https-URL, die beim Logout in einem versteckten iframe geladen wird (OIDC Front-Channel Logout). Leer lassen zum Überspringen. Exakter Wert; ohne Fragment.",
+                "frontchannelLogoutSessionRequired": "iss und sid beim Front-Channel-Logout verlangen",
+                "frontchannelLogoutSessionRequiredHint": "Wenn aktiv, hängt Signaculum Issuer- und Session-ID-Query-Parameter an die Logout-URI an."
             },
             "empty": {
                 "title": "Noch keine Anwendungen",

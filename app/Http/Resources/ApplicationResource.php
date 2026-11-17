@@ -28,6 +28,8 @@ final class ApplicationResource extends JsonResource
      *     is_client_credentials_enabled: bool,
      *     is_device_authorization_enabled: bool,
      *     is_pushed_authorization_required: bool,
+     *     frontchannel_logout_uri: string|null,
+     *     is_frontchannel_logout_session_required: bool,
      *     discovery_url: string,
      *     configure_command: string,
      *     created_at: string|null,
@@ -53,6 +55,8 @@ final class ApplicationResource extends JsonResource
             'is_client_credentials_enabled' => $application->hasGrantType('client_credentials'),
             'is_device_authorization_enabled' => $application->hasGrantType('urn:ietf:params:oauth:grant-type:device_code'),
             'is_pushed_authorization_required' => $application->requiresPushedAuthorizationRequests(),
+            'frontchannel_logout_uri' => $application->frontchannel_logout_uri,
+            'is_frontchannel_logout_session_required' => (bool) $application->is_frontchannel_logout_session_required,
             'discovery_url' => $discoveryUrl,
             'configure_command' => sprintf(
                 'php artisan oidc:configure %s --client-id=%s',

@@ -28,6 +28,8 @@ function applicationFormPayload(array $overrides = []): array
         'is_client_credentials_enabled' => false,
         'is_device_authorization_enabled' => false,
         'is_pushed_authorization_required' => false,
+        'frontchannel_logout_uri' => '',
+        'is_frontchannel_logout_session_required' => false,
         ...$overrides,
     ];
 }

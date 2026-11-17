@@ -414,6 +414,11 @@
             "title": "Esci",
             "description": "Conferma di voler uscire da Signaculum.",
             "confirm": "Esci"
+        },
+        "frontchannelLogout": {
+            "title": "Disconnessione in corso",
+            "description": "Disconnessione dalle applicazioni collegate…",
+            "iframeTitle": "Disconnessione applicazione"
         }
     },
     "errorBoundary": {
@@ -610,7 +615,11 @@
                 "deviceAuthorization": "Consenti autorizzazione dispositivo",
                 "deviceAuthorizationHint": "Flusso dispositivo RFC 8628 per CLI, TV e IoT. Gli utenti inseriscono un codice su /oauth/device.",
                 "pushedAuthorization": "Richiedi pushed authorization request (PAR)",
-                "pushedAuthorizationHint": "L'applicazione deve inviare ogni richiesta di accesso prima all'endpoint PAR. I normali link di autorizzazione vengono rifiutati. Attivalo solo se l'applicazione supporta PAR."
+                "pushedAuthorizationHint": "L'applicazione deve inviare ogni richiesta di accesso prima all'endpoint PAR. I normali link di autorizzazione vengono rifiutati. Attivalo solo se l'applicazione supporta PAR.",
+                "frontchannelLogoutUri": "URI di logout front-channel",
+                "frontchannelLogoutUriHint": "URL https assoluto caricato in un iframe nascosto al logout (OIDC Front-Channel Logout). Lascia vuoto per saltare. Valore esatto; senza frammento.",
+                "frontchannelLogoutSessionRequired": "Richiedi iss e sid nel logout front-channel",
+                "frontchannelLogoutSessionRequiredHint": "Se attivo, Signaculum aggiunge i parametri di query issuer e session id all’URI di logout."
             },
             "empty": {
                 "title": "Nessuna applicazione",

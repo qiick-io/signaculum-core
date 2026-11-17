@@ -29,6 +29,8 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property list<string>|null $post_logout_redirect_uris
  * @property string|null $backchannel_logout_uri
  * @property bool $is_backchannel_logout_session_required
+ * @property string|null $frontchannel_logout_uri
+ * @property bool $is_frontchannel_logout_session_required
  */
 class Client extends PassportClient
 {
@@ -48,6 +50,7 @@ class Client extends PassportClient
         'is_pushed_authorization_required' => 'bool',
         'post_logout_redirect_uris' => 'array',
         'is_backchannel_logout_session_required' => 'bool',
+        'is_frontchannel_logout_session_required' => 'bool',
     ];
 
     /**

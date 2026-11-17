@@ -49,7 +49,10 @@ final class SetSecurityHeadersMiddleware
         );
 
         if (! $response->headers->has('Content-Security-Policy')) {
-            $response->headers->set('Content-Security-Policy', $this->contentSecurityPolicy());
+            $response->headers->set(
+                'Content-Security-Policy',
+                $this->contentSecurityPolicy($request),
+            );
         }
 
         return $response;
@@ -57,8 +60,13 @@ final class SetSecurityHeadersMiddleware
 
     /**
      * Build the default CSP, or return the SECURITY_CSP override verbatim.
+     *
+     * `frame-src` is omitted globally (browsers fall back to `default-src 'self'`).
+     * Only the front-channel logout interstitial sets
+     * `security.frontchannel_frame_origins` so those RP origins are allowed
+     * on that page alone (OIDC Front-Channel Logout 1.0 §2).
      */
-    private function contentSecurityPolicy(): string
+    private function contentSecurityPolicy(Request $request): string
     {
         $override = config('security.csp');
 
@@ -73,7 +81,7 @@ final class SetSecurityHeadersMiddleware
         $fontSources = array_merge(["'self'", 'data:'], $developmentServerOrigins);
         $imageSources = array_merge(["'self'", 'data:', 'blob:', 'https:'], $developmentServerOrigins);
 
-        return implode('; ', [
+        $directives = [
             "default-src 'self'",
             'script-src '.implode(' ', $scriptSources),
             'style-src '.implode(' ', $styleSources),
@@ -86,7 +94,22 @@ final class SetSecurityHeadersMiddleware
             "base-uri 'self'",
             "form-action 'self'",
             "object-src 'none'",
-        ]);
+        ];
+
+        $frameOrigins = $request->attributes->get('security.frontchannel_frame_origins');
+
+        if (is_array($frameOrigins) && $frameOrigins !== []) {
+            $allowedFrameOrigins = array_values(array_filter(
+                $frameOrigins,
+                static fn (mixed $origin): bool => is_string($origin) && $origin !== '',
+            ));
+
+            if ($allowedFrameOrigins !== []) {
+                $directives[] = 'frame-src '.implode(' ', array_merge(["'self'"], $allowedFrameOrigins));
+            }
+        }
+
+        return implode('; ', $directives);
     }
 
     /**
