@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Enums\AuthenticationMethodEnum;
 use App\Enums\OrganizationRoleEnum;
 use App\Models\OrganizationMembership;
 use App\Models\User;
+use App\Services\OidcSessionService;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Passkeys\Passkey;
 use Spatie\Activitylog\Models\Activity;
 
 test('an owner can require MFA for organisation members', function () {
@@ -93,7 +97,61 @@ test('a member without 2FA is sent to security before authorizing when the org r
     expect(session('url.intended'))->toStartWith(url('/oauth/authorize'));
 });
 
-test('a member with 2FA can finish authorization when the org requires MFA', function () {
+test('an enrolled member with only email-code amr is stepped up before authorizing', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'email-otp-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $client = createOidcClient();
+    $authorizeUrl = authorizeUrl($client, pkcePair()['challenge']);
+
+    $this->actingAs($member);
+    session([
+        OidcSessionService::SESSION_KEY => 'sid-before-step-up',
+        'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value],
+    ]);
+
+    $this->get($authorizeUrl)->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse()
+        ->and(session('url.intended'))->toStartWith(url('/oauth/authorize'));
+});
+
+test('an enrolled member with password-only amr is stepped up before authorizing', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'pwd-only-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $client = createOidcClient();
+
+    $this->actingAs($member);
+    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value]]);
+
+    $this->get(authorizeUrl($client, pkcePair()['challenge']))
+        ->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse();
+});
+
+test('a password plus TOTP session can finish authorization when the org requires MFA', function () {
     $owner = User::factory()->create();
     $member = User::factory()->withTwoFactor()->create();
     $organization = createOrganizationWithOwner($owner, [
@@ -108,16 +166,126 @@ test('a member with 2FA can finish authorization when the org requires MFA', fun
     ]);
 
     $client = createOidcClient();
-    $authorization = $this->actingAs($member)
-        ->get(authorizeUrl($client, pkcePair()['challenge']));
+
+    $this->actingAs($member);
+    session(['oidc.authentication_methods' => [
+        AuthenticationMethodEnum::Password->value,
+        AuthenticationMethodEnum::OneTimePassword->value,
+        AuthenticationMethodEnum::MultipleFactors->value,
+    ]]);
+
+    $authorization = $this->get(authorizeUrl($client, pkcePair()['challenge']));
 
     expect(in_array($authorization->status(), [200, 302], true))->toBeTrue();
 
     if ($authorization->status() === 302) {
-        expect($authorization->headers->get('Location'))->not->toBe(route('security.edit'));
+        expect($authorization->headers->get('Location'))->not->toBe(route('security.edit'))
+            ->and($authorization->headers->get('Location'))->not->toEndWith('/login');
     } else {
         $authorization->assertInertia(fn (Assert $page) => $page->component('oauth/authorize'));
     }
+});
+
+test('a hardware passkey session satisfies organisation MFA without inventing mfa in amr', function () {
+    config(['oidc.issuer' => 'https://id.example.test']);
+
+    $owner = User::factory()->create();
+    $member = User::factory()->create(['email' => 'passkey-mfa@example.test']);
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'passkey-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $passkey = new Passkey([
+        'name' => 'YubiKey',
+        'credential_id' => 'hardware-org-mfa',
+        'credential' => ['transports' => ['usb'], 'aaguid' => '00000000-0000-0000-0000-000000000000'],
+    ]);
+    $passkey->user_id = $member->getKey();
+    $passkey->save();
+
+    $this->actingAs($member);
+    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::HardwareKey->value]]);
+
+    $client = createOidcClient();
+    $pkce = pkcePair();
+    $code = approveAuthorization($client, $pkce['challenge'])['code'];
+    $claims = verifiedIdToken(redeemCode($client, $code, $pkce['verifier'])->json('id_token'))->claims();
+
+    expect($claims->get('amr'))->toBe([AuthenticationMethodEnum::HardwareKey->value])
+        ->and($claims->get('amr'))->not->toContain(AuthenticationMethodEnum::MultipleFactors->value);
+});
+
+test('a platform passkey session satisfies organisation MFA', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'swk-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $passkey = new Passkey([
+        'name' => 'Touch ID',
+        'credential_id' => 'platform-org-mfa',
+        'credential' => ['transports' => ['internal'], 'aaguid' => '00000000-0000-0000-0000-000000000000'],
+    ]);
+    $passkey->user_id = $member->getKey();
+    $passkey->save();
+
+    $client = createOidcClient();
+
+    $this->actingAs($member);
+    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::SoftwareKey->value]]);
+
+    $authorization = $this->get(authorizeUrl($client, pkcePair()['challenge']));
+
+    expect(in_array($authorization->status(), [200, 302], true))->toBeTrue();
+
+    if ($authorization->status() === 302) {
+        expect($authorization->headers->get('Location'))->not->toEndWith('/login');
+    } else {
+        $authorization->assertInertia(fn (Assert $page) => $page->component('oauth/authorize'));
+    }
+});
+
+test('organisation MFA step-up does not fan out back-channel logout', function () {
+    Queue::fake();
+
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'step-up-sid-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $this->actingAs($member);
+    session([
+        OidcSessionService::SESSION_KEY => 'sid-org-mfa-step-up',
+        'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value],
+    ]);
+
+    $client = createOidcClient();
+    $this->get(authorizeUrl($client, pkcePair()['challenge']))->assertRedirect('/login');
+
+    Queue::assertNothingPushed();
 });
 
 test('authorization is not blocked by org MFA when the user has no membership in a requiring org', function () {
@@ -136,13 +304,12 @@ test('authorization is not blocked by org MFA when the user has no membership in
         ->assertInertia(fn (Assert $page) => $page->component('oauth/authorize'));
 });
 
-test('org MFA gating does not invent mfa in amr', function () {
+test('password plus TOTP org MFA authorization keeps truthful amr', function () {
     config(['oidc.issuer' => 'https://id.example.test']);
 
     $owner = User::factory()->create();
     $member = User::factory()->withTwoFactor()->create([
         'email' => 'org-mfa-amr@example.test',
-        'password' => bcrypt('password'),
     ]);
     $organization = createOrganizationWithOwner($owner, [
         'slug' => 'amr-org',
@@ -155,23 +322,21 @@ test('org MFA gating does not invent mfa in amr', function () {
         'roles' => [OrganizationRoleEnum::Member->value],
     ]);
 
-    // Sign in with password only (2FA is enrolled but not challenged here): gate passes
-    // because the account has 2FA, while amr must stay ['pwd'] without inventing mfa.
-    $this->post('/login', [
-        'email' => 'org-mfa-amr@example.test',
-        'password' => 'password',
-    ]);
-
-    // withTwoFactor users may be redirected to the challenge; complete without claiming we did MFA
-    // by acting as the user and seeding password-only methods.
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => ['pwd']]);
+    session(['oidc.authentication_methods' => [
+        AuthenticationMethodEnum::Password->value,
+        AuthenticationMethodEnum::OneTimePassword->value,
+        AuthenticationMethodEnum::MultipleFactors->value,
+    ]]);
 
     $client = createOidcClient();
     $pkce = pkcePair();
     $code = approveAuthorization($client, $pkce['challenge'])['code'];
     $claims = verifiedIdToken(redeemCode($client, $code, $pkce['verifier'])->json('id_token'))->claims();
 
-    expect($claims->get('amr'))->toBe(['pwd'])
-        ->and($claims->get('amr'))->not->toContain('mfa');
+    expect($claims->get('amr'))->toBe([
+        AuthenticationMethodEnum::Password->value,
+        AuthenticationMethodEnum::OneTimePassword->value,
+        AuthenticationMethodEnum::MultipleFactors->value,
+    ]);
 });

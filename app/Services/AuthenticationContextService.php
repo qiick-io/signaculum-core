@@ -144,6 +144,27 @@ final class AuthenticationContextService
         return AuthenticationContextClassEnum::Password;
     }
 
+    /**
+     * Whether this session's `amr` satisfies an organisation MFA requirement (#131).
+     *
+     * True when `amr` includes RFC 8176 `mfa`, or a passkey method (`hwk` / `swk`).
+     * Passkey-only sign-in never invents `mfa` in `amr` (so `acr` stays
+     * `urn:qiick:loa:pwd` unless two concrete factors were used), but the org gate
+     * still accepts it because enrolment treats a passkey as the second factor.
+     * Email-code-only (`otp`) and password-only (`pwd`) do not satisfy.
+     */
+    public function sessionSatisfiesOrganizationMfa(): bool
+    {
+        $authenticationMethods = $this->amrValues();
+
+        if (in_array(AuthenticationMethodEnum::MultipleFactors->value, $authenticationMethods, true)) {
+            return true;
+        }
+
+        return in_array(AuthenticationMethodEnum::HardwareKey->value, $authenticationMethods, true)
+            || in_array(AuthenticationMethodEnum::SoftwareKey->value, $authenticationMethods, true);
+    }
+
     private function methodForPasskey(Passkey $passkey): AuthenticationMethodEnum
     {
         /** @var mixed $transports */

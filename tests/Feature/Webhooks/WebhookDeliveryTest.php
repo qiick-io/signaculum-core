@@ -122,6 +122,18 @@ it('pins the validated address so a later private DNS answer cannot be used', fu
     expect($guard->authorizeOutbound('https://rebinding.example.com/hook')['ok'])->toBeFalse();
 });
 
+it('brackets IPv6 addresses in CURLOPT_RESOLVE pin entries', function (): void {
+    $guard = new WebhookUrlGuardService(
+        app(SettingsRepositoryService::class),
+        static fn (string $_host): array => ['2606:2800:220:1:248:1893:25c8:1946'],
+    );
+
+    expect($guard->authorizeOutbound('https://ipv6.example.com/hook'))->toMatchArray([
+        'ok' => true,
+        'curl_resolve' => ['ipv6.example.com:443:[2606:2800:220:1:248:1893:25c8:1946]'],
+    ]);
+});
+
 it('delivers to a hostname using the address pinned by the SSRF guard', function (): void {
     Http::fake([
         'hooks.example.com/*' => Http::response(['ok' => true], 200),
