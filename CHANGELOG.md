@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- The organisation MFA gate now also checks the consent approval, not only the consent screen: a member whose organisation started requiring MFA after the screen opened could still approve and the client received an authorization code. The gate matches route names instead of the `oauth/authorize` path, so Passport's route prefix cannot move a route out of it, and denying consent stays allowed (extracted from #110).
 - Every second-factor change (TOTP enable, confirm and disable, recovery-code regeneration, passkey registration and deletion, the admin TOTP reset) mails the account owner and writes an `auth` activity event. A password alone can still enrol a factor; this makes it visible to the owner until factor management requires a proven second factor (#168).
 - Organisation MFA gate no longer accepts enrolment alone; session `amr` must contain a second factor before `/oauth/authorize` completes (#131).
 - Session `amr` is bound to the user who proved it, on write and on every read: a passkey verified for an account whose login is then refused no longer counts for the next account that signs in, and methods bound to another (or no) subject never reach the `id_token` or the organisation MFA gate (#131).
