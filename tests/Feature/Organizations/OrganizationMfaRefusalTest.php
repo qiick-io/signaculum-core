@@ -184,3 +184,18 @@ test('a refused passkey login of another account does not satisfy a later passwo
 
     expect(auth()->check())->toBeFalse();
 });
+
+test('a passkey-only member who signs in with just the password is stepped up', function () {
+    // The #131 bypass: enrolment (a passkey) satisfied the old check, and without TOTP
+    // Fortify never challenges a password login, so the session proved one factor only.
+    $member = mfaRequiredMember(User::factory()->create(['email' => 'passkey-only@example.test']));
+    savedPasskeyFor($member, 'passkey-only-key', ['usb']);
+
+    $this->post('/login', ['email' => 'passkey-only@example.test', 'password' => 'password']);
+    $this->assertAuthenticatedAs($member);
+
+    $this->get(authorizeUrl(createOidcClient(), pkcePair()['challenge']))
+        ->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse();
+});
