@@ -39,10 +39,28 @@ use Symfony\Component\HttpFoundation\Response;
  * with every method off the request is refused ({@see SecondFactorUnavailableException},
  * or `access_denied` for `prompt=none`) instead of passing or looping.
  *
+ * The consent approval POST is gated as well as the consent screen: approving is the
+ * consenting act, and the organisation may start requiring MFA (or the user may join
+ * one) after the screen was rendered. The deny route is not gated, so a user who cannot
+ * enroll yet can still refuse a client they do not recognise.
+ *
  * Instance-wide 2FA (`EnsureTwoFactorIsEnabledMiddleware`) remains separate.
  */
 final class EnsureOrganizationMfaIsSatisfiedMiddleware
 {
+    /**
+     * Routes that show a consent screen or approve one. Matched by name, not path, so
+     * Passport's configurable route prefix cannot move them out of the gate.
+     * `OrganizationRequireMfaTest` fails when an `oauth/` route is added without being
+     * classified for this list.
+     *
+     * @var list<string>
+     */
+    public const GATED_ROUTE_NAMES = [
+        'passport.authorizations.authorize',
+        'passport.authorizations.approve',
+    ];
+
     public function __construct(
         private readonly AuthenticationContextService $authenticationContextService,
         private readonly OidcReauthenticationService $oidcReauthenticationService,
@@ -61,8 +79,7 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
         $user = $request->user();
 
         if ($user === null
-            || ! $request->is('oauth/authorize')
-            || $this->isConsentApproval($request)
+            || ! in_array($request->route()?->getName(), self::GATED_ROUTE_NAMES, true)
             || ! $this->userBelongsToMfaRequiredOrganization($user)
         ) {
             return $next($request);
@@ -93,14 +110,6 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
         $this->startOrganizationMfaStepUp($request);
 
         throw new AuthenticationException(guards: ['web']);
-    }
-
-    /**
-     * Passport consent approval is POST with `auth_token` only (no `response_type`).
-     */
-    private function isConsentApproval(Request $request): bool
-    {
-        return $request->isMethod('POST') && $request->filled('auth_token') && ! $request->filled('response_type');
     }
 
     /**
@@ -148,6 +157,9 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
         if ($request->isMethod('GET') && ! $request->expectsJson()) {
             redirect()->setIntendedUrl($request->fullUrl());
         }
+
+        // Drop a consent screen opened before the requirement applied: it must be reopened through this gate.
+        $request->session()->forget(['authToken', 'authRequest']);
 
         Inertia::flash('toast', [
             'type' => 'error',

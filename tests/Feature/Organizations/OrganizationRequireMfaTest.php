@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use App\Enums\AuthenticationMethodEnum;
 use App\Enums\OrganizationRoleEnum;
+use App\Http\Middleware\EnsureOrganizationMfaIsSatisfiedMiddleware;
 use App\Models\OrganizationMembership;
 use App\Models\User;
 use App\Services\OidcSessionService;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Passkeys\Passkey;
 use Spatie\Activitylog\Models\Activity;
@@ -440,4 +442,112 @@ test('password plus TOTP org MFA authorization keeps truthful amr', function () 
         AuthenticationMethodEnum::OneTimePassword->value,
         AuthenticationMethodEnum::MultipleFactors->value,
     ]);
+});
+
+test('consent approval is refused when the org starts requiring MFA after the consent screen opened', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $organization = createOrganizationWithOwner($owner, ['slug' => 'late-code-flow-org']);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $client = createOidcClient();
+
+    $this->actingAs($member)
+        ->get(authorizeUrl($client, pkcePair()['challenge']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('oauth/authorize'));
+
+    $organization->update(['is_mfa_required' => true]);
+
+    $this->post('/oauth/authorize', ['auth_token' => session('authToken')])
+        ->assertRedirect(route('security.edit'));
+
+    expect(session('authToken'))->toBeNull();
+});
+
+test('consent approval steps up an enrolled member whose session lacks a second factor once the org requires MFA', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, ['slug' => 'late-step-up-org']);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $this->actingAs($member);
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value]]);
+
+    $this->get(authorizeUrl(createOidcClient(), pkcePair()['challenge']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('oauth/authorize'));
+
+    $organization->update(['is_mfa_required' => true]);
+
+    $this->post('/oauth/authorize', ['auth_token' => session('authToken')])
+        ->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse();
+});
+
+test('a member who cannot satisfy organisation MFA can still deny consent', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $organization = createOrganizationWithOwner($owner, ['slug' => 'late-deny-org']);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $this->actingAs($member)
+        ->get(authorizeUrl(createOidcClient(), pkcePair()['challenge']))
+        ->assertOk();
+
+    $organization->update(['is_mfa_required' => true]);
+
+    $query = redirectQuery($this->delete('/oauth/authorize', ['auth_token' => session('authToken')])->headers->get('Location'));
+
+    expect($query['error'])->toBe('access_denied')
+        ->and($query)->not->toHaveKey('code');
+});
+
+/*
+ * The gate is an allow-list of route names. Every route Passport or this app registers
+ * under `oauth/` must be classified here, so a new grant or consent endpoint (PAR, SAML,
+ * an upstream broker, …) fails this test until someone decides whether the gate covers it.
+ */
+test('every oauth route is classified for the organisation MFA gate', function () {
+    $gatedRouteNames = [
+        'passport.authorizations.authorize', // GET consent screen; also auto-approval
+        'passport.authorizations.approve',   // POST authorization request or consent approval
+    ];
+
+    $ungatedRouteNames = [
+        'passport.authorizations.deny', // denial grants nothing
+        'passport.token',               // no session; user grants were gated at consent
+        'passport.token.refresh',       // first-party session cookie, no client involved
+        'oidc.userinfo',                // reads with an issued token
+        'oidc.introspect',              // client-authenticated read
+        'oidc.revoke',                  // revocation only
+        'oidc.end-session',             // logout
+        'oidc.end-session.confirm',     // logout
+    ];
+
+    $oauthRouteNames = collect(Route::getRoutes()->getRoutes())
+        ->filter(fn ($route): bool => str_starts_with($route->uri(), 'oauth/'))
+        ->map(fn ($route): ?string => $route->getName())
+        ->unique()
+        ->values()
+        ->all();
+
+    expect($oauthRouteNames)->toEqualCanonicalizing([...$gatedRouteNames, ...$ungatedRouteNames])
+        ->and(EnsureOrganizationMfaIsSatisfiedMiddleware::GATED_ROUTE_NAMES)->toEqualCanonicalizing($gatedRouteNames);
 });

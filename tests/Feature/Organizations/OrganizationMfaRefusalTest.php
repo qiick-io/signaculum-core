@@ -112,8 +112,11 @@ test('the consent POST cannot be reached without a gated authorize GET', functio
     $this->actingAs($member);
     session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value]]);
 
+    // The approval POST is gated itself (#110), so a forged token never reaches Passport.
     $this->post('/oauth/authorize', ['auth_token' => 'forged-auth-token'])
-        ->assertForbidden();
+        ->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse();
 });
 
 test('a form POST authorization request is stepped up like the GET', function () {
