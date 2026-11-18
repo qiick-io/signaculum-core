@@ -43,32 +43,6 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class EnsureOrganizationMfaIsSatisfiedMiddleware
 {
-    /**
-     * Routes needed to enroll without a redirect loop (same set as instance 2FA).
-     *
-     * @var list<string>
-     */
-    private const EXEMPT_ROUTE_NAMES = [
-        'logout',
-        'security.edit',
-        'user-password.update',
-        'profile.edit',
-        'profile.update',
-        'password.confirm',
-        'password.confirmation',
-        'password.confirm.store',
-        'two-factor.enable',
-        'two-factor.confirm',
-        'two-factor.disable',
-        'two-factor.qr-code',
-        'two-factor.secret-key',
-        'two-factor.recovery-codes',
-        'two-factor.regenerate-recovery-codes',
-        'passkey.registration-options',
-        'passkey.store',
-        'passkey.destroy',
-    ];
-
     public function __construct(
         private readonly AuthenticationContextService $authenticationContextService,
         private readonly OidcReauthenticationService $oidcReauthenticationService,
@@ -88,7 +62,6 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
 
         if ($user === null
             || ! $request->is('oauth/authorize')
-            || in_array($request->route()?->getName(), self::EXEMPT_ROUTE_NAMES, true)
             || $this->isConsentApproval($request)
             || ! $this->userBelongsToMfaRequiredOrganization($user)
         ) {
