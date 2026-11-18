@@ -27,7 +27,7 @@ The browser runner drives Inertia login/consent over HTTP (headless Chromium is 
 
 ### Classic host run
 
-Requirements: Docker Compose, PHP 8.4, Composer, Node 24, Java 21 (suite build), Python 3 with `httpx` and `selenium`.
+Requirements: Docker Compose, PHP 8.4, Composer, Node 26, Java 21 (suite build), Python 3 with `httpx` and `selenium`.
 
 1. Install and build the app (`composer setup`, or `composer install` + `npm ci` + `npm run build`).
 2. Copy `.env.example` → `.env`, then set at least:
