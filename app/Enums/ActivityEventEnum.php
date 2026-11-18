@@ -6,8 +6,8 @@ namespace App\Enums;
 
 /**
  * Activity-log event names offered by the activity log filter: Spatie's model events plus the
- * manual events written for auth, consent, token revocation, secret rotation, organisation MFA,
- * settings and API keys.
+ * manual events written for auth, second-factor changes, consent, token revocation, secret
+ * rotation, organisation MFA, settings and API keys.
  *
  * Every case needs an `activityLog.events.<value>` label in each locale file
  * (tests/Feature/Admin/ActivityEventLabelsTest.php).
@@ -21,6 +21,12 @@ enum ActivityEventEnum: string
     case Logout = 'logout';
     case Failed = 'failed';
     case Locked = 'locked';
+    case TwoFactorEnabled = 'two_factor_enabled';
+    case TwoFactorConfirmed = 'two_factor_confirmed';
+    case TwoFactorDisabled = 'two_factor_disabled';
+    case RecoveryCodesRegenerated = 'recovery_codes_regenerated';
+    case PasskeyRegistered = 'passkey_registered';
+    case PasskeyDeleted = 'passkey_deleted';
     case SettingsUpdated = 'settings_updated';
     case ConsentGranted = 'consent_granted';
     case TokenRevoked = 'token_revoked';
