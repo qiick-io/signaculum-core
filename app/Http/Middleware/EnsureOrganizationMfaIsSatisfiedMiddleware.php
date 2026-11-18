@@ -21,7 +21,8 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * When a signed-in user belongs to an organisation that requires MFA, they must have
  * enrolled TOTP or a passkey, and the current session's RFC 8176 `amr` must prove a
- * second factor, before finishing `/oauth/authorize` (#131).
+ * second factor, before finishing `/oauth/authorize` (#131) or the RFC 8628 device
+ * approval flow (`/oauth/device`, `/oauth/device/authorize`) (#64).
  *
  * Enrolment alone is not enough: email-code-only (`otp`) or password-only (`pwd`)
  * sessions of enrolled users are stepped up like OIDC Core §3.1.2.1 `max_age` /
@@ -59,6 +60,8 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
     public const GATED_ROUTE_NAMES = [
         'passport.authorizations.authorize',
         'passport.authorizations.approve',
+        'passport.device',
+        'passport.device.authorizations.authorize',
     ];
 
     public function __construct(

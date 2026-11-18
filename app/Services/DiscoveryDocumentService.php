@@ -26,6 +26,7 @@ final class DiscoveryDocumentService
         return [
             'issuer' => $issuer,
             'authorization_endpoint' => $issuer.'/oauth/authorize',
+            'device_authorization_endpoint' => $issuer.'/oauth/device/code',
             'token_endpoint' => $issuer.'/oauth/token',
             'userinfo_endpoint' => $issuer.'/oauth/userinfo',
             'introspection_endpoint' => $issuer.'/oauth/introspect',
@@ -36,7 +37,12 @@ final class DiscoveryDocumentService
             'scopes_supported' => array_map(fn (OidcScopeEnum $scope): string => $scope->value, OidcScopeEnum::cases()),
             'response_types_supported' => ['code'],
             'response_modes_supported' => ['query'],
-            'grant_types_supported' => ['authorization_code', 'refresh_token', 'client_credentials'],
+            'grant_types_supported' => [
+                'authorization_code',
+                'refresh_token',
+                'client_credentials',
+                'urn:ietf:params:oauth:grant-type:device_code',
+            ],
             'subject_types_supported' => ['public'],
             'id_token_signing_alg_values_supported' => [SigningKeyService::ALGORITHM],
             'token_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post', 'none'],

@@ -37,6 +37,7 @@ const EMPTY_APPLICATION_FORM = {
     is_confidential: true,
     is_first_party: false,
     is_client_credentials_enabled: false,
+    is_device_authorization_enabled: false,
 };
 
 export type ApplicationFormDrawerProps = {
@@ -80,6 +81,8 @@ export function ApplicationFormDrawer({
                 is_first_party: editing.is_first_party,
                 is_client_credentials_enabled:
                     editing.is_client_credentials_enabled,
+                is_device_authorization_enabled:
+                    editing.is_device_authorization_enabled,
             };
             form.setData(payload);
             form.setDefaults({ ...payload });
@@ -408,6 +411,40 @@ export function ApplicationFormDrawer({
                             </div>
                             <FieldError>
                                 {form.errors.is_client_credentials_enabled}
+                            </FieldError>
+                        </Field>
+
+                        <Field>
+                            <div className="flex items-start gap-3">
+                                <Checkbox
+                                    id="application-device-authorization"
+                                    checked={
+                                        form.data
+                                            .is_device_authorization_enabled
+                                    }
+                                    disabled={readOnly || form.processing}
+                                    onCheckedChange={(checked) =>
+                                        form.setData(
+                                            'is_device_authorization_enabled',
+                                            checked === true,
+                                        )
+                                    }
+                                />
+                                <div className="grid gap-1.5 leading-none">
+                                    <FieldLabel htmlFor="application-device-authorization">
+                                        {t(
+                                            'admin.applications.form.deviceAuthorization',
+                                        )}
+                                    </FieldLabel>
+                                    <FieldDescription>
+                                        {t(
+                                            'admin.applications.form.deviceAuthorizationHint',
+                                        )}
+                                    </FieldDescription>
+                                </div>
+                            </div>
+                            <FieldError>
+                                {form.errors.is_device_authorization_enabled}
                             </FieldError>
                         </Field>
 

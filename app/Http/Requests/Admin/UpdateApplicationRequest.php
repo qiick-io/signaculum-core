@@ -38,6 +38,7 @@ final class UpdateApplicationRequest extends FormRequest
             'is_confidential' => ['required', 'boolean'],
             'is_first_party' => ['required', 'boolean'],
             'is_client_credentials_enabled' => ['required', 'boolean'],
+            'is_device_authorization_enabled' => ['required', 'boolean'],
         ];
     }
 
@@ -49,6 +50,7 @@ final class UpdateApplicationRequest extends FormRequest
             isConfidential: $this->boolean('is_confidential'),
             isFirstParty: $this->boolean('is_first_party'),
             isClientCredentialsEnabled: $this->boolean('is_client_credentials_enabled'),
+            isDeviceAuthorizationEnabled: $this->boolean('is_device_authorization_enabled'),
         );
     }
 

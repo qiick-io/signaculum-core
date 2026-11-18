@@ -16,11 +16,11 @@ use SensitiveParameter;
 
 /**
  * Token response that adds an `id_token` (OIDC Core §3.1.3.3) when the redeemed
- * authorization code was granted the `openid` scope.
+ * authorization code or device code was granted the `openid` scope.
  *
  * League clones this response type for every token request, so the context set by
- * OidcAuthCodeGrant never leaks between requests. Refresh token responses carry no
- * context and therefore no id_token.
+ * {@see OidcAuthCodeGrant} or {@see OidcDeviceCodeGrant} never leaks between requests.
+ * Refresh token responses carry no context and therefore no id_token.
  */
 final class IdTokenResponse extends BearerTokenResponse
 {

@@ -17,6 +17,8 @@ use App\Models\User;
 use App\Oidc\IdTokenResponse;
 use App\Oidc\OidcAuthCodeGrant;
 use App\Oidc\OidcAuthCodeRepository;
+use App\Oidc\OidcDeviceCodeGrant;
+use App\Oidc\OidcDeviceCodeRepository;
 use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
 use App\Services\EmailTemplateService;
@@ -47,6 +49,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Laravel\Passport\Bridge\AuthCodeRepository;
+use Laravel\Passport\Bridge\DeviceCodeRepository;
 use Laravel\Passport\Bridge\RefreshTokenRepository;
 use Laravel\Passport\Passport;
 use Laravel\Passport\Scope;
@@ -66,10 +69,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Device authorization is not part of the Signaculum profile.
-        Passport::$deviceCodeGrantEnabled = false;
+        // Device authorization (RFC 8628) is enabled; Passport registers the grant and routes.
+        Passport::$deviceCodeGrantEnabled = true;
 
         $this->app->bind(AuthCodeRepository::class, OidcAuthCodeRepository::class);
+        $this->app->bind(DeviceCodeRepository::class, OidcDeviceCodeRepository::class);
         $this->app->singleton(SettingsRepositoryService::class);
     }
 
@@ -189,6 +193,12 @@ class AppServiceProvider extends ServiceProvider
                 ->by((string) $request->ip());
         });
 
+        // RFC 8628 §5.1: slow user-code / device-code guessing.
+        RateLimiter::for('oidc-device', function (Request $request) {
+            return Limit::perMinute((int) config('oidc.rate_limits.device_per_minute', 60))
+                ->by((string) $request->ip());
+        });
+
         // Reserved for organisation invitation POSTs (S5); registered now so routes can attach it.
         RateLimiter::for('organization-invitations', function (Request $request) {
             $identifier = $request->user()?->getAuthIdentifier() ?? $request->ip();
@@ -231,6 +241,14 @@ class AppServiceProvider extends ServiceProvider
                 'passport.authorizations.deny',
             ];
 
+            $deviceRouteNames = [
+                'passport.device',
+                'passport.device.code',
+                'passport.device.authorizations.authorize',
+                'passport.device.authorizations.approve',
+                'passport.device.authorizations.deny',
+            ];
+
             foreach (Route::getRoutes()->getRoutes() as $route) {
                 $routeName = $route->getName();
 
@@ -240,6 +258,10 @@ class AppServiceProvider extends ServiceProvider
 
                 if (is_string($routeName) && in_array($routeName, $authorizeRouteNames, true)) {
                     $route->middleware('throttle:oidc-authorize');
+                }
+
+                if (is_string($routeName) && in_array($routeName, $deviceRouteNames, true)) {
+                    $route->middleware('throttle:oidc-device');
                 }
 
                 if ($routeName === 'password.email') {
@@ -427,7 +449,7 @@ class AppServiceProvider extends ServiceProvider
         Passport::tokensCan(OidcScopeEnum::descriptions());
         Passport::useAuthorizationServerResponseType(new IdTokenResponse);
 
-        // Replaces Passport's own authorization_code grant (same identifier).
+        // Replaces Passport's own authorization_code and device_code grants (same identifiers).
         $this->app->extend(AuthorizationServer::class, function (AuthorizationServer $authorizationServer): AuthorizationServer {
             $authCodeGrant = new OidcAuthCodeGrant(
                 $this->app->make(AuthCodeRepository::class),
@@ -439,6 +461,21 @@ class AppServiceProvider extends ServiceProvider
 
             $authorizationServer->enableGrantType($authCodeGrant, Passport::tokensExpireIn());
 
+            if (Passport::$deviceCodeGrantEnabled && Route::has('passport.device')) {
+                $deviceCodeGrant = new OidcDeviceCodeGrant(
+                    $this->app->make(DeviceCodeRepository::class),
+                    $this->app->make(RefreshTokenRepository::class),
+                    new DateInterval('PT10M'),
+                    route('passport.device'),
+                    5,
+                );
+                $deviceCodeGrant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
+                $deviceCodeGrant->setIncludeVerificationUriComplete(true);
+                $deviceCodeGrant->setIntervalVisibility(true);
+
+                $authorizationServer->enableGrantType($deviceCodeGrant, Passport::tokensExpireIn());
+            }
+
             return $authorizationServer;
         });
 
@@ -447,6 +484,29 @@ class AppServiceProvider extends ServiceProvider
             $scopes = $parameters['scopes'];
 
             return Inertia::render('oauth/authorize', [
+                'clientName' => $parameters['client']->name,
+                'scopes' => array_map(fn (Scope $scope): array => [
+                    'id' => $scope->id,
+                    'description' => $scope->description,
+                ], $scopes),
+                'authToken' => $parameters['authToken'],
+                'csrfToken' => csrf_token(),
+            ])->toResponse(request());
+        });
+
+        // RFC 8628 device verification UI (Passport device grant).
+        Passport::deviceUserCodeView(function (array $parameters): Response {
+            return Inertia::render('oauth/device/user-code', [
+                'userCode' => old('user_code', $parameters['request']->query('user_code')),
+                'errors' => $parameters['request']->session()->get('errors')?->getBagMessages() ?? [],
+            ])->toResponse($parameters['request']);
+        });
+
+        Passport::deviceAuthorizationView(function (array $parameters): Response {
+            /** @var list<Scope> $scopes */
+            $scopes = $parameters['scopes'];
+
+            return Inertia::render('oauth/device/authorize', [
                 'clientName' => $parameters['client']->name,
                 'scopes' => array_map(fn (Scope $scope): array => [
                     'id' => $scope->id,

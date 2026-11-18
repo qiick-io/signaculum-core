@@ -6,17 +6,20 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 
 ## Endpoints
 
-| Path                                | Methods       | Notes                                                                                                                                                                            |
-| ----------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/.well-known/openid-configuration` | `GET`         | Discovery (`DiscoveryController`)                                                                                                                                                |
-| `/.well-known/jwks.json`            | `GET`         | Public signing keys (`JwksController`), `Cache-Control: public, max-age=300`                                                                                                     |
-| `/oauth/authorize`                  | `GET`, `POST` | Authorization request (GET or form-encoded POST, OIDC Core §3.1.2.1) + consent approve (`POST` with `auth_token`) / deny (`DELETE`); UI `resources/js/pages/oauth/authorize.tsx` |
-| `/oauth/token`                      | `POST`        | Passport token endpoint; OIDC grant adds `id_token`                                                                                                                              |
-| `/oauth/userinfo`                   | `GET`, `POST` | Bearer access token; requires `openid` scope                                                                                                                                     |
-| `/oauth/introspect`                 | `POST`        | RFC 7662 introspection; confidential clients only (`client_secret_basic` / `_post`)                                                                                              |
-| `/oauth/revoke`                     | `POST`        | RFC 7009 token revocation (`revocation_endpoint`)                                                                                                                                |
-| `/oauth/end-session`                | `GET`, `POST` | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing                                                                                                     |
-| `/oauth/end-session/confirm`        | `POST`        | User confirmation after the logout interstitial                                                                                                                                  |
+| Path                                | Methods                 | Notes                                                                                                                                                                            |
+| ----------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/.well-known/openid-configuration` | `GET`                   | Discovery (`DiscoveryController`)                                                                                                                                                |
+| `/.well-known/jwks.json`            | `GET`                   | Public signing keys (`JwksController`), `Cache-Control: public, max-age=300`                                                                                                     |
+| `/oauth/authorize`                  | `GET`, `POST`           | Authorization request (GET or form-encoded POST, OIDC Core §3.1.2.1) + consent approve (`POST` with `auth_token`) / deny (`DELETE`); UI `resources/js/pages/oauth/authorize.tsx` |
+| `/oauth/device`                     | `GET`                   | RFC 8628 user-code entry (`resources/js/pages/oauth/device/user-code.tsx`)                                                                                                       |
+| `/oauth/device/code`                | `POST`                  | RFC 8628 device authorization endpoint (`device_authorization_endpoint`)                                                                                                         |
+| `/oauth/device/authorize`           | `GET`, `POST`, `DELETE` | Device consent UI (`resources/js/pages/oauth/device/authorize.tsx`)                                                                                                              |
+| `/oauth/token`                      | `POST`                  | Passport token endpoint; OIDC grant adds `id_token`                                                                                                                              |
+| `/oauth/userinfo`                   | `GET`, `POST`           | Bearer access token; requires `openid` scope                                                                                                                                     |
+| `/oauth/introspect`                 | `POST`                  | RFC 7662 introspection; confidential clients only (`client_secret_basic` / `_post`)                                                                                              |
+| `/oauth/revoke`                     | `POST`                  | RFC 7009 token revocation (`revocation_endpoint`)                                                                                                                                |
+| `/oauth/end-session`                | `GET`, `POST`           | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing                                                                                                     |
+| `/oauth/end-session/confirm`        | `POST`                  | User confirmation after the logout interstitial                                                                                                                                  |
 
 Known limitation (`/oauth/authorize` form POST): session cookies use `SameSite=Lax`, so a cross-site RP POST carries no session cookie and the user is asked to sign in again.
 
@@ -24,12 +27,12 @@ Known limitation (`/oauth/authorize` form POST): session cookies use `SameSite=L
 
 Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
-- `issuer`, `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `introspection_endpoint`, `revocation_endpoint`, `end_session_endpoint`, `jwks_uri`
+- `issuer`, `authorization_endpoint`, `device_authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `introspection_endpoint`, `revocation_endpoint`, `end_session_endpoint`, `jwks_uri`
 - `introspection_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post` (no `none`)
 - `scopes_supported`: `openid`, `profile`, `email`, `qiick.orgs`
 - `response_types_supported`: `code`
 - `response_modes_supported`: `query`
-- `grant_types_supported`: `authorization_code`, `refresh_token`, `client_credentials`
+- `grant_types_supported`: `authorization_code`, `refresh_token`, `client_credentials`, `urn:ietf:params:oauth:grant-type:device_code`
 - `subject_types_supported`: `public`
 - `id_token_signing_alg_values_supported`: `RS256`
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `none`
@@ -49,7 +52,7 @@ Every redirect back to the client's `redirect_uri` — success (`code`) and erro
 
 ## PKCE and nonce
 
-- Interactive SSO uses the authorization code flow. Device code grant is disabled.
+- Interactive SSO uses the authorization code flow. Device authorization (RFC 8628) is available for opted-in clients (`/oauth/device`, `/oauth/device/code`).
 - **PKCE S256 required for every client** (confidential included) when `OIDC_REQUIRE_PKCE` is true (default). `plain` is refused. Missing challenge → `invalid_request` redirect with `state`.
 - **`nonce` required** on every `openid` authorization request when `OIDC_REQUIRE_NONCE` is true (default). Echoed in the `id_token`. Missing nonce → `invalid_request` redirect with `state`.
 - Both flags may be relaxed only for the OpenID Foundation conformance suite, never in production. CI job and local steps: [`conformance/README.md`](../conformance/README.md); workflow `.github/workflows/oidc-conformance.yml` (own commit).
@@ -63,7 +66,19 @@ OAuth 2.0 client credentials (`grant_type=client_credentials`) is for **machine-
 | Authorization code (+ PKCE) | A person signs in (SSO into Externa, Excubia, …). Issues `id_token` / refresh; userinfo and `orgs` apply.                       |
 | Client credentials          | No human is present. Access token only; **no** `id_token`, **no** refresh token, **no** userinfo / `sid` / back-channel logout. |
 
-Opt-in per confidential application (Admin → Applications → “Allow client credentials”). Public clients cannot enable it. Passport already registers the grant; Signaculum only adds `client_credentials` to that client's `grant_types`. Device flow and dynamic registration stay out of scope.
+Opt-in per confidential application (Admin → Applications → “Allow client credentials”). Public clients cannot enable it. Passport already registers the grant; Signaculum only adds `client_credentials` to that client's `grant_types`. Dynamic registration stays out of scope.
+
+## Device authorization (RFC 8628)
+
+Opt-in per application (Admin → Applications → “Allow device authorization”). The client calls `POST /oauth/device/code`, shows `user_code` / `verification_uri` to the person, who signs in at `/oauth/device` and approves. The client then polls `POST /oauth/token` with `grant_type=urn:ietf:params:oauth:grant-type:device_code`. Passport owns the grant and storage (`oauth_device_codes`); Signaculum supplies the Inertia verification UI, discovery fields, and an `id_token` when `openid` was requested.
+
+Device `id_token` rules (OIDC Core §2 / §3.1.3.6; RFC 8628 has no authorization-request `nonce`):
+
+- Emits `auth_time`, `amr` and `sid` from the **approving browser session** (same sources as the authorization-code grant). Never invents or reuses stale values from another flow.
+- Omits `nonce` (none exists on the device authorization request).
+- Token polling errors follow RFC 8628 §3.5: `authorization_pending`, `slow_down`, `expired_token`, `access_denied`.
+- User-code entry (`/oauth/device`, `/oauth/device/authorize`) and `/oauth/device/code` share named rate limiters with the other OAuth endpoints.
+- Device approval uses the same web gates as `/oauth/authorize` (deactivated user, organisation MFA enrollment).
 
 ## `prompt` and `max_age`
 
