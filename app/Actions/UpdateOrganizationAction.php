@@ -11,10 +11,16 @@ use App\Models\User;
 /**
  * Update an organisation's name, slug and MFA requirement.
  *
- * Side effects: activity log when `is_mfa_required` changes (keys only, never secrets).
+ * Side effects: activity log when `is_mfa_required` changes (keys only, never secrets). Turning
+ * the requirement on revokes the members' OAuth grants (RevokeOrganizationMemberTokensAction),
+ * so tokens issued without a second factor do not outlive it (#163).
  */
 final class UpdateOrganizationAction
 {
+    public function __construct(
+        private readonly RevokeOrganizationMemberTokensAction $revokeOrganizationMemberTokensAction,
+    ) {}
+
     public function execute(Organization $organization, OrganizationData $organizationData, ?User $actor = null): Organization
     {
         $previousIsMfaRequired = (bool) $organization->is_mfa_required;
@@ -39,6 +45,10 @@ final class UpdateOrganizationAction
             }
 
             $activity->log('Organisation MFA requirement updated');
+        }
+
+        if (! $previousIsMfaRequired && $organizationData->isMfaRequired) {
+            $this->revokeOrganizationMemberTokensAction->execute($organization, $actor);
         }
 
         return $organization->refresh();

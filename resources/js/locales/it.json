@@ -662,7 +662,8 @@
             "user_impersonation_stopped": "Impersonazione interrotta",
             "user_impersonation_expired": "Impersonazione scaduta",
             "locked": "Account bloccato",
-            "organization_mfa_requirement_updated": "Requisito MFA dell'organizzazione aggiornato"
+            "organization_mfa_requirement_updated": "Requisito MFA dell'organizzazione aggiornato",
+            "organization_member_tokens_revoked": "Token dei membri revocati"
         },
         "logs": {
             "default": "Applicazione",
@@ -769,7 +770,8 @@
             "logoDark": "Logo (scuro)",
             "saveBranding": "Salva branding",
             "requireMfa": "I membri devono usare l'autenticazione a due fattori",
-            "requireMfaHint": "I membri senza TOTP o passkey vengono inviati a Sicurezza prima di autorizzare un'applicazione. Signaculum non dichiara mai MFA in amr o acr se l'utente non ha usato un secondo fattore."
+            "requireMfaHint": "I membri senza TOTP o passkey vengono inviati a Sicurezza prima di autorizzare un'applicazione. Signaculum non dichiara mai MFA in amr o acr se l'utente non ha usato un secondo fattore.",
+            "requireMfaRevokesTokens": "Attivando questa opzione vengono revocati i token di accesso e di aggiornamento esistenti di tutti i membri. Le applicazioni collegate perdono l'accesso finché ogni membro non accede di nuovo con un secondo fattore."
         },
         "accept": {
             "head": "Invito all'organizzazione",

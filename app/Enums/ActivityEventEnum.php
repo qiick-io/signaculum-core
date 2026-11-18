@@ -28,6 +28,7 @@ enum ActivityEventEnum: string
     case Rotated = 'rotated';
     case Revoked = 'revoked';
     case OrganizationMfaRequirementUpdated = 'organization_mfa_requirement_updated';
+    case OrganizationMemberTokensRevoked = 'organization_member_tokens_revoked';
     case UserImpersonationStarted = 'user_impersonation_started';
     case UserImpersonationStopped = 'user_impersonation_stopped';
     case UserImpersonationExpired = 'user_impersonation_expired';

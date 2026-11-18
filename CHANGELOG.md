@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Organisation MFA gate no longer accepts enrolment alone; session `amr` must contain a second factor before `/oauth/authorize` completes (#131).
 - Session `amr` is bound to the user who proved it, on write and on every read: a passkey verified for an account whose login is then refused no longer counts for the next account that signs in, and methods bound to another (or no) subject never reach the `id_token` or the organisation MFA gate (#131).
 - Organisation MFA and the instance-wide two-factor requirement no longer switch off when Fortify's TOTP feature is disabled: passkeys still satisfy them, a factor counts only while its method is enabled (a TOTP-only user is sent to enrol a passkey instead of a step-up that cannot challenge TOTP), and with no second-factor method enabled the user gets a 403 page that says why (`access_denied` for `prompt=none`). Settings → Authentication & security warns the instance admin and lists the affected organisations. **Behaviour change:** instances that disabled TOTP now enforce these requirements (#169).
+- Turning on an organisation's MFA requirement revokes its members' access tokens, refresh tokens and unredeemed authorization codes, and logs `organization_member_tokens_revoked`; the settings page says so next to the switch. Before, a refresh token issued without a second factor kept minting access tokens for a year (#163).
 
 ## [1.0.0-beta.1] - 2026-11-16
 
