@@ -5,7 +5,10 @@ declare(strict_types=1);
 use App\Actions\CreateApiKeyAction;
 use App\Data\ApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
+use App\Enums\OrganizationRoleEnum;
 use App\Models\ApiKey;
+use App\Models\Organization;
+use App\Models\OrganizationMembership;
 use App\Models\SigningKey;
 use App\Models\User;
 use App\Services\SigningKeyService;
@@ -243,5 +246,65 @@ function adminApiKey(array $scopes = [ApiKeyScopeEnum::UsersWrite->value], ?ApiK
         'admin' => $admin,
         'plain' => $issuedApiKey->plainTextToken,
         'apiKey' => $issuedApiKey->apiKey,
+    ];
+}
+
+/*
+|--------------------------------------------------------------------------
+| Shared fixtures
+|--------------------------------------------------------------------------
+|
+| Helpers used by more than one test file live here: a parallel worker loads only the
+| test files it runs, so a helper declared in another file is undefined there (#144).
+|
+*/
+
+/**
+ * A user who may manage the instance settings.
+ */
+function instanceAdmin(): User
+{
+    return User::factory()->create(['is_instance_admin' => true]);
+}
+
+/**
+ * An organisation with `$owner` as its only member, in the owner role.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function createOrganizationWithOwner(User $owner, array $attributes = []): Organization
+{
+    $organization = Organization::factory()->create($attributes);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $owner->getKey(),
+        'roles' => [OrganizationRoleEnum::Owner->value],
+    ]);
+
+    return $organization;
+}
+
+/**
+ * A valid Authentication & security settings form; override any field.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function securitySettingsPayload(array $overrides = []): array
+{
+    return [
+        'password_min_length' => 8,
+        'password_require_mixed_case' => '1',
+        'password_require_numbers' => '1',
+        'password_require_symbols' => '0',
+        'password_reject_compromised' => '0',
+        'login_max_attempts' => 3,
+        'login_lockout_threshold' => 5,
+        'login_lockout_minutes' => 15,
+        'registration_enabled' => '0',
+        'two_factor_required' => '0',
+        'email_code_login_enabled' => '0',
+        ...$overrides,
     ];
 }

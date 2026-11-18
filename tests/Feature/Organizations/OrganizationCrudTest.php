@@ -8,19 +8,6 @@ use App\Models\OrganizationMembership;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
-function createOrganizationWithOwner(User $owner, array $attributes = []): Organization
-{
-    $organization = Organization::factory()->create($attributes);
-
-    OrganizationMembership::query()->create([
-        'organization_id' => $organization->getKey(),
-        'user_id' => $owner->getKey(),
-        'roles' => [OrganizationRoleEnum::Owner->value],
-    ]);
-
-    return $organization;
-}
-
 test('a verified user creates an organisation and becomes its owner', function () {
     $user = User::factory()->create();
 

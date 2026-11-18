@@ -15,11 +15,6 @@ use Inertia\Testing\AssertableInertia as Assert;
  * Instance settings pages copied from Excubia's project settings (General, Localization,
  * Authentication & security, Appearance), all for instance admins only.
  */
-function instanceAdmin(): User
-{
-    return User::factory()->create(['is_instance_admin' => true]);
-}
-
 function generalSettingsPayload(array $overrides = []): array
 {
     return [
@@ -27,24 +22,6 @@ function generalSettingsPayload(array $overrides = []): array
         'description' => 'Sign-in for the Acme apps.',
         'report_bug_url' => 'https://example.com/bugs/new',
         'activity_retention_days' => 365,
-        ...$overrides,
-    ];
-}
-
-function securitySettingsPayload(array $overrides = []): array
-{
-    return [
-        'password_min_length' => 8,
-        'password_require_mixed_case' => '1',
-        'password_require_numbers' => '1',
-        'password_require_symbols' => '0',
-        'password_reject_compromised' => '0',
-        'login_max_attempts' => 3,
-        'login_lockout_threshold' => 5,
-        'login_lockout_minutes' => 15,
-        'registration_enabled' => '0',
-        'two_factor_required' => '0',
-        'email_code_login_enabled' => '0',
         ...$overrides,
     ];
 }
