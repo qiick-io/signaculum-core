@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Settings\Concerns\LogsInstanceSettingsUpdateTrait;
 use App\Http\Requests\Settings\UpdateInstanceSecuritySettingsRequest;
+use App\Services\SecondFactorAvailabilityService;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -22,8 +23,16 @@ final class InstanceSecuritySettingsController extends Controller
 {
     use LogsInstanceSettingsUpdateTrait;
 
-    public function __construct(private readonly SettingsRepositoryService $settings) {}
+    public function __construct(
+        private readonly SettingsRepositoryService $settings,
+        private readonly SecondFactorAvailabilityService $secondFactorAvailabilityService,
+    ) {}
 
+    /**
+     * `unavailableSecondFactor` is set when `config/fortify.php` enables no second-factor
+     * method (#169), so the admin sees which organisations' members are refused at
+     * `/oauth/authorize` before one of them reports it.
+     */
     public function edit(): Response
     {
         return Inertia::render('settings/instance/security', [
@@ -40,6 +49,9 @@ final class InstanceSecuritySettingsController extends Controller
                 'two_factor_required',
                 'email_code_login_enabled',
             ]),
+            'unavailableSecondFactor' => $this->secondFactorAvailabilityService->isAnyMethodEnabled() ? null : [
+                'mfaRequiredOrganizationNames' => $this->secondFactorAvailabilityService->unsatisfiableOrganizationNames(),
+            ],
         ]);
     }
 

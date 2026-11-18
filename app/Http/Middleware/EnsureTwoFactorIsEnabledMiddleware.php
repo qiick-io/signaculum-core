@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Exceptions\SecondFactorUnavailableException;
+use App\Services\SecondFactorAvailabilityService;
 use App\Services\SettingsRepositoryService;
 use Closure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Laravel\Fortify\Features;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -16,6 +17,11 @@ use Symfony\Component\HttpFoundation\Response;
  * A confirmed TOTP or at least one passkey satisfies the requirement, as in externa-core.
  * Copied from Excubia. A GET (for example an OAuth authorization request from an app) is
  * kept as the intended URL, so the login can continue after enrolment.
+ *
+ * The requirement is a stored setting and holds whatever second-factor features
+ * `config/fortify.php` enables (#169). Only a factor this instance can challenge counts
+ * ({@see SecondFactorAvailabilityService}); with no method enabled at all, the user is
+ * refused with an explanation, since the security page would have nothing to offer.
  */
 final class EnsureTwoFactorIsEnabledMiddleware
 {
@@ -45,10 +51,15 @@ final class EnsureTwoFactorIsEnabledMiddleware
         'passkey.destroy',
     ];
 
-    public function __construct(private SettingsRepositoryService $settings) {}
+    public function __construct(
+        private SettingsRepositoryService $settings,
+        private SecondFactorAvailabilityService $secondFactorAvailabilityService,
+    ) {}
 
     /**
      * @param  Closure(Request): (Response)  $next
+     *
+     * @throws SecondFactorUnavailableException when no second-factor method is enabled
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -57,11 +68,13 @@ final class EnsureTwoFactorIsEnabledMiddleware
         if ($user === null
             || in_array($request->route()?->getName(), self::EXEMPT_ROUTE_NAMES, true)
             || ! $this->settings->isTwoFactorRequired()
-            || ! Features::canManageTwoFactorAuthentication()
-            || $user->hasEnabledTwoFactorAuthentication()
-            || (Features::canManagePasskeys() && $user->hasPasskeysEnabled())
+            || $this->secondFactorAvailabilityService->hasUsableSecondFactor($user)
         ) {
             return $next($request);
+        }
+
+        if (! $this->secondFactorAvailabilityService->isAnyMethodEnabled()) {
+            throw new SecondFactorUnavailableException;
         }
 
         if ($request->isMethod('GET') && ! $request->expectsJson()) {

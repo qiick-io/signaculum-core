@@ -1,9 +1,11 @@
 import { Form, Head } from '@inertiajs/react';
+import { TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import InstanceSecuritySettingsController from '@/actions/App/Http/Controllers/Settings/InstanceSecuritySettingsController';
 import Heading from '@/components/heading';
 import { SettingsFormActions } from '@/components/settings-form-actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
@@ -35,6 +37,8 @@ type SecurityInstanceSettings = Pick<
 
 type Props = {
     instance: SecurityInstanceSettings;
+    /** Set when no second-factor method is enabled, so no MFA requirement can be met (#169). */
+    unavailableSecondFactor: { mfaRequiredOrganizationNames: string[] } | null;
 };
 
 function buildFormState(instance: SecurityInstanceSettings) {
@@ -58,7 +62,10 @@ function buildFormState(instance: SecurityInstanceSettings) {
  * self-registration and required two-factor authentication. Pattern from app-ui
  * `settings.md` / Excubia instance security, without Excubia's SSO section.
  */
-export default function InstanceSecuritySettingsPage({ instance }: Props) {
+export default function InstanceSecuritySettingsPage({
+    instance,
+    unavailableSecondFactor,
+}: Props) {
     const { t } = useTranslation();
     const [form, setForm] = useState(() => buildFormState(instance));
 
@@ -78,6 +85,37 @@ export default function InstanceSecuritySettingsPage({ instance }: Props) {
             </h1>
 
             <SettingsLayout>
+                {unavailableSecondFactor ? (
+                    <Alert variant="warning" className="mb-12">
+                        <TriangleAlert />
+                        <AlertTitle>
+                            {t(
+                                'settings.instance.secondFactorUnavailableTitle',
+                            )}
+                        </AlertTitle>
+                        <AlertDescription>
+                            <p>
+                                {t(
+                                    'settings.instance.secondFactorUnavailableDescription',
+                                )}
+                            </p>
+                            {unavailableSecondFactor
+                                .mfaRequiredOrganizationNames.length > 0 ? (
+                                <p>
+                                    {t(
+                                        'settings.instance.secondFactorUnavailableOrganizations',
+                                        {
+                                            names: unavailableSecondFactor.mfaRequiredOrganizationNames.join(
+                                                ', ',
+                                            ),
+                                        },
+                                    )}
+                                </p>
+                            ) : null}
+                        </AlertDescription>
+                    </Alert>
+                ) : null}
+
                 <Form
                     {...InstanceSecuritySettingsController.update.form()}
                     options={{ preserveScroll: true }}
