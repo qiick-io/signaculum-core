@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Responses;
 
+use App\Exceptions\SecondFactorUnavailableException;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,7 +15,8 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
  * Web 403 / 404 / 500 / 503 as one Inertia error page (app-ui `error-pages.md`).
  *
  * Guests on a 404 are sent to login so a missing URL does not reveal what exists.
- * JSON / OIDC clients keep Laravel's default payload.
+ * JSON / OIDC clients keep Laravel's default payload. A 403 with a known cause carries a
+ * `reason` key so the page explains it instead of the generic "no permission" copy.
  */
 final class RenderHttpErrorResponse
 {
@@ -57,6 +59,7 @@ final class RenderHttpErrorResponse
         return Inertia::render('errors/error-page', [
             'status' => $status,
             'homeUrl' => $homeUrl,
+            'reason' => $exception instanceof SecondFactorUnavailableException ? 'secondFactorUnavailable' : null,
         ])->toResponse($request)->setStatusCode($status);
     }
 

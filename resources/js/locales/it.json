@@ -212,6 +212,9 @@
             "securityTitle": "Sicurezza",
             "twoFactorRequired": "Richiedi autenticazione a due fattori per tutti gli utenti",
             "twoFactorRequiredHint": "Se attiva, gli utenti devono abilitare la 2FA TOTP o registrare una passkey nella pagina Sicurezza prima di usare l'app.",
+            "secondFactorUnavailableTitle": "Nessun metodo di secondo fattore attivo",
+            "secondFactorUnavailableDescription": "config/fortify.php non attiva né TOTP né le passkey, quindi nessuno può soddisfare un requisito di due fattori. Richiedere l'autenticazione a due fattori per tutti gli utenti bloccherebbe ogni pagina.",
+            "secondFactorUnavailableOrganizations": "I membri di queste organizzazioni vengono rifiutati quando accedono alle app: {{names}}",
             "retentionTitle": "Conservazione dati",
             "retentionDescription": "Per quanto tempo Signaculum conserva il registro attività. Le voci più vecchie vengono eliminate ogni giorno.",
             "activityRetentionDays": "Registro attività (giorni)",
@@ -675,6 +678,13 @@
             "head": "Non autorizzato",
             "title": "Non hai il permesso",
             "description": "Questa pagina richiede un ruolo o un permesso diverso. Chiedi a un admin di istanza se ti serve l'accesso.",
+            "goHome": "Torna alla dashboard",
+            "signIn": "Accedi"
+        },
+        "secondFactorUnavailable": {
+            "head": "Secondo fattore non disponibile",
+            "title": "È richiesto un secondo fattore",
+            "description": "Il tuo account deve accedere con l'autenticazione a due fattori, ma questa istanza di Signaculum non ha alcun metodo di secondo fattore attivo. Contatta l'amministratore.",
             "goHome": "Torna alla dashboard",
             "signIn": "Accedi"
         },

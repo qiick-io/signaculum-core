@@ -19,25 +19,32 @@ import type { BreadcrumbItem } from '@/types';
 type ErrorPageProps = {
     status: 403 | 404 | 500 | 503;
     homeUrl: string;
+    /** A known 403 cause the user may know about (`RenderHttpErrorResponse`). */
+    reason?: 'secondFactorUnavailable' | null;
 };
 
 type ErrorCopy = {
     icon: LucideIcon;
-    key: 'forbidden' | 'notFound' | 'serverError' | 'serviceUnavailable';
+    key:
+        | 'forbidden'
+        | 'notFound'
+        | 'serverError'
+        | 'serviceUnavailable'
+        | 'secondFactorUnavailable';
 };
 
 /**
  * Shared 403 / 404 / 500 / 503 page (app-ui `error-pages.md`).
  * App shell when signed in; auth layout when not.
  */
-export default function ErrorPage({ status, homeUrl }: ErrorPageProps) {
+export default function ErrorPage({ status, homeUrl, reason }: ErrorPageProps) {
     const { t } = useTranslation();
     const page = usePage();
     const isSignedIn = Boolean(
         (page.props.auth as { user?: unknown } | undefined)?.user,
     );
 
-    const copy = copyForStatus(status);
+    const copy = reason ? { icon: Lock, key: reason } : copyForStatus(status);
     const Icon = copy.icon;
     const translationRoot = `errors.${copy.key}`;
 

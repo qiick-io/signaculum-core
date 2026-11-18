@@ -212,6 +212,9 @@
             "securityTitle": "Security",
             "twoFactorRequired": "Require two-factor authentication for all users",
             "twoFactorRequiredHint": "When enabled, users must enable TOTP 2FA or register a passkey on the Security page before using the app.",
+            "secondFactorUnavailableTitle": "No second-factor method is enabled",
+            "secondFactorUnavailableDescription": "config/fortify.php turns on neither TOTP nor passkeys, so nobody can meet a two-factor requirement. Requiring two-factor authentication for all users would refuse every page.",
+            "secondFactorUnavailableOrganizations": "Members of these organisations are refused when they sign in to apps: {{names}}",
             "retentionTitle": "Data retention",
             "retentionDescription": "How long Signaculum keeps the activity log. Older entries are deleted daily.",
             "activityRetentionDays": "Activity log (days)",
@@ -675,6 +678,13 @@
             "head": "Forbidden",
             "title": "You do not have permission",
             "description": "This page needs a different role or permission. Ask an instance admin if you need access.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "secondFactorUnavailable": {
+            "head": "Second factor unavailable",
+            "title": "A second factor is required",
+            "description": "Your account has to sign in with two-factor authentication, but this Signaculum instance has no second-factor method turned on. Ask your administrator.",
             "goHome": "Back to dashboard",
             "signIn": "Sign in"
         },
