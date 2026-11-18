@@ -22,6 +22,7 @@ use Laravel\Passkeys\Events\PasskeyVerified;
  * - Fortify TOTP after email-code login → keep prior `otp`, add `mfa` (both proofs
  *   are `otp` in RFC 8176, so `mfa` is forced).
  * - Passkey verification → `hwk` or `swk` from the credential transports.
+ * - Methods proven for another user in this session are never reused (#131).
  */
 final class RecordAuthenticationMethodListener
 {
@@ -31,8 +32,10 @@ final class RecordAuthenticationMethodListener
 
     public function handle(Login|ValidTwoFactorAuthenticationCodeProvided|PasskeyVerified $event): void
     {
+        $userIdentifier = $event->user->getAuthIdentifier();
+
         if ($event instanceof PasskeyVerified) {
-            $this->authenticationContextService->recordPasskey($event->passkey);
+            $this->authenticationContextService->recordPasskey($event->passkey, $userIdentifier);
 
             return;
         }
@@ -40,17 +43,17 @@ final class RecordAuthenticationMethodListener
         if ($event instanceof ValidTwoFactorAuthenticationCodeProvided) {
             // Password login leaves methods empty until this event. Email-code login
             // already recorded `otp` before staging the Fortify challenge.
-            $hadPriorFactor = $this->authenticationContextService->methods() !== [];
+            $hadPriorFactor = $this->authenticationContextService->methodsFor($userIdentifier) !== [];
 
             if (! $hadPriorFactor) {
-                $this->authenticationContextService->record(AuthenticationMethodEnum::Password);
+                $this->authenticationContextService->record(AuthenticationMethodEnum::Password, $userIdentifier);
             }
 
-            $this->authenticationContextService->record(AuthenticationMethodEnum::OneTimePassword);
+            $this->authenticationContextService->record(AuthenticationMethodEnum::OneTimePassword, $userIdentifier);
 
             // Email OTP + TOTP both map to `otp`; still two proofs → force `mfa`.
             if ($hadPriorFactor) {
-                $this->authenticationContextService->record(AuthenticationMethodEnum::MultipleFactors);
+                $this->authenticationContextService->record(AuthenticationMethodEnum::MultipleFactors, $userIdentifier);
             }
 
             return;
@@ -66,10 +69,10 @@ final class RecordAuthenticationMethodListener
             return;
         }
 
-        if ($this->authenticationContextService->methods() !== []) {
+        if ($this->authenticationContextService->methodsFor($userIdentifier) !== []) {
             return;
         }
 
-        $this->authenticationContextService->record(AuthenticationMethodEnum::Password);
+        $this->authenticationContextService->record(AuthenticationMethodEnum::Password, $userIdentifier);
     }
 }

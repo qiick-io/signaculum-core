@@ -7,6 +7,13 @@ use App\Enums\OrganizationRoleEnum;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
+use Laravel\Passkeys\Actions\VerifyPasskey;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\Events\PasskeyVerified;
+use Laravel\Passkeys\Passkey;
+use ParagonIE\ConstantTime\Base64UrlSafe;
+use Webauthn\PublicKeyCredential;
+use Webauthn\PublicKeyCredentialRequestOptions;
 
 /**
  * Refusal paths of the organisation MFA gate (#131): every way a session can
@@ -24,6 +31,19 @@ function mfaRequiredMember(?User $member = null): User
     ]);
 
     return $member;
+}
+
+function savedPasskeyFor(User $user, string $credentialId, array $transports): Passkey
+{
+    $passkey = new Passkey([
+        'name' => 'Key '.$credentialId,
+        'credential_id' => $credentialId,
+        'credential' => ['transports' => $transports, 'aaguid' => '00000000-0000-0000-0000-000000000000'],
+    ]);
+    $passkey->user_id = $user->getKey();
+    $passkey->save();
+
+    return $passkey;
 }
 
 test('a session without any recorded amr is stepped up', function () {
@@ -107,6 +127,60 @@ test('a form POST authorization request is stepped up like the GET', function ()
     parse_str((string) parse_url(authorizeUrl($client, pkcePair()['challenge']), PHP_URL_QUERY), $parameters);
 
     $this->post('/oauth/authorize', $parameters)->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse();
+});
+
+test('a refused passkey login of another account does not satisfy a later password session', function () {
+    // An attacker holds a passkey for an account Signaculum refuses to sign in (inactive),
+    // and the password of a passkey-only member of an MFA-required organisation.
+    $attacker = User::factory()->create(['is_active' => false]);
+    $attackerPasskey = savedPasskeyFor($attacker, 'attacker-inactive-key', ['internal']);
+
+    $victim = mfaRequiredMember(User::factory()->create(['email' => 'victim@example.test']));
+    savedPasskeyFor($victim, 'victim-own-key', ['internal']);
+
+    // Mirrors Laravel\Passkeys\Actions\VerifyPasskey: the assertion is valid, so
+    // `PasskeyVerified` fires before PasskeyLoginController asks allowsLogin().
+    app()->instance(VerifyPasskey::class, new class($attackerPasskey) extends VerifyPasskey
+    {
+        public function __construct(private readonly Passkey $verifiedPasskey) {}
+
+        public function __invoke(
+            PublicKeyCredential $credential,
+            PublicKeyCredentialRequestOptions $options,
+            ?PasskeyUser $user = null,
+        ): Passkey {
+            PasskeyVerified::dispatch($this->verifiedPasskey->user, $this->verifiedPasskey);
+
+            return $this->verifiedPasskey;
+        }
+    });
+
+    $this->getJson(route('passkey.login-options'))->assertOk();
+
+    $this->postJson(route('passkey.login'), ['credential' => [
+        'id' => 'YXR0YWNrZXItaW5hY3RpdmUta2V5',
+        'rawId' => 'YXR0YWNrZXItaW5hY3RpdmUta2V5',
+        'type' => 'public-key',
+        'response' => [
+            'clientDataJSON' => Base64UrlSafe::encodeUnpadded((string) json_encode([
+                'type' => 'webauthn.get',
+                'challenge' => Base64UrlSafe::encodeUnpadded(random_bytes(32)),
+                'origin' => config('app.url'),
+            ])),
+            'authenticatorData' => Base64UrlSafe::encodeUnpadded(str_repeat("\0", 32)."\x05".str_repeat("\0", 4)),
+            'signature' => Base64UrlSafe::encodeUnpadded('signature'),
+        ],
+    ]])->assertStatus(422);
+
+    $this->assertGuest();
+
+    $this->post('/login', ['email' => 'victim@example.test', 'password' => 'password']);
+    $this->assertAuthenticatedAs($victim);
+
+    $this->get(authorizeUrl(createOidcClient(), pkcePair()['challenge']))
+        ->assertRedirect('/login');
 
     expect(auth()->check())->toBeFalse();
 });

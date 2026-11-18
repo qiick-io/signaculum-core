@@ -14,10 +14,16 @@ use Webauthn\PublicKeyCredentialDescriptor;
  *
  * Values live in the session until they are copied onto the authorization code and
  * into the `id_token`. `PendingAuthorizationService` still owns `nonce` / `auth_time`.
+ *
+ * Methods are bound to the user who proved them: a factor proven for one account (for
+ * example a passkey of an inactive account, verified before the login is refused) must
+ * never count for a different account that signs in later in the same browser session.
  */
 final class AuthenticationContextService
 {
     public const string SESSION_KEY = 'oidc.authentication_methods';
+
+    public const string SUBJECT_SESSION_KEY = 'oidc.authentication_subject';
 
     /**
      * @var list<string>
@@ -34,14 +40,16 @@ final class AuthenticationContextService
      * Append an authentication method. When two concrete factors are present, also
      * append `mfa` (RFC 8176). `MultipleFactors` may also be recorded directly when
      * two proofs share one `amr` value (email OTP + TOTP are both `otp`).
+     *
+     * Methods recorded for a different user are discarded first.
      */
-    public function record(AuthenticationMethodEnum $authenticationMethod): void
+    public function record(AuthenticationMethodEnum $authenticationMethod, int|string $userIdentifier): void
     {
         if (! request()->hasSession()) {
             return;
         }
 
-        $authenticationMethods = $this->methods();
+        $authenticationMethods = $this->methodsFor($userIdentifier);
 
         if (! in_array($authenticationMethod->value, $authenticationMethods, true)) {
             $authenticationMethods[] = $authenticationMethod->value;
@@ -56,7 +64,10 @@ final class AuthenticationContextService
             $authenticationMethods[] = AuthenticationMethodEnum::MultipleFactors->value;
         }
 
-        request()->session()->put(self::SESSION_KEY, $authenticationMethods);
+        request()->session()->put([
+            self::SESSION_KEY => $authenticationMethods,
+            self::SUBJECT_SESSION_KEY => (string) $userIdentifier,
+        ]);
     }
 
     /**
@@ -65,9 +76,9 @@ final class AuthenticationContextService
      * External authenticators (USB / NFC / BLE / smart-card) are hardware keys; platform
      * and hybrid authenticators are software keys when no hardware transport is present.
      */
-    public function recordPasskey(Passkey $passkey): void
+    public function recordPasskey(Passkey $passkey, int|string $userIdentifier): void
     {
-        $this->record($this->methodForPasskey($passkey));
+        $this->record($this->methodForPasskey($passkey), $userIdentifier);
     }
 
     /**
@@ -76,7 +87,7 @@ final class AuthenticationContextService
     public function reset(): void
     {
         if (request()->hasSession()) {
-            request()->session()->forget(self::SESSION_KEY);
+            request()->session()->forget([self::SESSION_KEY, self::SUBJECT_SESSION_KEY]);
         }
     }
 
@@ -107,6 +118,21 @@ final class AuthenticationContextService
         }
 
         return $authenticationMethods;
+    }
+
+    /**
+     * Methods recorded in this browser session for the given user; empty when they were
+     * proven for someone else.
+     *
+     * @return list<string>
+     */
+    public function methodsFor(int|string $userIdentifier): array
+    {
+        if (! request()->hasSession() || request()->session()->get(self::SUBJECT_SESSION_KEY) !== (string) $userIdentifier) {
+            return [];
+        }
+
+        return $this->methods();
     }
 
     /**

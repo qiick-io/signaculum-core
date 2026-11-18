@@ -116,6 +116,25 @@ test('a hardware passkey records hwk without pwd', function () {
     expect($claims->get('amr'))->toBe([AuthenticationMethodEnum::HardwareKey->value]);
 });
 
+test('methods proven for another account are not reused by a later login', function () {
+    $this->get('/login')->assertOk();
+
+    $otherUser = User::factory()->create(['is_active' => false]);
+    $passkey = new Passkey([
+        'name' => 'Other key',
+        'credential_id' => 'other-account-key',
+        'credential' => ['transports' => ['internal'], 'aaguid' => '00000000-0000-0000-0000-000000000000'],
+    ]);
+    $passkey->user_id = $otherUser->id;
+
+    // Passkey login verifies the assertion before refusing an inactive account.
+    event(new PasskeyVerified($otherUser, $passkey));
+    event(new Login('web', $this->user, false));
+
+    expect(app(AuthenticationContextService::class)->methods())
+        ->toBe([AuthenticationMethodEnum::Password->value]);
+});
+
 test('a platform passkey records swk', function () {
     $this->get('/login')->assertOk();
 
