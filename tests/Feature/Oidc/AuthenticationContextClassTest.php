@@ -67,7 +67,7 @@ test('acr_values with mfa login emits urn:qiick:loa:mfa', function (): void {
 
     $google2fa = app(Google2FA::class);
     $secret = $google2fa->generateSecretKey();
-    User::factory()->withTwoFactor()->create([
+    $user = User::factory()->withTwoFactor()->create([
         'email' => 'mfa@example.test',
         'two_factor_secret' => encrypt($secret),
     ]);
@@ -79,7 +79,7 @@ test('acr_values with mfa login emits urn:qiick:loa:mfa', function (): void {
         'code' => $google2fa->getCurrentOtp($secret),
     ])->assertRedirect();
 
-    expect(app(AuthenticationContextService::class)->methods())
+    expect(app(AuthenticationContextService::class)->methodsFor($user->getKey()))
         ->toContain(AuthenticationMethodEnum::MultipleFactors->value);
 
     $code = approveAuthorization($this->client, $this->pkce['challenge'], [

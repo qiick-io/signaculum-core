@@ -74,7 +74,7 @@ final class VerifyEmailLoginCodeAction
         $emailLoginCode->forceFill(['consumed_at' => Date::now()])->save();
 
         $this->authenticationContextService->reset();
-        $this->authenticationContextService->record(AuthenticationMethodEnum::OneTimePassword);
+        $this->authenticationContextService->record(AuthenticationMethodEnum::OneTimePassword, $user->getKey());
         $this->loginLockoutService->clear($user);
 
         if ($user->hasEnabledTwoFactorAuthentication()) {

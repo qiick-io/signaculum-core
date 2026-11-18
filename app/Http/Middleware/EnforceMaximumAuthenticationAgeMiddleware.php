@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Models\Client;
+use App\Services\AuthorizationErrorRedirectService;
 use App\Services\OidcReauthenticationService;
 use App\Services\PendingAuthorizationService;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
@@ -29,6 +28,7 @@ final class EnforceMaximumAuthenticationAgeMiddleware
     public function __construct(
         private readonly PendingAuthorizationService $pendingAuthorizationService,
         private readonly OidcReauthenticationService $oidcReauthenticationService,
+        private readonly AuthorizationErrorRedirectService $authorizationErrorRedirectService,
     ) {}
 
     /**
@@ -80,7 +80,7 @@ final class EnforceMaximumAuthenticationAgeMiddleware
         }
 
         if ($isPromptNone) {
-            return $this->loginRequiredRedirect($request);
+            return $this->authorizationErrorRedirectService->redirect($request, 'login_required');
         }
 
         $this->startInteractiveReauthentication($request);
@@ -161,41 +161,5 @@ final class EnforceMaximumAuthenticationAgeMiddleware
         );
 
         return url('/oauth/authorize').'?'.http_build_query($parameters, '', '&', PHP_QUERY_RFC3986);
-    }
-
-    /**
-     * Silent failure for `prompt=none` when re-authentication would be required
-     * (OIDC Core §3.1.2.1 / §3.1.2.6): keep the browser session, redirect with
-     * `login_required`, `state`, and `iss` (RFC 9207).
-     */
-    private function loginRequiredRedirect(Request $request): RedirectResponse|Response
-    {
-        $clientId = $request->input('client_id');
-        $redirectUri = $request->input('redirect_uri');
-
-        if (! is_string($clientId) || $clientId === '' || ! is_string($redirectUri) || $redirectUri === '') {
-            abort(401);
-        }
-
-        $client = Client::query()->find($clientId);
-
-        if ($client === null || ! in_array($redirectUri, $client->redirect_uris, true)) {
-            abort(401);
-        }
-
-        $query = [
-            'error' => 'login_required',
-            'iss' => (string) config('oidc.issuer'),
-        ];
-
-        $state = $request->input('state');
-
-        if (is_string($state) && $state !== '') {
-            $query['state'] = $state;
-        }
-
-        $separator = str_contains($redirectUri, '?') ? '&' : '?';
-
-        return redirect()->away($redirectUri.$separator.http_build_query($query));
     }
 }

@@ -26,7 +26,7 @@ beforeEach(function () {
 test('password login records pwd and the id_token always carries amr', function () {
     $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
 
-    expect(app(AuthenticationContextService::class)->methods())
+    expect(app(AuthenticationContextService::class)->methodsFor($this->user->getKey()))
         ->toBe([AuthenticationMethodEnum::Password->value]);
 
     $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
@@ -76,7 +76,7 @@ test('totp challenge records pwd otp and mfa in the id_token', function () {
 
     $this->assertAuthenticatedAs($user);
 
-    expect(app(AuthenticationContextService::class)->methods())
+    expect(app(AuthenticationContextService::class)->methodsFor($user->getKey()))
         ->toBe([
             AuthenticationMethodEnum::Password->value,
             AuthenticationMethodEnum::OneTimePassword->value,
@@ -106,7 +106,7 @@ test('a hardware passkey records hwk without pwd', function () {
     event(new PasskeyVerified($this->user, $passkey));
     event(new Login('web', $this->user, false));
 
-    expect(app(AuthenticationContextService::class)->methods())
+    expect(app(AuthenticationContextService::class)->methodsFor($this->user->getKey()))
         ->toBe([AuthenticationMethodEnum::HardwareKey->value]);
 
     $this->actingAs($this->user);
@@ -114,6 +114,45 @@ test('a hardware passkey records hwk without pwd', function () {
     $claims = verifiedIdToken(redeemCode($this->client, $code, $this->pkce['verifier'])->json('id_token'))->claims();
 
     expect($claims->get('amr'))->toBe([AuthenticationMethodEnum::HardwareKey->value]);
+});
+
+test('methods proven for another account are not reused by a later login', function () {
+    $this->get('/login')->assertOk();
+
+    $otherUser = User::factory()->create(['is_active' => false]);
+    $passkey = new Passkey([
+        'name' => 'Other key',
+        'credential_id' => 'other-account-key',
+        'credential' => ['transports' => ['internal'], 'aaguid' => '00000000-0000-0000-0000-000000000000'],
+    ]);
+    $passkey->user_id = $otherUser->id;
+
+    // Passkey login verifies the assertion before refusing an inactive account.
+    event(new PasskeyVerified($otherUser, $passkey));
+    event(new Login('web', $this->user, false));
+
+    expect(app(AuthenticationContextService::class)->methodsFor($this->user->getKey()))
+        ->toBe([AuthenticationMethodEnum::Password->value]);
+});
+
+test('methods bound to another subject are never stamped into the id_token', function () {
+    $otherUser = User::factory()->create();
+
+    $this->actingAs($this->user);
+    session([
+        AuthenticationContextService::SUBJECT_SESSION_KEY => (string) $otherUser->getKey(),
+        AuthenticationContextService::SESSION_KEY => [
+            AuthenticationMethodEnum::Password->value,
+            AuthenticationMethodEnum::OneTimePassword->value,
+            AuthenticationMethodEnum::MultipleFactors->value,
+        ],
+    ]);
+
+    $code = approveAuthorization($this->client, $this->pkce['challenge'], ['acr_values' => 'urn:qiick:loa:mfa'])['code'];
+    $claims = verifiedIdToken(redeemCode($this->client, $code, $this->pkce['verifier'])->json('id_token'))->claims();
+
+    expect($claims->get('amr'))->toBe([AuthenticationMethodEnum::Password->value])
+        ->and($claims->get('acr'))->toBe('urn:qiick:loa:pwd');
 });
 
 test('a platform passkey records swk', function () {
@@ -128,7 +167,7 @@ test('a platform passkey records swk', function () {
 
     event(new PasskeyVerified($this->user, $passkey));
 
-    expect(app(AuthenticationContextService::class)->methods())
+    expect(app(AuthenticationContextService::class)->methodsFor($this->user->getKey()))
         ->toBe([AuthenticationMethodEnum::SoftwareKey->value]);
 });
 
@@ -151,7 +190,7 @@ test('valid two-factor event alone records pwd otp and mfa', function () {
 
     event(new ValidTwoFactorAuthenticationCodeProvided($this->user));
 
-    expect(app(AuthenticationContextService::class)->methods())
+    expect(app(AuthenticationContextService::class)->methodsFor($this->user->getKey()))
         ->toBe([
             AuthenticationMethodEnum::Password->value,
             AuthenticationMethodEnum::OneTimePassword->value,
@@ -162,11 +201,11 @@ test('valid two-factor event alone records pwd otp and mfa', function () {
 test('logout clears recorded authentication methods', function () {
     Date::setTestNow('2026-11-13 10:00:00');
     $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
-    expect(app(AuthenticationContextService::class)->methods())->not->toBeEmpty();
+    expect(app(AuthenticationContextService::class)->methodsFor($this->user->getKey()))->not->toBeEmpty();
 
     $this->post('/logout')->assertRedirect();
 
-    expect(app(AuthenticationContextService::class)->methods())->toBe([]);
+    expect(app(AuthenticationContextService::class)->methodsFor($this->user->getKey()))->toBe([]);
 });
 
 test('interactive password login with remember still records pwd', function () {
@@ -177,7 +216,7 @@ test('interactive password login with remember still records pwd', function () {
     ])->assertRedirect();
 
     expect(Auth::guard('web')->viaRemember())->toBeFalse()
-        ->and(app(AuthenticationContextService::class)->methods())
+        ->and(app(AuthenticationContextService::class)->methodsFor($this->user->getKey()))
         ->toBe([AuthenticationMethodEnum::Password->value]);
 });
 
@@ -199,5 +238,5 @@ test('remember-me recaller login does not record pwd', function () {
     $this->assertAuthenticatedAs($this->user);
 
     expect(Auth::guard('web')->viaRemember())->toBeTrue()
-        ->and(app(AuthenticationContextService::class)->methods())->toBe([]);
+        ->and(app(AuthenticationContextService::class)->methodsFor($this->user->getKey()))->toBe([]);
 });

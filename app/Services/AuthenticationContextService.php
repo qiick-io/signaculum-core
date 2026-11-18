@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\AuthenticationContextClassEnum;
 use App\Enums\AuthenticationMethodEnum;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Passkeys\Passkey;
 use Webauthn\PublicKeyCredentialDescriptor;
 
@@ -14,10 +15,18 @@ use Webauthn\PublicKeyCredentialDescriptor;
  *
  * Values live in the session until they are copied onto the authorization code and
  * into the `id_token`. `PendingAuthorizationService` still owns `nonce` / `auth_time`.
+ *
+ * Methods are bound to the user who proved them: a factor proven for one account (for
+ * example a passkey of an inactive account, verified before the login is refused) must
+ * never count for a different account that signs in later in the same browser session.
+ * The binding is checked on every read as well as on write, so `amr`, `acr` and the
+ * organisation MFA gate never depend on every login path having rewritten the subject.
  */
 final class AuthenticationContextService
 {
     public const string SESSION_KEY = 'oidc.authentication_methods';
+
+    public const string SUBJECT_SESSION_KEY = 'oidc.authentication_subject';
 
     /**
      * @var list<string>
@@ -34,14 +43,16 @@ final class AuthenticationContextService
      * Append an authentication method. When two concrete factors are present, also
      * append `mfa` (RFC 8176). `MultipleFactors` may also be recorded directly when
      * two proofs share one `amr` value (email OTP + TOTP are both `otp`).
+     *
+     * Methods recorded for a different user are discarded first.
      */
-    public function record(AuthenticationMethodEnum $authenticationMethod): void
+    public function record(AuthenticationMethodEnum $authenticationMethod, int|string $userIdentifier): void
     {
         if (! request()->hasSession()) {
             return;
         }
 
-        $authenticationMethods = $this->methods();
+        $authenticationMethods = $this->methodsFor($userIdentifier);
 
         if (! in_array($authenticationMethod->value, $authenticationMethods, true)) {
             $authenticationMethods[] = $authenticationMethod->value;
@@ -56,7 +67,10 @@ final class AuthenticationContextService
             $authenticationMethods[] = AuthenticationMethodEnum::MultipleFactors->value;
         }
 
-        request()->session()->put(self::SESSION_KEY, $authenticationMethods);
+        request()->session()->put([
+            self::SESSION_KEY => $authenticationMethods,
+            self::SUBJECT_SESSION_KEY => (string) $userIdentifier,
+        ]);
     }
 
     /**
@@ -65,9 +79,9 @@ final class AuthenticationContextService
      * External authenticators (USB / NFC / BLE / smart-card) are hardware keys; platform
      * and hybrid authenticators are software keys when no hardware transport is present.
      */
-    public function recordPasskey(Passkey $passkey): void
+    public function recordPasskey(Passkey $passkey, int|string $userIdentifier): void
     {
-        $this->record($this->methodForPasskey($passkey));
+        $this->record($this->methodForPasskey($passkey), $userIdentifier);
     }
 
     /**
@@ -76,16 +90,17 @@ final class AuthenticationContextService
     public function reset(): void
     {
         if (request()->hasSession()) {
-            request()->session()->forget(self::SESSION_KEY);
+            request()->session()->forget([self::SESSION_KEY, self::SUBJECT_SESSION_KEY]);
         }
     }
 
     /**
-     * Methods recorded for this browser session.
+     * Every recorded method, whoever proved it. Private on purpose: callers read
+     * through {@see methodsFor()} or {@see amrValues()}, which check the subject.
      *
      * @return list<string>
      */
-    public function methods(): array
+    private function storedMethodsIgnoringSubject(): array
     {
         if (! request()->hasSession()) {
             return [];
@@ -110,14 +125,35 @@ final class AuthenticationContextService
     }
 
     /**
-     * Values for the `amr` claim: recorded methods, or `pwd` when none were recorded
-     * (signed-in session without going through the login listeners, e.g. `actingAs`).
+     * Methods recorded in this browser session for the given user; empty when they were
+     * proven for someone else.
+     *
+     * @return list<string>
+     */
+    public function methodsFor(int|string $userIdentifier): array
+    {
+        if (! request()->hasSession() || request()->session()->get(self::SUBJECT_SESSION_KEY) !== (string) $userIdentifier) {
+            return [];
+        }
+
+        return $this->storedMethodsIgnoringSubject();
+    }
+
+    /**
+     * Values for the `amr` claim: the methods recorded for the signed-in web user, or
+     * `pwd` when none were recorded for them (no login listener ran, e.g. `actingAs`,
+     * or the session's methods belong to another subject). The `pwd` floor never
+     * satisfies organisation MFA, so a missing or foreign binding fails closed.
      *
      * @return list<string>
      */
     public function amrValues(): array
     {
-        $authenticationMethods = $this->methods();
+        $userIdentifier = Auth::guard('web')->id();
+
+        $authenticationMethods = is_int($userIdentifier) || is_string($userIdentifier)
+            ? $this->methodsFor($userIdentifier)
+            : [];
 
         if ($authenticationMethods === []) {
             return [AuthenticationMethodEnum::Password->value];
@@ -142,6 +178,27 @@ final class AuthenticationContextService
         }
 
         return AuthenticationContextClassEnum::Password;
+    }
+
+    /**
+     * Whether this session's `amr` satisfies an organisation MFA requirement (#131).
+     *
+     * True when `amr` includes RFC 8176 `mfa`, or a passkey method (`hwk` / `swk`).
+     * Passkey-only sign-in never invents `mfa` in `amr` (so `acr` stays
+     * `urn:qiick:loa:pwd` unless two concrete factors were used), but the org gate
+     * still accepts it because enrolment treats a passkey as the second factor.
+     * Email-code-only (`otp`) and password-only (`pwd`) do not satisfy.
+     */
+    public function sessionSatisfiesOrganizationMfa(): bool
+    {
+        $authenticationMethods = $this->amrValues();
+
+        if (in_array(AuthenticationMethodEnum::MultipleFactors->value, $authenticationMethods, true)) {
+            return true;
+        }
+
+        return in_array(AuthenticationMethodEnum::HardwareKey->value, $authenticationMethods, true)
+            || in_array(AuthenticationMethodEnum::SoftwareKey->value, $authenticationMethods, true);
     }
 
     private function methodForPasskey(Passkey $passkey): AuthenticationMethodEnum

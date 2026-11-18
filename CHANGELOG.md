@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `signaculum:install` checks for and generates the Passport keys at `Passport::keyPath()`, so a key directory set with `Passport::loadKeysFrom()` is honoured; its tests use their own key directory instead of deleting the shared pair, which made the parallel suite flaky (#144).
+- Organisation MFA now requires the current session `amr` to prove a second factor (`mfa`, or passkey `hwk`/`swk`); enrolled users with email-code-only or password-only sessions are stepped up like `max_age` / `prompt=login` (#131).
+- Organisation MFA with `prompt=none` returns `interaction_required` (keeps the session); interactive step-up flashes a second-factor toast on login (#131).
+- Webhook `CURLOPT_RESOLVE` pins wrap IPv6 addresses in brackets (`host:443:[2001:db8::1]`) (#131).
+
+### Security
+
+- Organisation MFA gate no longer accepts enrolment alone; session `amr` must contain a second factor before `/oauth/authorize` completes (#131).
+- Session `amr` is bound to the user who proved it, on write and on every read: a passkey verified for an account whose login is then refused no longer counts for the next account that signs in, and methods bound to another (or no) subject never reach the `id_token` or the organisation MFA gate (#131).
 
 ## [1.0.0-beta.1] - 2026-11-16
 
@@ -82,7 +90,6 @@ First tagged beta of Signaculum: self-hosted OpenID Connect IdP for the qiick su
 - Run a **queue worker** for mail, outbound webhooks and back-channel logout.
 - Back up `APP_KEY`, `storage/oauth-*.key` and the database (including `signing_keys`) before moving hosts — see [docs/key-rotation-and-backup.md](./docs/key-rotation-and-backup.md).
 - Beta: wire contracts may still change before 1.0.0; pin clients to this tag and read [docs/oidc-profile.md](./docs/oidc-profile.md).
-- Known follow-up: organisation MFA checks enrolment only; session `amr` step-up is [#131](https://github.com/qiick-io/signaculum-core/issues/131).
 
 [Unreleased]: https://github.com/qiick-io/signaculum-core/compare/v1.0.0-beta.1...HEAD
 [1.0.0-beta.1]: https://github.com/qiick-io/signaculum-core/releases/tag/v1.0.0-beta.1
