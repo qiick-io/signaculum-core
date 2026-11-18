@@ -11,13 +11,19 @@ use Illuminate\Support\Facades\Schema;
  *
  * Passport owns `oauth_clients`; these columns sit beside its schema. Post-logout
  * redirect URIs match exactly at runtime (same rule as `redirect_uris`).
+ *
+ * `post_logout_redirect_uris` is nullable with no default: MySQL refuses a literal default on
+ * a JSON column (error 1101, "JSON column can't have a default value"), so `default('[]')`
+ * made the whole install impossible there while PostgreSQL and MariaDB accepted it. A client
+ * that registered none reads as null, and every read site already treats that as the empty
+ * list. An expression default would work on MySQL 8.0.13+ only, which is not portable.
  */
 return new class extends Migration
 {
     public function up(): void
     {
         Schema::table('oauth_clients', function (Blueprint $table): void {
-            $table->json('post_logout_redirect_uris')->default('[]');
+            $table->json('post_logout_redirect_uris')->nullable();
             $table->string('backchannel_logout_uri')->nullable();
             $table->boolean('is_backchannel_logout_session_required')->default(true);
         });
