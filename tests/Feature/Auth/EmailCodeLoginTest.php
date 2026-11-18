@@ -60,7 +60,7 @@ test('a signed-in user receives a one-time email code that logs them in with amr
 
     $this->assertAuthenticatedAs($user);
 
-    expect(app(AuthenticationContextService::class)->methods())
+    expect(app(AuthenticationContextService::class)->methodsFor($user->getKey()))
         ->toBe([AuthenticationMethodEnum::OneTimePassword->value]);
 
     expect($row->refresh()->consumed_at)->not->toBeNull();
@@ -182,7 +182,7 @@ test('a user with two-factor enabled is challenged after a valid email code', fu
 
     $this->assertGuest();
 
-    expect(app(AuthenticationContextService::class)->methods())
+    expect(app(AuthenticationContextService::class)->methodsFor($user->getKey()))
         ->toBe([AuthenticationMethodEnum::OneTimePassword->value]);
 
     $this->post('/two-factor-challenge', [
@@ -191,7 +191,7 @@ test('a user with two-factor enabled is challenged after a valid email code', fu
 
     $this->assertAuthenticatedAs($user);
 
-    expect(app(AuthenticationContextService::class)->methods())
+    expect(app(AuthenticationContextService::class)->methodsFor($user->getKey()))
         ->toBe([
             AuthenticationMethodEnum::OneTimePassword->value,
             AuthenticationMethodEnum::MultipleFactors->value,

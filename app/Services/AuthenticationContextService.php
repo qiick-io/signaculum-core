@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\AuthenticationContextClassEnum;
 use App\Enums\AuthenticationMethodEnum;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Passkeys\Passkey;
 use Webauthn\PublicKeyCredentialDescriptor;
 
@@ -18,6 +19,8 @@ use Webauthn\PublicKeyCredentialDescriptor;
  * Methods are bound to the user who proved them: a factor proven for one account (for
  * example a passkey of an inactive account, verified before the login is refused) must
  * never count for a different account that signs in later in the same browser session.
+ * The binding is checked on every read as well as on write, so `amr`, `acr` and the
+ * organisation MFA gate never depend on every login path having rewritten the subject.
  */
 final class AuthenticationContextService
 {
@@ -92,11 +95,12 @@ final class AuthenticationContextService
     }
 
     /**
-     * Methods recorded for this browser session.
+     * Every recorded method, whoever proved it. Private on purpose: callers read
+     * through {@see methodsFor()} or {@see amrValues()}, which check the subject.
      *
      * @return list<string>
      */
-    public function methods(): array
+    private function storedMethodsIgnoringSubject(): array
     {
         if (! request()->hasSession()) {
             return [];
@@ -132,18 +136,24 @@ final class AuthenticationContextService
             return [];
         }
 
-        return $this->methods();
+        return $this->storedMethodsIgnoringSubject();
     }
 
     /**
-     * Values for the `amr` claim: recorded methods, or `pwd` when none were recorded
-     * (signed-in session without going through the login listeners, e.g. `actingAs`).
+     * Values for the `amr` claim: the methods recorded for the signed-in web user, or
+     * `pwd` when none were recorded for them (no login listener ran, e.g. `actingAs`,
+     * or the session's methods belong to another subject). The `pwd` floor never
+     * satisfies organisation MFA, so a missing or foreign binding fails closed.
      *
      * @return list<string>
      */
     public function amrValues(): array
     {
-        $authenticationMethods = $this->methods();
+        $userIdentifier = Auth::guard('web')->id();
+
+        $authenticationMethods = is_int($userIdentifier) || is_string($userIdentifier)
+            ? $this->methodsFor($userIdentifier)
+            : [];
 
         if ($authenticationMethods === []) {
             return [AuthenticationMethodEnum::Password->value];

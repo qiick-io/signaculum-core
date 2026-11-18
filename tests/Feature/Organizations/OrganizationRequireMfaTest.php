@@ -117,7 +117,7 @@ test('an enrolled member with only email-code amr is stepped up before authorizi
     $this->actingAs($member);
     session([
         OidcSessionService::SESSION_KEY => 'sid-before-step-up',
-        'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value],
+        'oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value],
     ]);
 
     $this->get($authorizeUrl)->assertRedirect('/login');
@@ -143,7 +143,7 @@ test('an enrolled member with password-only amr is stepped up before authorizing
     $client = createOidcClient();
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value]]);
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value]]);
 
     $this->get(authorizeUrl($client, pkcePair()['challenge']))
         ->assertRedirect('/login');
@@ -168,7 +168,7 @@ test('a password plus TOTP session can finish authorization when the org require
     $client = createOidcClient();
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => [
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [
         AuthenticationMethodEnum::Password->value,
         AuthenticationMethodEnum::OneTimePassword->value,
         AuthenticationMethodEnum::MultipleFactors->value,
@@ -211,7 +211,7 @@ test('a hardware passkey session satisfies organisation MFA without inventing mf
     $passkey->save();
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::HardwareKey->value]]);
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::HardwareKey->value]]);
 
     $client = createOidcClient();
     $pkce = pkcePair();
@@ -247,7 +247,7 @@ test('a platform passkey session satisfies organisation MFA', function () {
     $client = createOidcClient();
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::SoftwareKey->value]]);
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::SoftwareKey->value]]);
 
     $authorization = $this->get(authorizeUrl($client, pkcePair()['challenge']));
 
@@ -279,7 +279,7 @@ test('organisation MFA step-up does not fan out back-channel logout', function (
     $this->actingAs($member);
     session([
         OidcSessionService::SESSION_KEY => 'sid-org-mfa-step-up',
-        'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value],
+        'oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value],
     ]);
 
     $client = createOidcClient();
@@ -311,7 +311,7 @@ test('prompt=none when organisation MFA is unsatisfied returns interaction_requi
     $this->actingAs($member);
     session([
         OidcSessionService::SESSION_KEY => $sid,
-        'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value],
+        'oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value],
     ]);
 
     $response = $this->get(authorizeUrl($client, pkcePair()['challenge'], [
@@ -350,7 +350,7 @@ test('prompt=none interaction_required with a revoked client is refused with htt
     $this->actingAs($member);
     session([
         OidcSessionService::SESSION_KEY => 'sid-revoked-client-org-mfa',
-        'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value],
+        'oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value],
     ]);
 
     $response = $this->get(authorizeUrl($client, pkcePair()['challenge'], [
@@ -378,7 +378,7 @@ test('organisation MFA step-up shows that a second factor is required', function
     $client = createOidcClient();
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value]]);
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value]]);
 
     $this->get(authorizeUrl($client, pkcePair()['challenge']))
         ->assertRedirect('/login')
@@ -424,7 +424,7 @@ test('password plus TOTP org MFA authorization keeps truthful amr', function () 
     ]);
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => [
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [
         AuthenticationMethodEnum::Password->value,
         AuthenticationMethodEnum::OneTimePassword->value,
         AuthenticationMethodEnum::MultipleFactors->value,

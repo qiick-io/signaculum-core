@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - Organisation MFA gate no longer accepts enrolment alone; session `amr` must contain a second factor before `/oauth/authorize` completes (#131).
-- Session `amr` is bound to the user who proved it: a passkey verified for an account whose login is then refused no longer counts for the next account that signs in (#131).
+- Session `amr` is bound to the user who proved it, on write and on every read: a passkey verified for an account whose login is then refused no longer counts for the next account that signs in, and methods bound to another (or no) subject never reach the `id_token` or the organisation MFA gate (#131).
 
 ## [1.0.0-beta.1] - 2026-11-16
 

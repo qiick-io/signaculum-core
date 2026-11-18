@@ -60,7 +60,7 @@ test('malformed or unknown session amr values are stepped up', function (mixed $
     $member = mfaRequiredMember();
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => $storedMethods]);
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => $storedMethods]);
 
     $this->get(authorizeUrl(createOidcClient(), pkcePair()['challenge']))
         ->assertRedirect('/login');
@@ -81,7 +81,7 @@ test('a client cannot inject amr through the authorization request', function ()
     $member = mfaRequiredMember();
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value]]);
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value]]);
 
     $this->get(authorizeUrl(createOidcClient(), pkcePair()['challenge'], [
         'amr' => 'mfa',
@@ -110,7 +110,7 @@ test('the consent POST cannot be reached without a gated authorize GET', functio
     $member = mfaRequiredMember();
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value]]);
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value]]);
 
     $this->post('/oauth/authorize', ['auth_token' => 'forged-auth-token'])
         ->assertForbidden();
@@ -121,7 +121,7 @@ test('a form POST authorization request is stepped up like the GET', function ()
     $client = createOidcClient();
 
     $this->actingAs($member);
-    session(['oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value]]);
+    session(['oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::OneTimePassword->value]]);
 
     $parameters = [];
     parse_str((string) parse_url(authorizeUrl($client, pkcePair()['challenge']), PHP_URL_QUERY), $parameters);
@@ -199,3 +199,30 @@ test('a passkey-only member who signs in with just the password is stepped up', 
 
     expect(auth()->check())->toBeFalse();
 });
+
+test('methods bound to another subject do not satisfy organisation MFA', function (?string $foreignSubject) {
+    // No login path reaches this state today; the gate must refuse it anyway, so a
+    // future path that signs a user in without recording a method cannot reuse it.
+    $member = mfaRequiredMember();
+
+    $this->actingAs($member);
+    session(array_filter([
+        'oidc.authentication_subject' => $foreignSubject === 'other' ? (string) User::factory()->create()->getKey() : $foreignSubject,
+        'oidc.authentication_methods' => [
+            AuthenticationMethodEnum::Password->value,
+            AuthenticationMethodEnum::OneTimePassword->value,
+            AuthenticationMethodEnum::MultipleFactors->value,
+            AuthenticationMethodEnum::HardwareKey->value,
+        ],
+    ], fn (mixed $value): bool => $value !== null));
+
+    $this->get(authorizeUrl(createOidcClient(), pkcePair()['challenge']))
+        ->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse();
+})->with([
+    'another user' => ['other'],
+    'no subject recorded' => [null],
+    'empty subject' => [''],
+    'numeric look-alike' => ['0'],
+]);
