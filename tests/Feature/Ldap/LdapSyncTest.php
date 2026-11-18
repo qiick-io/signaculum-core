@@ -15,7 +15,6 @@ use App\Services\LdapUserSyncService;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 use LdapRecord\Laravel\Testing\DirectoryEmulator;
 use Spatie\Activitylog\Models\Activity;
 

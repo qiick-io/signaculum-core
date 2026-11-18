@@ -24,7 +24,7 @@ Every qiick app keeps working standalone with local login. Signaculum is one sta
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Install**  | `composer create-project qiick/signaculum-core` · [Install](./docs/install.md) · [Upgrade](./docs/upgrade.md)                                                             |
 | **OIDC**     | [Protocol profile](./docs/oidc-profile.md) · [Clients](./docs/clients.md) · [Organisations](./docs/organizations.md) · [Keys & backup](./docs/key-rotation-and-backup.md) |
-| **Security** | [SECURITY.md](./SECURITY.md) · [Password policy](./docs/password-policy.md) · [LDAP sync](./docs/ldap.md)                                                                   |
+| **Security** | [SECURITY.md](./SECURITY.md) · [Password policy](./docs/password-policy.md) · [LDAP sync](./docs/ldap.md)                                                                 |
 | **Issues**   | [GitHub Issues](https://github.com/qiick-io/signaculum-core/issues)                                                                                                       |
 
 ## What you get

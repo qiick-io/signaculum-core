@@ -12,19 +12,19 @@ Library: [`directorytree/ldaprecord-laravel`](https://ldaprecord.com/docs/larave
 
 Instance settings key `ldap` (JSON in `settings`):
 
-| Field | Default | Notes |
-| --- | --- | --- |
-| `enabled` | `false` | Sync no-ops until enabled |
-| `hosts` | `[]` | One or more hostnames / IPs |
-| `port` | `636` | `636` for LDAPS, `389` for StartTLS |
-| `encryption` | `tls` | `tls` (LDAPS), `starttls`, or `none` (refused while enabled) |
-| `bind_dn` | `''` | Service account DN |
-| `bind_password` | `null` | Laravel `Crypt` ciphertext; never returned to UI/API |
-| `base_dn` | `''` | Search base |
-| `user_filter` | `(objectClass=person)` | Extra LDAP filter (simple `(attr=value)` preferred) |
-| Attribute map | mail / givenName / sn / displayName / uid / objectGUID | Configurable |
-| `sync_interval_minutes` | `60` | Scheduler interval |
-| `last_synced_at` | `null` | ISO-8601 after a successful run |
+| Field                   | Default                                                | Notes                                                        |
+| ----------------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| `enabled`               | `false`                                                | Sync no-ops until enabled                                    |
+| `hosts`                 | `[]`                                                   | One or more hostnames / IPs                                  |
+| `port`                  | `636`                                                  | `636` for LDAPS, `389` for StartTLS                          |
+| `encryption`            | `tls`                                                  | `tls` (LDAPS), `starttls`, or `none` (refused while enabled) |
+| `bind_dn`               | `''`                                                   | Service account DN                                           |
+| `bind_password`         | `null`                                                 | Laravel `Crypt` ciphertext; never returned to UI/API         |
+| `base_dn`               | `''`                                                   | Search base                                                  |
+| `user_filter`           | `(objectClass=person)`                                 | Extra LDAP filter (simple `(attr=value)` preferred)          |
+| Attribute map           | mail / givenName / sn / displayName / uid / objectGUID | Configurable                                                 |
+| `sync_interval_minutes` | `60`                                                   | Scheduler interval                                           |
+| `last_synced_at`        | `null`                                                 | ISO-8601 after a successful run                              |
 
 TLS (LDAPS) or StartTLS is **required by default**. Enabling the connector with
 `encryption=none` is rejected.
@@ -35,10 +35,10 @@ TLS (LDAPS) or StartTLS is **required by default**. Enabling the connector with
 2. Search under `base_dn` with the user filter.
 3. For each entry with a stable GUID (`objectGUID` / `entryUUID` / configured attribute)
    and a valid `mail`:
-   - **Create** a local user linked by `users.ldap_guid` (random unusable local password).
-   - **Update** name / email / DN when already linked.
-   - **Conflict**: a local account already owns that email and is not LDAP-linked →
-     skip and write an activity-log `ldap_sync_conflict` (never overwrite).
+    - **Create** a local user linked by `users.ldap_guid` (random unusable local password).
+    - **Update** name / email / DN when already linked.
+    - **Conflict**: a local account already owns that email and is not LDAP-linked →
+      skip and write an activity-log `ldap_sync_conflict` (never overwrite).
 4. LDAP-linked users missing from this run are **deactivated** (`is_active=false`),
    not deleted (tokens/sessions revoked via the usual deactivate path).
 
