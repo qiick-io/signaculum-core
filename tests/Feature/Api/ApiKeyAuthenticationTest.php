@@ -59,7 +59,22 @@ it('refuses a revoked key on the very next request', function (): void {
     assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key has been revoked.');
 });
 
+/**
+ * The 'not json' case runs on SQLite only, where a json column is plain TEXT. PostgreSQL,
+ * MySQL and MariaDB validate the column, so a key there can never hold such a row and the
+ * guard's unparseable branch is only reachable on SQLite: the skip states that fact, it is
+ * not a workaround. Without it the case fails on the fixture update, before the request runs.
+ *
+ * Observed when writing `users:read` into `api_keys.scopes` (#158, as in externa-core#790):
+ * - pgsql: SQLSTATE[22P02] invalid input syntax for type json
+ * - mysql: SQLSTATE[22032] 3140 Invalid JSON text: "Invalid value." at position 0
+ * - mariadb: SQLSTATE[23000] 4025 CONSTRAINT `api_keys.scopes` failed
+ */
 it('refuses a key whose stored scopes no longer parse', function (string $storedScopes): void {
+    if (DB::getDriverName() !== 'sqlite' && ! json_validate($storedScopes)) {
+        $this->markTestSkipped('A non-JSON scopes value is only storable on SQLite.');
+    }
+
     ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
     DB::table('api_keys')->where('id', $apiKey->getKey())->update(['scopes' => $storedScopes]);
 
@@ -93,7 +108,22 @@ it('refuses a request from outside the ip allowlist', function (): void {
     $this->withServerVariables(['REMOTE_ADDR' => '10.1.2.3'])->withToken($plain)->getJson('/api/v1/users')->assertOk();
 });
 
+/**
+ * The 'not json' case runs on SQLite only, for the same reason as the stored scopes above:
+ * PostgreSQL, MySQL and MariaDB refuse a non-JSON value in the `api_keys.ip_allowlist` json
+ * column on write, so the unparseable branch is only reachable on SQLite.
+ *
+ * Observed when writing `127.0.0.1` into `api_keys.ip_allowlist` (#158):
+ * - pgsql: SQLSTATE[22P02] invalid input syntax for type json
+ * - mysql: SQLSTATE[22032] 3140 Invalid JSON text: "The document root must not be followed by
+ *   other values." at position 5
+ * - mariadb: SQLSTATE[23000] 4025 CONSTRAINT `api_keys.ip_allowlist` failed
+ */
 it('refuses every address when the stored allowlist does not parse', function (string $storedAllowlist): void {
+    if (DB::getDriverName() !== 'sqlite' && ! json_validate($storedAllowlist)) {
+        $this->markTestSkipped('A non-JSON allowlist value is only storable on SQLite.');
+    }
+
     ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
     DB::table('api_keys')->where('id', $apiKey->getKey())->update(['ip_allowlist' => $storedAllowlist]);
 
