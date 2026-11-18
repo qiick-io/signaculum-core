@@ -652,6 +652,12 @@
             "login": "Login",
             "logout": "Logout",
             "failed": "Failed login",
+            "two_factor_enabled": "Two-factor setup started",
+            "two_factor_confirmed": "Authenticator app confirmed",
+            "two_factor_disabled": "Two-factor authentication turned off",
+            "recovery_codes_regenerated": "Recovery codes regenerated",
+            "passkey_registered": "Passkey added",
+            "passkey_deleted": "Passkey removed",
             "settings_updated": "Settings updated",
             "consent_granted": "Consent granted",
             "token_revoked": "Access revoked",
@@ -662,7 +668,8 @@
             "user_impersonation_stopped": "Impersonation stopped",
             "user_impersonation_expired": "Impersonation expired",
             "locked": "Account locked",
-            "organization_mfa_requirement_updated": "Organisation MFA requirement updated"
+            "organization_mfa_requirement_updated": "Organisation MFA requirement updated",
+            "organization_member_tokens_revoked": "Member tokens revoked"
         },
         "logs": {
             "default": "Application",
@@ -769,7 +776,8 @@
             "logoDark": "Logo (dark)",
             "saveBranding": "Save branding",
             "requireMfa": "Members must use two-factor authentication",
-            "requireMfaHint": "Members without TOTP or a passkey are sent to Security before they can authorize an application. Signaculum never claims MFA in amr or acr unless the user actually used a second factor."
+            "requireMfaHint": "Members without TOTP or a passkey are sent to Security before they can authorize an application. Signaculum never claims MFA in amr or acr unless the user actually used a second factor.",
+            "requireMfaRevokesTokens": "Turning this on revokes the existing access and refresh tokens of every member. Connected applications lose access until each member signs in again with a second factor."
         },
         "accept": {
             "head": "Organisation invitation",

@@ -652,6 +652,12 @@
             "login": "Accesso",
             "logout": "Uscita",
             "failed": "Accesso non riuscito",
+            "two_factor_enabled": "Configurazione due fattori avviata",
+            "two_factor_confirmed": "App di autenticazione confermata",
+            "two_factor_disabled": "Autenticazione a due fattori disattivata",
+            "recovery_codes_regenerated": "Codici di recupero rigenerati",
+            "passkey_registered": "Passkey aggiunta",
+            "passkey_deleted": "Passkey rimossa",
             "settings_updated": "Impostazioni aggiornate",
             "consent_granted": "Consenso concesso",
             "token_revoked": "Accesso revocato",
@@ -662,7 +668,8 @@
             "user_impersonation_stopped": "Impersonazione interrotta",
             "user_impersonation_expired": "Impersonazione scaduta",
             "locked": "Account bloccato",
-            "organization_mfa_requirement_updated": "Requisito MFA dell'organizzazione aggiornato"
+            "organization_mfa_requirement_updated": "Requisito MFA dell'organizzazione aggiornato",
+            "organization_member_tokens_revoked": "Token dei membri revocati"
         },
         "logs": {
             "default": "Applicazione",
@@ -769,7 +776,8 @@
             "logoDark": "Logo (scuro)",
             "saveBranding": "Salva branding",
             "requireMfa": "I membri devono usare l'autenticazione a due fattori",
-            "requireMfaHint": "I membri senza TOTP o passkey vengono inviati a Sicurezza prima di autorizzare un'applicazione. Signaculum non dichiara mai MFA in amr o acr se l'utente non ha usato un secondo fattore."
+            "requireMfaHint": "I membri senza TOTP o passkey vengono inviati a Sicurezza prima di autorizzare un'applicazione. Signaculum non dichiara mai MFA in amr o acr se l'utente non ha usato un secondo fattore.",
+            "requireMfaRevokesTokens": "Attivando questa opzione vengono revocati gli access token e i refresh token esistenti di tutti i membri. Le applicazioni collegate perdono l'accesso finché ogni membro non accede di nuovo con un secondo fattore."
         },
         "accept": {
             "head": "Invito all'organizzazione",

@@ -652,6 +652,12 @@
             "login": "Anmeldung",
             "logout": "Abmeldung",
             "failed": "Fehlgeschlagene Anmeldung",
+            "two_factor_enabled": "Zwei-Faktor-Einrichtung gestartet",
+            "two_factor_confirmed": "Authenticator-App bestätigt",
+            "two_factor_disabled": "Zwei-Faktor-Authentifizierung deaktiviert",
+            "recovery_codes_regenerated": "Wiederherstellungscodes neu erstellt",
+            "passkey_registered": "Passkey hinzugefügt",
+            "passkey_deleted": "Passkey entfernt",
             "settings_updated": "Einstellungen aktualisiert",
             "consent_granted": "Zustimmung erteilt",
             "token_revoked": "Zugriff widerrufen",
@@ -662,7 +668,8 @@
             "user_impersonation_stopped": "Imitation beendet",
             "user_impersonation_expired": "Imitation abgelaufen",
             "locked": "Konto gesperrt",
-            "organization_mfa_requirement_updated": "MFA-Pflicht der Organisation geändert"
+            "organization_mfa_requirement_updated": "MFA-Pflicht der Organisation geändert",
+            "organization_member_tokens_revoked": "Mitglieder-Tokens widerrufen"
         },
         "logs": {
             "default": "Anwendung",
@@ -769,7 +776,8 @@
             "logoDark": "Logo (dunkel)",
             "saveBranding": "Branding speichern",
             "requireMfa": "Mitglieder müssen die Zwei-Faktor-Authentifizierung nutzen",
-            "requireMfaHint": "Mitglieder ohne TOTP oder Passkey werden zur Sicherheit geleitet, bevor sie eine Anwendung autorisieren können. Signaculum behauptet MFA in amr oder acr nie, wenn kein zweiter Faktor verwendet wurde."
+            "requireMfaHint": "Mitglieder ohne TOTP oder Passkey werden zur Sicherheit geleitet, bevor sie eine Anwendung autorisieren können. Signaculum behauptet MFA in amr oder acr nie, wenn kein zweiter Faktor verwendet wurde.",
+            "requireMfaRevokesTokens": "Beim Aktivieren werden die bestehenden Access- und Refresh-Tokens aller Mitglieder widerrufen. Verbundene Anwendungen verlieren den Zugriff, bis sich jedes Mitglied erneut mit einem zweiten Faktor anmeldet."
         },
         "accept": {
             "head": "Organisationseinladung",

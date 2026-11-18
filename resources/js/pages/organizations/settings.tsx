@@ -179,7 +179,7 @@ export default function OrganizationSettings({
                                                         checked === true,
                                                     )
                                                 }
-                                                aria-describedby="is-mfa-required-hint"
+                                                aria-describedby="is-mfa-required-hint is-mfa-required-revocation-hint"
                                             />
                                             <FieldLabel htmlFor="is_mfa_required">
                                                 {t(
@@ -193,6 +193,14 @@ export default function OrganizationSettings({
                                         >
                                             {t(
                                                 'organizations.settings.requireMfaHint',
+                                            )}
+                                        </FieldDescription>
+                                        <FieldDescription
+                                            id="is-mfa-required-revocation-hint"
+                                            className="pl-8"
+                                        >
+                                            {t(
+                                                'organizations.settings.requireMfaRevokesTokens',
                                             )}
                                         </FieldDescription>
                                         <FieldError>
