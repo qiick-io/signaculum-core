@@ -2,7 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Actions\CreateApiKeyAction;
+use App\Data\ApiKeyData;
+use App\Enums\ApiKeyScopeEnum;
+use App\Enums\WebhookEventEnum;
 use App\Models\User;
+use App\Models\Webhook;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Carbon;
@@ -59,8 +64,8 @@ it('logs user creation and updates with the acting admin and never the password'
     $user = User::query()->where('email', 'grace@example.com')->sole();
     $created = latestActivity('created', $user->getMorphClass());
 
-    expect($created->causer_id)->toBe($admin->id)
-        ->and($created->subject_id)->toBe($user->id)
+    expect($created->causer_id)->toBe((string) $admin->id)
+        ->and($created->subject_id)->toBe((string) $user->id)
         ->and($created->attribute_changes['attributes']['email'] ?? null)->toBe('grace@example.com')
         ->and($created->attribute_changes['attributes'] ?? [])->not->toHaveKey('password');
 
@@ -73,7 +78,7 @@ it('logs user creation and updates with the acting admin and never the password'
 
     $updated = latestActivity('updated', $user->getMorphClass());
 
-    expect($updated->causer_id)->toBe($admin->id)
+    expect($updated->causer_id)->toBe((string) $admin->id)
         ->and($updated->attribute_changes['attributes']['last_name'] ?? null)->toBe('Murray')
         ->and(json_encode($updated->attribute_changes))->not->toContain('password');
 });
@@ -112,12 +117,57 @@ it('logs logins, logouts and failed logins without the password', function () {
     $this->post(route('login.store'), ['email' => 'ada@example.com', 'password' => 'password'])
         ->assertRedirect();
 
-    expect(latestActivity('login'))->causer_id->toBe($user->id)->log_name->toBe('auth')
+    expect(latestActivity('login'))->causer_id->toBe((string) $user->id)->log_name->toBe('auth')
         ->and(latestActivity('login')->properties['ip'] ?? null)->not->toBeNull();
 
     $this->actingAs($user)->post(route('logout'));
 
-    expect(latestActivity('logout')->causer_id)->toBe($user->id);
+    expect(latestActivity('logout')->causer_id)->toBe((string) $user->id);
+});
+
+it('stores and reads back the subject of every logged model, integer and UUID keys alike', function () {
+    // Clients have UUID keys, the other three integer keys: the morph columns hold both.
+    // A bigint column passed on SQLite only; MySQL, MariaDB and PostgreSQL refused the UUID.
+    $admin = activityAdmin();
+    $this->actingAs($admin);
+
+    $loggedModels = [
+        'user' => User::factory()->create(),
+        'client' => createOidcClient(),
+        'api key' => app(CreateApiKeyAction::class)
+            ->execute($admin, new ApiKeyData('Morph check', [ApiKeyScopeEnum::UsersRead->value]))
+            ->apiKey,
+        'webhook' => Webhook::query()->create([
+            'url' => 'https://hooks.example.com/signaculum',
+            'secret' => 'test-signing-secret-value',
+            'events' => [WebhookEventEnum::UserCreated->value],
+            'is_active' => true,
+        ]),
+    ];
+
+    foreach ($loggedModels as $modelLabel => $loggedModel) {
+        $created = latestActivity('created', $loggedModel->getMorphClass());
+
+        expect($created->subject_id)->toBe((string) $loggedModel->getKey(), $modelLabel)
+            ->and($created->subject?->is($loggedModel))->toBeTrue($modelLabel)
+            ->and($created->causer?->is($admin))->toBeTrue($modelLabel);
+    }
+});
+
+it('shows each subject id with its model key type, integer or UUID', function () {
+    $admin = activityAdmin();
+    $this->actingAs($admin);
+
+    $user = User::factory()->create();
+    $client = createOidcClient();
+
+    $this->get(route('admin.activity-logs.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where(
+            'activityLogs.data',
+            fn ($rows) => collect($rows)->pluck('subject.id')->contains(fn ($subjectId) => $subjectId === $user->getKey())
+                && collect($rows)->pluck('subject.id')->contains(fn ($subjectId) => $subjectId === $client->getKey()),
+        ));
 });
 
 it('logs instance settings updates with keys only', function () {
@@ -133,7 +183,7 @@ it('logs instance settings updates with keys only', function () {
     $activity = latestActivity('settings_updated');
 
     expect($activity->log_name)->toBe('settings')
-        ->and($activity->causer_id)->toBe($admin->id)
+        ->and($activity->causer_id)->toBe((string) $admin->id)
         ->and($activity->properties['section'] ?? null)->toBe('general')
         ->and($activity->properties['keys'] ?? [])->toContain('app_name')
         ->and($activity->properties['keys'] ?? [])->toContain('activity_retention_days')
@@ -151,7 +201,7 @@ it('logs consent grants and application access revocation without secrets', func
 
     $consent = latestActivity('consent_granted');
 
-    expect($consent->causer_id)->toBe($user->id)
+    expect($consent->causer_id)->toBe((string) $user->id)
         ->and($consent->log_name)->toBe('auth')
         ->and($consent->properties['client_id'] ?? null)->toBe($client->getKey())
         ->and($consent->properties['scopes'] ?? [])->toContain('openid');
@@ -161,7 +211,7 @@ it('logs consent grants and application access revocation without secrets', func
 
     $revoked = latestActivity('token_revoked');
 
-    expect($revoked->causer_id)->toBe($user->id)
+    expect($revoked->causer_id)->toBe((string) $user->id)
         ->and($revoked->properties['client_id'] ?? null)->toBe($client->getKey())
         ->and(json_encode(Activity::query()->get()->toArray()))->not->toContain($code);
 });

@@ -49,7 +49,8 @@ final class ActivityLogResource extends JsonResource
             ] : null),
             'subject' => $this->whenLoaded('subject', fn () => $activity->subject !== null ? [
                 'type' => class_basename((string) $activity->subject_type),
-                'id' => $activity->subject_id,
+                // The model's own key type (integer or UUID), not the string column.
+                'id' => $activity->subject->getKey(),
                 'label' => $this->subjectLabel($activity->subject),
             ] : null),
             'changes' => $activity->attribute_changes?->toArray() ?? [],
