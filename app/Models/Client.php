@@ -25,7 +25,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property list<string> $grant_types
  * @property bool $revoked
  * @property bool $is_first_party
- * @property list<string> $post_logout_redirect_uris
+ * @property list<string>|null $post_logout_redirect_uris
  * @property string|null $backchannel_logout_uri
  * @property bool $is_backchannel_logout_session_required
  */
