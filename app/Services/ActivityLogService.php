@@ -24,8 +24,10 @@ final class ActivityLogService
             ->latest('id');
 
         if ($filters['user_ids'] !== []) {
+            // causer_id is a string column (UUID and integer keys share it); PostgreSQL
+            // refuses to compare it with integer bindings.
             $query->where('causer_type', (new User)->getMorphClass())
-                ->whereIn('causer_id', $filters['user_ids']);
+                ->whereIn('causer_id', array_map(strval(...), $filters['user_ids']));
         }
 
         if ($filters['event'] !== '') {
