@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `signaculum:install` checks for and generates the Passport keys at `Passport::keyPath()`, so a key directory set with `Passport::loadKeysFrom()` is honoured; its tests use their own key directory instead of deleting the shared pair, which made the parallel suite flaky (#144).
+
 ## [1.0.0-beta.1] - 2026-11-16
 
 First tagged beta of Signaculum: self-hosted OpenID Connect IdP for the qiick suite (Passport 13 + in-house OIDC layer, admin UI, organisations, distribution).

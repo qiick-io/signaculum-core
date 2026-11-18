@@ -8,7 +8,24 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Laravel\Passport\Passport;
+
+/*
+ * Parallel workers each get their own database but share storage/, so one Passport key pair
+ * serves them all. Deleting it here made token signing fail in whichever worker raced it (#144).
+ * The installer therefore writes its keys into a directory of this file's own.
+ */
+beforeEach(function () {
+    $this->passportKeyDirectory = sys_get_temp_dir().'/signaculum-install-keys-'.Str::uuid();
+    File::ensureDirectoryExists($this->passportKeyDirectory);
+    Passport::loadKeysFrom($this->passportKeyDirectory);
+});
+
+afterEach(function () {
+    Passport::$keyPath = null;
+    File::deleteDirectory($this->passportKeyDirectory);
+});
 
 test('signaculum:install is registered', function () {
     expect(Artisan::all())->toHaveKey('signaculum:install');
@@ -67,8 +84,6 @@ test('install refuses an existing .env without --force in non-interactive mode',
 
 test('install skips creating an administrator when a user already exists', function () {
     [$envPath, $envBackup] = beginInstallFixtures();
-    File::delete(Passport::keyPath('oauth-private.key'));
-    File::delete(Passport::keyPath('oauth-public.key'));
 
     try {
         $this->artisan(InstallCommand::class, [
@@ -98,8 +113,6 @@ test('install skips creating an administrator when a user already exists', funct
 
 test('install migrates sqlite, creates keys and the first administrator', function () {
     [$envPath, $envBackup] = beginInstallFixtures();
-    File::delete(Passport::keyPath('oauth-private.key'));
-    File::delete(Passport::keyPath('oauth-public.key'));
     putenv('SIGNACULUM_ADMIN_EMAIL=admin@example.com');
     putenv('SIGNACULUM_ADMIN_PASSWORD=password');
     putenv('SIGNACULUM_ADMIN_FIRST_NAME=Ada');
@@ -135,7 +148,8 @@ test('install migrates sqlite, creates keys and the first administrator', functi
             ->and((bool) $administrator->is_instance_admin)->toBeTrue()
             ->and((bool) $administrator->is_active)->toBeTrue()
             ->and(is_string($administrator->password) && Hash::check('password', $administrator->password))->toBeTrue()
-            ->and(File::exists(Passport::keyPath('oauth-private.key')))->toBeTrue()
+            ->and(File::exists($this->passportKeyDirectory.'/oauth-private.key'))->toBeTrue()
+            ->and(File::exists($this->passportKeyDirectory.'/oauth-public.key'))->toBeTrue()
             ->and(File::get($envPath))->toContain('APP_NAME=Signaculum')
             ->and(File::get($envPath))->toContain('DB_CONNECTION=sqlite');
     } finally {
@@ -155,8 +169,6 @@ test('install migrates sqlite, creates keys and the first administrator', functi
 
 test('install prints a generated administrator password when none is provided', function () {
     [$envPath, $envBackup] = beginInstallFixtures();
-    File::delete(Passport::keyPath('oauth-private.key'));
-    File::delete(Passport::keyPath('oauth-public.key'));
     putenv('SIGNACULUM_ADMIN_EMAIL=generated@example.com');
     $_ENV['SIGNACULUM_ADMIN_EMAIL'] = 'generated@example.com';
     putenv('SIGNACULUM_ADMIN_PASSWORD');
