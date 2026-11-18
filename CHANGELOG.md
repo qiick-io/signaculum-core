@@ -89,5 +89,6 @@ First tagged beta of Signaculum: self-hosted OpenID Connect IdP for the qiick su
 - Run a **queue worker** for mail, outbound webhooks and back-channel logout.
 - Back up `APP_KEY`, `storage/oauth-*.key` and the database (including `signing_keys`) before moving hosts — see [docs/key-rotation-and-backup.md](./docs/key-rotation-and-backup.md).
 - Beta: wire contracts may still change before 1.0.0; pin clients to this tag and read [docs/oidc-profile.md](./docs/oidc-profile.md).
-  [Unreleased]: https://github.com/qiick-io/signaculum-core/compare/v1.0.0-beta.1...HEAD
-  [1.0.0-beta.1]: https://github.com/qiick-io/signaculum-core/releases/tag/v1.0.0-beta.1
+
+[Unreleased]: https://github.com/qiick-io/signaculum-core/compare/v1.0.0-beta.1...HEAD
+[1.0.0-beta.1]: https://github.com/qiick-io/signaculum-core/releases/tag/v1.0.0-beta.1
