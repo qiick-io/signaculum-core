@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\AuthenticationMethodEnum;
 use App\Enums\OrganizationRoleEnum;
 use App\Models\Client;
+use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
 use App\Services\OidcSessionService;
@@ -303,4 +304,224 @@ test('a member without 2FA is sent to security before device authorization when 
         ->assertRedirect(route('security.edit'));
 
     expect(session('url.intended'))->toStartWith(url('/oauth/device/authorize'));
+});
+
+/**
+ * A member of an organisation that does not require MFA yet, with the device consent
+ * screen open. Returns the organisation so a test can switch the requirement on.
+ *
+ * @return array{organization: Organization, member: User, client: Client, device: array{device_code: string, user_code: string, interval: int}, auth_token: string}
+ */
+function memberWithOpenDeviceConsent(): array
+{
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $organization = createOrganizationWithOwner($owner, ['slug' => 'late-mfa-org']);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $client = deviceAuthorizationClient();
+    $device = issueDeviceCode($client);
+
+    test()->actingAs($member)
+        ->get(route('passport.device.authorizations.authorize', ['user_code' => $device['user_code']]))
+        ->assertOk();
+
+    return [
+        'organization' => $organization,
+        'member' => $member,
+        'client' => $client,
+        'device' => $device,
+        'auth_token' => (string) session('authToken'),
+    ];
+}
+
+test('approving a device is refused when the organisation requires MFA at the moment of approval', function () {
+    ['organization' => $organization, 'client' => $client, 'device' => $device, 'auth_token' => $authToken] = memberWithOpenDeviceConsent();
+
+    // The consent screen was opened before the requirement; approving is the consenting act.
+    $organization->update(['is_mfa_required' => true]);
+
+    $this->post(route('passport.device.authorizations.approve'), ['auth_token' => $authToken])
+        ->assertRedirect(route('security.edit'));
+
+    expect(session('authToken'))->toBeNull()
+        ->and(session('url.intended'))->toBe(route('passport.device'));
+
+    // Refused, not denied: the device keeps polling until the user enrolls or the code expires.
+    redeemDeviceCode($client, $device['device_code'])
+        ->assertStatus(400)
+        ->assertJson(['error' => 'authorization_pending']);
+});
+
+test('approving a device steps up an enrolled member whose session lacks a second factor once the org requires MFA', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, ['slug' => 'late-device-step-up-org']);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $this->actingAs($member);
+    session([
+        'oidc.authentication_subject' => (string) $member->getKey(),
+        'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value],
+    ]);
+
+    $client = deviceAuthorizationClient();
+    $device = issueDeviceCode($client);
+
+    $this->get(route('passport.device.authorizations.authorize', ['user_code' => $device['user_code']]))
+        ->assertOk();
+
+    $authToken = (string) session('authToken');
+
+    $organization->update(['is_mfa_required' => true]);
+
+    // Enrolled but `amr` proves no second factor (#131): step up instead of enrolment.
+    $this->post(route('passport.device.authorizations.approve'), ['auth_token' => $authToken])
+        ->assertRedirect('/login');
+
+    // The gate points the step-up at code entry, not at a rebuilt `/oauth/authorize` URL
+    // (RFC 8628 keeps the authorization request on the device). Laravel's guest redirect
+    // then overwrites `url.intended` for a POST, as it already does for consent approval.
+    expect(auth()->check())->toBeFalse();
+
+    redeemDeviceCode($client, $device['device_code'])
+        ->assertStatus(400)
+        ->assertJson(['error' => 'authorization_pending']);
+});
+
+test('a member who must enroll MFA can still deny a device', function () {
+    ['organization' => $organization, 'client' => $client, 'device' => $device, 'auth_token' => $authToken] = memberWithOpenDeviceConsent();
+
+    $organization->update(['is_mfa_required' => true]);
+
+    $this->delete(route('passport.device.authorizations.deny'), ['auth_token' => $authToken])
+        ->assertRedirect()
+        ->assertRedirectToRoute('passport.device');
+
+    redeemDeviceCode($client, $device['device_code'])
+        ->assertStatus(401)
+        ->assertJson(['error' => 'access_denied']);
+});
+
+test('the device code-entry page sends a member without MFA to security when the org requires it', function () {
+    ['organization' => $organization] = memberWithOpenDeviceConsent();
+
+    $organization->update(['is_mfa_required' => true]);
+
+    $this->get(route('passport.device'))->assertRedirect(route('security.edit'));
+});
+
+test('user codes are 8 characters from a 20-letter alphabet (RFC 8628 §6.1, about 34.6 bits)', function () {
+    $client = deviceAuthorizationClient();
+
+    foreach (range(1, 5) as $attempt) {
+        expect(issueDeviceCode($client)['user_code'])->toMatch('/^[BCDFGHJKLMNPQRSTVWXZ]{4}-?[BCDFGHJKLMNPQRSTVWXZ]{4}$/');
+    }
+});
+
+test('user-code entry is rate limited per signed-in user across IP addresses (RFC 8628 §5.1)', function () {
+    config(['oidc.rate_limits.device_per_minute' => 2]);
+
+    $user = User::factory()->create();
+
+    foreach (['198.51.100.1', '198.51.100.2'] as $ipAddress) {
+        $this->actingAs($user)
+            ->withServerVariables(['REMOTE_ADDR' => $ipAddress])
+            ->get(route('passport.device.authorizations.authorize', ['user_code' => 'BCDFGHJK']))
+            ->assertRedirect(route('passport.device'));
+    }
+
+    $this->actingAs($user)
+        ->withServerVariables(['REMOTE_ADDR' => '198.51.100.3'])
+        ->get(route('passport.device.authorizations.authorize', ['user_code' => 'BCDFGHJK']))
+        ->assertStatus(429);
+});
+
+test('a device code issued to one client cannot be exchanged by another', function () {
+    $issuingClient = deviceAuthorizationClient();
+    $otherClient = deviceAuthorizationClient();
+    $device = issueDeviceCode($issuingClient);
+
+    $this->actingAs(User::factory()->create());
+    approveDeviceAuthorization($device['user_code']);
+
+    redeemDeviceCode($otherClient, $device['device_code'])
+        ->assertStatus(400)
+        ->assertJson(['error' => 'invalid_request']);
+
+    // The rightful client still gets its tokens: the failed attempt consumed nothing.
+    redeemDeviceCode($issuingClient, $device['device_code'])->assertOk();
+});
+
+test('an approved device code is single use', function () {
+    $client = deviceAuthorizationClient();
+    $device = issueDeviceCode($client);
+
+    $this->actingAs(User::factory()->create());
+    approveDeviceAuthorization($device['user_code']);
+
+    redeemDeviceCode($client, $device['device_code'])->assertOk();
+
+    redeemDeviceCode($client, $device['device_code'])
+        ->assertStatus(400)
+        ->assertJson(['error' => 'invalid_grant']);
+});
+
+test('an approved device code past its expiry cannot be exchanged', function () {
+    $client = deviceAuthorizationClient();
+    $device = issueDeviceCode($client);
+
+    $this->actingAs(User::factory()->create());
+    approveDeviceAuthorization($device['user_code']);
+
+    // league compares against time(), so move the stored expiry rather than the test clock.
+    DB::table('oauth_device_codes')
+        ->where('id', $device['device_code'])
+        ->update(['expires_at' => Date::now()->subSecond()]);
+
+    redeemDeviceCode($client, $device['device_code'])
+        ->assertStatus(400)
+        ->assertJson(['error' => 'expired_token']);
+});
+
+test('a denial cannot be overturned by a consent screen that was already open elsewhere', function () {
+    $client = deviceAuthorizationClient();
+    $device = issueDeviceCode($client);
+    $denyingUser = User::factory()->create();
+    $approvingUser = User::factory()->create();
+
+    // Two browsers open the consent screen for the same user code before either decides.
+    $this->actingAs($denyingUser)
+        ->get(route('passport.device.authorizations.authorize', ['user_code' => $device['user_code']]))
+        ->assertOk();
+    $denyingSession = ['authToken' => session('authToken'), 'deviceCode' => session('deviceCode')];
+
+    $this->actingAs($approvingUser)
+        ->get(route('passport.device.authorizations.authorize', ['user_code' => $device['user_code']]))
+        ->assertOk();
+    $approvingSession = ['authToken' => session('authToken'), 'deviceCode' => session('deviceCode')];
+
+    $this->actingAs($denyingUser)
+        ->withSession($denyingSession)
+        ->delete(route('passport.device.authorizations.deny'), ['auth_token' => $denyingSession['authToken']])
+        ->assertRedirect();
+
+    $this->actingAs($approvingUser)
+        ->withSession($approvingSession)
+        ->post(route('passport.device.authorizations.approve'), ['auth_token' => $approvingSession['authToken']])
+        ->assertStatus(400);
+
+    redeemDeviceCode($client, $device['device_code'])
+        ->assertStatus(401)
+        ->assertJson(['error' => 'access_denied']);
 });

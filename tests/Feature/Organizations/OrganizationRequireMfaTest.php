@@ -526,19 +526,24 @@ test('a member who cannot satisfy organisation MFA can still deny consent', func
  */
 test('every oauth route is classified for the organisation MFA gate', function () {
     $gatedRouteNames = [
-        'passport.authorizations.authorize', // GET consent screen; also auto-approval
-        'passport.authorizations.approve',   // POST authorization request or consent approval
+        'passport.authorizations.authorize',        // GET consent screen; also auto-approval
+        'passport.authorizations.approve',          // POST authorization request or consent approval
+        'passport.device',                          // device code entry (fails fast before consent)
+        'passport.device.authorizations.authorize', // device consent screen
+        'passport.device.authorizations.approve',   // device approval: the consenting act
     ];
 
     $ungatedRouteNames = [
-        'passport.authorizations.deny', // denial grants nothing
-        'passport.token',               // no session; user grants were gated at consent
-        'passport.token.refresh',       // first-party session cookie, no client involved
-        'oidc.userinfo',                // reads with an issued token
-        'oidc.introspect',              // client-authenticated read
-        'oidc.revoke',                  // revocation only
-        'oidc.end-session',             // logout
-        'oidc.end-session.confirm',     // logout
+        'passport.authorizations.deny',             // denial grants nothing
+        'passport.device.authorizations.deny',      // denial grants nothing
+        'passport.device.code',                     // no user: issues a pending device code only
+        'passport.token',                           // no session; user grants were gated at consent
+        'passport.token.refresh',                   // first-party session cookie, no client involved
+        'oidc.userinfo',                            // reads with an issued token
+        'oidc.introspect',                          // client-authenticated read
+        'oidc.revoke',                              // revocation only
+        'oidc.end-session',                         // logout
+        'oidc.end-session.confirm',                 // logout
     ];
 
     $oauthRouteNames = collect(Route::getRoutes()->getRoutes())

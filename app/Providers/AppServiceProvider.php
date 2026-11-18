@@ -193,10 +193,20 @@ class AppServiceProvider extends ServiceProvider
                 ->by((string) $request->ip());
         });
 
-        // RFC 8628 §5.1: slow user-code / device-code guessing.
+        // RFC 8628 §5.1: slow user-code guessing. A user code carries about 34.6 bits
+        // (8 of 20 letters), safe only while guesses are throttled. Codes are checked on a
+        // signed-in route, so the budget is per account as well as per IP: spreading
+        // guesses over many addresses does not buy one account more attempts.
         RateLimiter::for('oidc-device', function (Request $request) {
-            return Limit::perMinute((int) config('oidc.rate_limits.device_per_minute', 60))
-                ->by((string) $request->ip());
+            $perMinute = (int) config('oidc.rate_limits.device_per_minute', 60);
+            $limits = [Limit::perMinute($perMinute)->by('ip:'.$request->ip())];
+            $userIdentifier = $request->user()?->getAuthIdentifier();
+
+            if ($userIdentifier !== null) {
+                $limits[] = Limit::perMinute($perMinute)->by('user:'.$userIdentifier);
+            }
+
+            return $limits;
         });
 
         // Reserved for organisation invitation POSTs (S5); registered now so routes can attach it.

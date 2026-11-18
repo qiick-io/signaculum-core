@@ -77,8 +77,9 @@ Device `id_token` rules (OIDC Core §2 / §3.1.3.6; RFC 8628 has no authorizatio
 - Emits `auth_time`, `amr` and `sid` from the **approving browser session** (same sources as the authorization-code grant). Never invents or reuses stale values from another flow.
 - Omits `nonce` (none exists on the device authorization request).
 - Token polling errors follow RFC 8628 §3.5: `authorization_pending`, `slow_down`, `expired_token`, `access_denied`.
-- User-code entry (`/oauth/device`, `/oauth/device/authorize`) and `/oauth/device/code` share named rate limiters with the other OAuth endpoints.
-- Device approval uses the same web gates as `/oauth/authorize` (deactivated user, organisation MFA enrollment).
+- User codes are 8 letters from a 20-letter alphabet (about 34.6 bits, RFC 8628 §6.1). User-code entry (`/oauth/device`, `/oauth/device/authorize`) and `/oauth/device/code` share the `oidc-device` limiter, per IP and, when signed in, per account (§5.1).
+- The token endpoint returns `slow_down` when a pending code is polled faster than `interval` (5 s), `expired_token` after the 10-minute lifetime, `access_denied` after a denial, and refuses a code presented by another client. A code yields tokens once; the first approval or denial is final.
+- Device approval uses the same web gates as `/oauth/authorize` (deactivated user, organisation MFA enrollment). The organisation MFA gate runs again on the approving `POST`; a refused approval leaves the code pending and sends the user to enroll, then back to code entry. Denying is never gated.
 
 ## `prompt` and `max_age`
 
@@ -115,12 +116,14 @@ A remember-me **recaller** login (session restored from the cookie, `Auth::viaRe
 
 #### Organisation MFA requirement
 
-An organisation owner/admin may set **Members must use two-factor authentication** (`organizations.is_mfa_required`). Before `/oauth/authorize` can complete, a member of such an organisation must:
+An organisation owner/admin may set **Members must use two-factor authentication** (`organizations.is_mfa_required`). Before `/oauth/authorize` or an RFC 8628 device approval can complete, a member of such an organisation must:
 
 1. **Enrol** TOTP or a passkey (otherwise redirect to Settings → Security, intended URL preserved).
 2. **Prove a second factor in this session's `amr`** (RFC 8176): `mfa`, or a passkey method (`hwk` / `swk`). Email-code-only (`otp`) or password-only (`pwd`) sessions are stepped up like `max_age` / `prompt=login` (local re-auth, same `sid`, no back-channel fan-out; login toast explains that a second factor is required), then resume authorization.
 
-With `prompt=none` (OIDC Core §3.1.2.1 / §3.1.2.6), an unsatisfied organisation MFA requirement returns `interaction_required` (with `state` and `iss`) **without** ending the Signaculum session or showing UI.
+Both the consent screen and the approving request are checked, so a requirement switched on while a consent screen is open still applies. Denying is never gated.
+
+With `prompt=none` (OIDC Core §3.1.2.1 / §3.1.2.6), an unsatisfied organisation MFA requirement returns `interaction_required` (with `state` and `iss`) **without** ending the Signaculum session or showing UI. The device flow has no `prompt` parameter, so a device approval always gets the interactive path: the code is left pending (the device keeps polling `authorization_pending`) and the user goes to enrolment or step-up and then back to `/oauth/device` code entry.
 
 Passkey-only sign-in satisfies the org gate via `hwk`/`swk` without inventing `mfa` in `amr`. `acr` stays as decided elsewhere (`urn:qiick:loa:mfa` only when `amr` includes `mfa`). Instance-wide `two_factor_required` remains a separate setting.
 

@@ -42,18 +42,25 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * The consent approval POST is gated as well as the consent screen: approving is the
  * consenting act, and the organisation may start requiring MFA (or the user may join
- * one) after the screen was rendered. The deny route is not gated, so a user who cannot
- * enroll yet can still refuse a client they do not recognise.
+ * one) after the screen was rendered. The deny routes are not gated, so a user who
+ * cannot enroll yet can still refuse a client, or a device code, they do not recognise.
+ *
+ * A refused device approval has no client redirect URI to report to (RFC 8628 §3.3).
+ * The device code is left pending rather than denied: the device keeps polling
+ * (`authorization_pending`, §3.5), and the user is sent to enroll — or to prove a second
+ * factor — and then back to code entry, so they can finish before the code expires. The
+ * device flow has no `prompt` parameter: every request here comes from a user typing a
+ * code, so there is no silent variant and the enrolment or sign-in page is always shown.
  *
  * Instance-wide 2FA (`EnsureTwoFactorIsEnabledMiddleware`) remains separate.
  */
 final class EnsureOrganizationMfaIsSatisfiedMiddleware
 {
     /**
-     * Routes that show a consent screen or approve one. Matched by name, not path, so
-     * Passport's configurable route prefix cannot move them out of the gate.
-     * `OrganizationRequireMfaTest` fails when an `oauth/` route is added without being
-     * classified for this list.
+     * Routes that show a consent screen, approve one, or lead straight to one. Matched
+     * by name, not path, so Passport's configurable route prefix cannot move them out
+     * of the gate. `OrganizationRequireMfaTest` fails when an `oauth/` route is added
+     * without being classified for this list.
      *
      * @var list<string>
      */
@@ -62,6 +69,7 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
         'passport.authorizations.approve',
         'passport.device',
         'passport.device.authorizations.authorize',
+        'passport.device.authorizations.approve',
     ];
 
     public function __construct(
@@ -80,9 +88,10 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
+        $routeName = $request->route()?->getName();
 
         if ($user === null
-            || ! in_array($request->route()?->getName(), self::GATED_ROUTE_NAMES, true)
+            || ! in_array($routeName, self::GATED_ROUTE_NAMES, true)
             || ! $this->userBelongsToMfaRequiredOrganization($user)
         ) {
             return $next($request);
@@ -159,6 +168,9 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
     {
         if ($request->isMethod('GET') && ! $request->expectsJson()) {
             redirect()->setIntendedUrl($request->fullUrl());
+        } elseif ($request->route()?->getName() === 'passport.device.authorizations.approve') {
+            // No replayable authorize URL for a device approval POST: send them back to code entry.
+            redirect()->setIntendedUrl(route('passport.device'));
         }
 
         // Drop a consent screen opened before the requirement applied: it must be reopened through this gate.
@@ -199,13 +211,18 @@ final class EnsureOrganizationMfaIsSatisfiedMiddleware
     }
 
     /**
-     * Intended URL after step-up: always a GET authorize URL so a later browser
-     * redirect does not depend on a replayed form POST body.
+     * Intended URL after step-up: always a GET URL so a later browser redirect does not
+     * depend on a replayed form POST body. A device approval POST has no authorize URL
+     * to rebuild (RFC 8628 keeps the request on the device), so it returns to code entry.
      */
     private function authorizationRequestUrl(Request $request): string
     {
         if ($request->isMethod('GET')) {
             return $request->fullUrl();
+        }
+
+        if ($request->route()?->getName() === 'passport.device.authorizations.approve') {
+            return route('passport.device');
         }
 
         $parameters = array_filter(
