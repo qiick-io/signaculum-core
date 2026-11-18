@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
+use Laravel\Passport\Passport;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\password;
@@ -103,8 +104,10 @@ final class InstallCommand extends Command
             return $migrate;
         }
 
-        if (! File::exists(storage_path('oauth-private.key'))) {
-            $passportKeys = $this->runArtisanProcess($connection, ['passport:keys', '--force', '--no-interaction']);
+        // In-process, so the check and the write use the same Passport::keyPath() a deployment
+        // (or a test) configured with Passport::loadKeysFrom(); the keys need no database.
+        if (! File::exists(Passport::keyPath('oauth-private.key'))) {
+            $passportKeys = $this->call('passport:keys', ['--force' => true]);
 
             if ($passportKeys !== self::SUCCESS) {
                 return $passportKeys;
