@@ -107,6 +107,7 @@ it('refuses a malformed create payload field by field', function (array $payload
     'confidential not boolean' => [[...applicationApiPayload(), 'is_confidential' => 'maybe'], ['is_confidential']],
     'first party missing' => [['name' => 'Externa', 'redirect_uris' => ['https://a.test/cb'], 'is_confidential' => true], ['is_first_party']],
     'client credentials not boolean' => [[...applicationApiPayload(), 'is_client_credentials_enabled' => 'yes please'], ['is_client_credentials_enabled']],
+    'pushed authorization not boolean' => [[...applicationApiPayload(), 'is_pushed_authorization_required' => 'yes please'], ['is_pushed_authorization_required']],
 ]);
 
 it('answers 404 for an application id that does not exist', function (): void {
@@ -128,6 +129,7 @@ it('lists applications with the documented resource shape', function (): void {
         ->assertJsonPath('data.0.is_confidential', true)
         ->assertJsonPath('data.0.is_first_party', false)
         ->assertJsonPath('data.0.is_client_credentials_enabled', false)
+        ->assertJsonPath('data.0.is_pushed_authorization_required', false)
         ->assertJsonPath('data.0.redirect_uris', ['https://listed-app.test/callback'])
         ->assertJsonStructure(['data' => [['created_at', 'updated_at']], 'links', 'meta']);
 });
@@ -237,4 +239,44 @@ it('rotates a confidential application secret and invalidates the old one', func
 
     expect($rotatedSecret)->toBeString()->not->toBe('')
         ->and($application->fresh()?->secret)->not->toBe($hashedSecretBefore);
+});
+
+it('accepts the per-application PAR requirement on create and reads it back', function (): void {
+    ['plain' => $plain] = adminApiKey([
+        ApiKeyScopeEnum::ApplicationsWrite->value,
+        ApiKeyScopeEnum::ApplicationsRead->value,
+    ]);
+
+    $this->withToken($plain)
+        ->postJson('/api/v1/applications', applicationApiPayload([
+            'name' => 'Par required app',
+            'is_pushed_authorization_required' => true,
+        ]))
+        ->assertCreated()
+        ->assertJsonPath('data.is_pushed_authorization_required', true);
+
+    $application = Client::query()->where('name', 'Par required app')->firstOrFail();
+
+    // The flag the API accepted is the flag the authorization endpoint enforces.
+    expect($application->requiresPushedAuthorizationRequests())->toBeTrue();
+
+    $this->withToken($plain)->getJson('/api/v1/applications/'.$application->getKey())
+        ->assertOk()
+        ->assertJsonPath('data.is_pushed_authorization_required', true);
+});
+
+it('defaults the per-application PAR requirement to off when the field is omitted', function (): void {
+    ['plain' => $plain] = adminApiKey([
+        ApiKeyScopeEnum::ApplicationsWrite->value,
+        ApiKeyScopeEnum::ApplicationsRead->value,
+    ]);
+
+    $this->withToken($plain)
+        ->postJson('/api/v1/applications', applicationApiPayload(['name' => 'Par default app']))
+        ->assertCreated()
+        ->assertJsonPath('data.is_pushed_authorization_required', false);
+
+    $application = Client::query()->where('name', 'Par default app')->firstOrFail();
+
+    expect($application->requiresPushedAuthorizationRequests())->toBeFalse();
 });

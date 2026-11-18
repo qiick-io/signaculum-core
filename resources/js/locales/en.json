@@ -608,7 +608,9 @@
                 "clientCredentials": "Allow client credentials",
                 "clientCredentialsHint": "Machine-to-machine access token without a user. Use for jobs, MCP agents and services — not for browser SSO.",
                 "deviceAuthorization": "Allow device authorization",
-                "deviceAuthorizationHint": "RFC 8628 device flow for CLI, TV and IoT clients. Users enter a code at /oauth/device."
+                "deviceAuthorizationHint": "RFC 8628 device flow for CLI, TV and IoT clients. Users enter a code at /oauth/device.",
+                "pushedAuthorization": "Require pushed authorization requests (PAR)",
+                "pushedAuthorizationHint": "The application must send every sign-in request to the PAR endpoint first. Plain authorization links from it are refused. Turn on only when the application supports PAR."
             },
             "empty": {
                 "title": "No applications yet",

@@ -30,6 +30,7 @@ final class ApplicationResource extends JsonResource
             'is_confidential' => $application->confidential(),
             'is_first_party' => (bool) $application->is_first_party,
             'is_client_credentials_enabled' => $application->hasGrantType('client_credentials'),
+            'is_pushed_authorization_required' => $application->requiresPushedAuthorizationRequests(),
             'created_at' => $application->created_at?->toIso8601String(),
             'updated_at' => $application->updated_at?->toIso8601String(),
         ];

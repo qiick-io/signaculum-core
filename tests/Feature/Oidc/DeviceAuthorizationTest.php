@@ -172,6 +172,7 @@ test('admin can opt an application into device authorization', function () {
             'is_first_party' => false,
             'is_client_credentials_enabled' => false,
             'is_device_authorization_enabled' => true,
+            'is_pushed_authorization_required' => false,
         ])
         ->assertRedirect(route('admin.applications.index'));
 

@@ -27,6 +27,7 @@ final class ApplicationResource extends JsonResource
      *     is_first_party: bool,
      *     is_client_credentials_enabled: bool,
      *     is_device_authorization_enabled: bool,
+     *     is_pushed_authorization_required: bool,
      *     discovery_url: string,
      *     configure_command: string,
      *     created_at: string|null,
@@ -51,6 +52,7 @@ final class ApplicationResource extends JsonResource
             'is_first_party' => (bool) $application->is_first_party,
             'is_client_credentials_enabled' => $application->hasGrantType('client_credentials'),
             'is_device_authorization_enabled' => $application->hasGrantType('urn:ietf:params:oauth:grant-type:device_code'),
+            'is_pushed_authorization_required' => $application->requiresPushedAuthorizationRequests(),
             'discovery_url' => $discoveryUrl,
             'configure_command' => sprintf(
                 'php artisan oidc:configure %s --client-id=%s',

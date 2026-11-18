@@ -608,7 +608,9 @@
                 "clientCredentials": "Consenti client credentials",
                 "clientCredentialsHint": "Access token macchina senza utente. Per job, agenti MCP e servizi — non per SSO nel browser.",
                 "deviceAuthorization": "Consenti autorizzazione dispositivo",
-                "deviceAuthorizationHint": "Flusso dispositivo RFC 8628 per CLI, TV e IoT. Gli utenti inseriscono un codice su /oauth/device."
+                "deviceAuthorizationHint": "Flusso dispositivo RFC 8628 per CLI, TV e IoT. Gli utenti inseriscono un codice su /oauth/device.",
+                "pushedAuthorization": "Richiedi pushed authorization request (PAR)",
+                "pushedAuthorizationHint": "L'applicazione deve inviare ogni richiesta di accesso prima all'endpoint PAR. I normali link di autorizzazione vengono rifiutati. Attivalo solo se l'applicazione supporta PAR."
             },
             "empty": {
                 "title": "Nessuna applicazione",

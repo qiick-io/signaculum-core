@@ -39,6 +39,7 @@ final class CreateApplicationAction
 
         $client->forceFill([
             'is_first_party' => $applicationData->isFirstParty,
+            'is_pushed_authorization_required' => $applicationData->isPushedAuthorizationRequired,
             'grant_types' => $applicationData->grantTypes(),
         ])->save();
 

@@ -93,9 +93,10 @@ class AppServiceProvider extends ServiceProvider
         $this->registerAuthActivityListeners();
         $this->attachOidcRateLimitMiddleware();
         $this->attachAuthorizationResponseIssuerMiddleware();
-        $this->attachMaximumAuthenticationAgeMiddleware();
+        // Order matters: a PAR request_uri is expanded before max_age / prompt=login run.
         $this->attachUnsupportedRequestObjectMiddleware();
         $this->attachPushedAuthorizationRequestMiddleware();
+        $this->attachMaximumAuthenticationAgeMiddleware();
         $this->configureAuthorizationEndpointPost();
     }
 
@@ -354,7 +355,8 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * RFC 9126 §4: expand PAR `request_uri` on the authorization endpoint.
+     * RFC 9126 §4 / §6: expand PAR `request_uri` on the authorization endpoint and
+     * refuse plain requests from clients that require PAR.
      *
      * {@see RejectUnsupportedRequestObjectMiddleware} lets PAR URIs through; this
      * middleware consumes them (or returns `invalid_request`) before Passport runs.

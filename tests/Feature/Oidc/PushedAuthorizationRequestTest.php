@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Enums\AuthenticationMethodEnum;
+use App\Enums\OrganizationRoleEnum;
+use App\Models\Client;
+use App\Models\OrganizationMembership;
 use App\Models\PushedAuthorizationRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Date;
@@ -272,4 +276,272 @@ test('the PAR endpoint is rate limited like the token endpoint', function () {
     $this->post('/oauth/par', parPayload())->assertCreated();
 
     $this->post('/oauth/par', parPayload())->assertStatus(429);
+});
+
+/**
+ * Authorization endpoint URL that carries only `client_id` and a PAR `request_uri`.
+ */
+function pushedAuthorizeUrl(string $clientId, string $requestUri): string
+{
+    return '/oauth/authorize?'.http_build_query([
+        'client_id' => $clientId,
+        'request_uri' => $requestUri,
+    ]);
+}
+
+/**
+ * Follow a pushed authorization request through the consent screen and return the
+ * query the client receives on its redirect URI.
+ *
+ * @return array<string, string>
+ */
+function approvePushedAuthorization(string $clientId, string $requestUri): array
+{
+    $authorization = test()->get(pushedAuthorizeUrl($clientId, $requestUri));
+
+    if ($authorization->isRedirect()) {
+        return redirectQuery($authorization->headers->get('Location'));
+    }
+
+    $authorization->assertOk();
+
+    $approval = test()->post('/oauth/authorize', ['auth_token' => session('authToken')]);
+
+    return redirectQuery($approval->headers->get('Location'));
+}
+
+function requirePushedAuthorization(Client $client): Client
+{
+    $client->forceFill(['is_pushed_authorization_required' => true])->save();
+
+    return $client;
+}
+
+test('a client that requires PAR is refused a plain authorization request at its redirect URI', function () {
+    config(['oidc.issuer' => 'https://id.example.test']);
+    requirePushedAuthorization($this->client);
+
+    $this->actingAs(User::factory()->create());
+
+    $query = redirectQuery($this->get(authorizeUrl($this->client, $this->pkce['challenge']))
+        ->assertRedirect()
+        ->headers->get('Location'));
+
+    expect($query['error'])->toBe('invalid_request')
+        ->and($query['state'])->toBe('state-123')
+        ->and($query['iss'])->toBe('https://id.example.test')
+        ->and($query)->not->toHaveKey('code');
+});
+
+test('a client that requires PAR is refused a plain request without any redirect when the redirect URI is unregistered', function () {
+    requirePushedAuthorization($this->client);
+
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->get(authorizeUrl($this->client, $this->pkce['challenge'], [
+        'redirect_uri' => 'https://attacker.example.test/callback',
+    ]));
+
+    expect($response->getStatusCode())->toBe(401)
+        ->and((string) $response->headers->get('Location'))->toBe('');
+});
+
+test('a client that requires PAR is refused a plain form POST authorization request', function () {
+    requirePushedAuthorization($this->client);
+
+    $this->actingAs(User::factory()->create());
+
+    parse_str((string) parse_url(authorizeUrl($this->client, $this->pkce['challenge']), PHP_URL_QUERY), $parameters);
+
+    $query = redirectQuery($this->post('/oauth/authorize', $parameters)->headers->get('Location'));
+
+    expect($query['error'])->toBe('invalid_request')
+        ->and($query)->not->toHaveKey('code');
+});
+
+test('a client that requires PAR gets a code through the PAR endpoint', function () {
+    requirePushedAuthorization($this->client);
+    $requestUri = $this->post('/oauth/par', parPayload())->json('request_uri');
+
+    $this->actingAs(User::factory()->create());
+
+    $query = approvePushedAuthorization((string) $this->client->getKey(), $requestUri);
+
+    expect($query)->toHaveKey('code')
+        ->and($query['state'])->toBe('state-123');
+
+    redeemCode($this->client, $query['code'], $this->pkce['verifier'])
+        ->assertOk()
+        ->assertJsonStructure(['id_token']);
+});
+
+test('a client that does not require PAR gets a code both with and without PAR', function () {
+    expect($this->client->requiresPushedAuthorizationRequests())->toBeFalse();
+
+    $this->actingAs(User::factory()->create());
+
+    $plainQuery = approveAuthorization($this->client, $this->pkce['challenge']);
+
+    $requestUri = $this->post('/oauth/par', parPayload())->json('request_uri');
+    $pushedQuery = approvePushedAuthorization((string) $this->client->getKey(), $requestUri);
+
+    expect($plainQuery)->toHaveKey('code')
+        ->and($pushedQuery)->toHaveKey('code');
+});
+
+test('a client that requires PAR cannot use a request_uri twice', function () {
+    requirePushedAuthorization($this->client);
+    $requestUri = $this->post('/oauth/par', parPayload())->json('request_uri');
+
+    $this->actingAs(User::factory()->create());
+
+    expect(approvePushedAuthorization((string) $this->client->getKey(), $requestUri))->toHaveKey('code');
+
+    $this->get(pushedAuthorizeUrl((string) $this->client->getKey(), $requestUri))
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_request');
+});
+
+test('a client that requires PAR cannot use an expired request_uri', function () {
+    requirePushedAuthorization($this->client);
+    $requestUri = $this->post('/oauth/par', parPayload())->json('request_uri');
+
+    $this->travel((int) config('oidc.par_expires_in') + 1)->seconds();
+    $this->actingAs(User::factory()->create());
+
+    $this->get(pushedAuthorizeUrl((string) $this->client->getKey(), $requestUri))
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_request');
+});
+
+test('a guest who logs in finishes a pushed request without the parameters entering the browser', function () {
+    requirePushedAuthorization($this->client);
+    User::factory()->create(['email' => 'ada@example.test']);
+    $clientId = (string) $this->client->getKey();
+    $requestUri = $this->post('/oauth/par', parPayload())->json('request_uri');
+    $pushedUrl = url(pushedAuthorizeUrl($clientId, $requestUri));
+
+    $this->get(pushedAuthorizeUrl($clientId, $requestUri))->assertRedirect('/login');
+
+    expect(session('url.intended'))->toBe($pushedUrl)
+        ->and(session('url.intended'))->not->toContain('code_challenge');
+
+    // The URI is already spent: a browser without this session cannot redeem it.
+    $this->travel((int) config('oidc.par_expires_in') + 1)->seconds();
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])
+        ->assertRedirect($pushedUrl);
+
+    $query = approvePushedAuthorization($clientId, $requestUri);
+
+    expect($query)->toHaveKey('code')
+        ->and($query['state'])->toBe('state-123');
+
+    $this->get(pushedAuthorizeUrl($clientId, $requestUri))
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_request');
+});
+
+test('a pushed request spent by one browser cannot be redeemed by another', function () {
+    requirePushedAuthorization($this->client);
+    $clientId = (string) $this->client->getKey();
+    $requestUri = $this->post('/oauth/par', parPayload())->json('request_uri');
+
+    $this->get(pushedAuthorizeUrl($clientId, $requestUri))->assertRedirect('/login');
+
+    $this->flushSession();
+    $this->actingAs(User::factory()->create());
+
+    $this->get(pushedAuthorizeUrl($clientId, $requestUri))
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_request');
+});
+
+test('max_age inside a pushed request forces re-authentication and then finishes the request', function () {
+    requirePushedAuthorization($this->client);
+    User::factory()->create(['email' => 'ada@example.test']);
+    $clientId = (string) $this->client->getKey();
+
+    Date::setTestNow('2026-11-18 10:00:00');
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])->assertRedirect();
+
+    Date::setTestNow('2026-11-18 10:10:00');
+    $requestUri = $this->post('/oauth/par', parPayload(['max_age' => '60']))->json('request_uri');
+    $pushedUrl = url(pushedAuthorizeUrl($clientId, $requestUri));
+
+    $this->get(pushedAuthorizeUrl($clientId, $requestUri))->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse()
+        ->and(session('url.intended'))->toBe($pushedUrl);
+
+    $this->post('/login', ['email' => 'ada@example.test', 'password' => 'password'])
+        ->assertRedirect($pushedUrl);
+
+    expect(approvePushedAuthorization($clientId, $requestUri))->toHaveKey('code');
+});
+
+test('a public client that requires PAR is refused a plain request and gets a code through PAR', function () {
+    $publicClient = requirePushedAuthorization(createOidcClient(isConfidential: false));
+    $clientId = (string) $publicClient->getKey();
+
+    $this->actingAs(User::factory()->create());
+
+    $refused = redirectQuery($this->get(authorizeUrl($publicClient, $this->pkce['challenge']))->headers->get('Location'));
+
+    $requestUri = $this->post('/oauth/par', parPayload([
+        'client_id' => $clientId,
+        'client_secret' => null,
+    ]))->json('request_uri');
+
+    expect($refused['error'])->toBe('invalid_request')
+        ->and(approvePushedAuthorization($clientId, $requestUri))->toHaveKey('code');
+});
+
+test('discovery keeps require_pushed_authorization_requests false when only some clients require PAR', function () {
+    requirePushedAuthorization($this->client);
+
+    $document = $this->getJson('/.well-known/openid-configuration')->json();
+
+    expect($document['require_pushed_authorization_requests'])->toBeFalse()
+        ->and($document['pushed_authorization_request_endpoint'])->toEndWith('/oauth/par');
+});
+
+/*
+ * `/oauth/par` carries no user session: it is registered in the `api` group, so
+ * the organisation MFA gate (a `web` middleware keyed on route name) never runs
+ * on it, and `oidc.par` is classified ungated in OrganizationRequireMfaTest.
+ * Pushing a request must therefore not become a way around that gate: the
+ * consent step the `request_uri` feeds is still `passport.authorizations.authorize`.
+ */
+test('a pushed authorization request does not bypass the organisation MFA gate', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'par-mfa-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    // The client pushes the request; no user is involved at this point.
+    $requestUri = $this->post('/oauth/par', parPayload())
+        ->assertCreated()
+        ->json('request_uri');
+
+    // A password-only session is exactly what the gate must step up.
+    $this->actingAs($member);
+    session([
+        'oidc.authentication_subject' => (string) $member->getKey(),
+        'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value],
+    ]);
+
+    $this->get(pushedAuthorizeUrl((string) $this->client->getKey(), $requestUri))
+        ->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse()
+        // The pushed request is still pending: the gate refused before consent.
+        ->and(PushedAuthorizationRequest::query()->where('request_uri', $requestUri)->exists())->toBeTrue();
 });

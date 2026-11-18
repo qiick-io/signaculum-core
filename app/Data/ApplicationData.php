@@ -19,6 +19,7 @@ final readonly class ApplicationData
         public bool $isFirstParty,
         public bool $isClientCredentialsEnabled = false,
         public bool $isDeviceAuthorizationEnabled = false,
+        public bool $isPushedAuthorizationRequired = false,
     ) {}
 
     /**

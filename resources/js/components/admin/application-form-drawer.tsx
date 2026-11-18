@@ -38,6 +38,7 @@ const EMPTY_APPLICATION_FORM = {
     is_first_party: false,
     is_client_credentials_enabled: false,
     is_device_authorization_enabled: false,
+    is_pushed_authorization_required: false,
 };
 
 export type ApplicationFormDrawerProps = {
@@ -83,6 +84,8 @@ export function ApplicationFormDrawer({
                     editing.is_client_credentials_enabled,
                 is_device_authorization_enabled:
                     editing.is_device_authorization_enabled,
+                is_pushed_authorization_required:
+                    editing.is_pushed_authorization_required,
             };
             form.setData(payload);
             form.setDefaults({ ...payload });
@@ -445,6 +448,40 @@ export function ApplicationFormDrawer({
                             </div>
                             <FieldError>
                                 {form.errors.is_device_authorization_enabled}
+                            </FieldError>
+                        </Field>
+
+                        <Field>
+                            <div className="flex items-start gap-3">
+                                <Checkbox
+                                    id="application-pushed-authorization"
+                                    checked={
+                                        form.data
+                                            .is_pushed_authorization_required
+                                    }
+                                    disabled={readOnly || form.processing}
+                                    onCheckedChange={(checked) =>
+                                        form.setData(
+                                            'is_pushed_authorization_required',
+                                            checked === true,
+                                        )
+                                    }
+                                />
+                                <div className="grid gap-1.5 leading-none">
+                                    <FieldLabel htmlFor="application-pushed-authorization">
+                                        {t(
+                                            'admin.applications.form.pushedAuthorization',
+                                        )}
+                                    </FieldLabel>
+                                    <FieldDescription>
+                                        {t(
+                                            'admin.applications.form.pushedAuthorizationHint',
+                                        )}
+                                    </FieldDescription>
+                                </div>
+                            </div>
+                            <FieldError>
+                                {form.errors.is_pushed_authorization_required}
                             </FieldError>
                         </Field>
 

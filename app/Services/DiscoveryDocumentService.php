@@ -60,7 +60,8 @@ final class DiscoveryDocumentService
             'claims_parameter_supported' => false,
             'request_parameter_supported' => false,
             'request_uri_parameter_supported' => false,
-            // RFC 9126 §5: PAR is optional; clients may still use plain authorize.
+            // RFC 9126 §5: the server as a whole does not require PAR. Requiring it is
+            // per client (RFC 9126 §6), set in Admin → Applications.
             'require_pushed_authorization_requests' => false,
             'backchannel_logout_supported' => true,
             'backchannel_logout_session_supported' => true,

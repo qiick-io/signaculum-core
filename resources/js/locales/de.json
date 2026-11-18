@@ -608,7 +608,9 @@
                 "clientCredentials": "Client Credentials erlauben",
                 "clientCredentialsHint": "Maschinen-Access-Token ohne Benutzer. Für Jobs, MCP-Agenten und Dienste — nicht für Browser-SSO.",
                 "deviceAuthorization": "Geräteautorisierung erlauben",
-                "deviceAuthorizationHint": "RFC-8628-Gerätefluss für CLI, TV und IoT. Benutzer geben einen Code unter /oauth/device ein."
+                "deviceAuthorizationHint": "RFC-8628-Gerätefluss für CLI, TV und IoT. Benutzer geben einen Code unter /oauth/device ein.",
+                "pushedAuthorization": "Pushed Authorization Requests (PAR) verlangen",
+                "pushedAuthorizationHint": "Die Anwendung muss jede Anmeldeanfrage zuerst an den PAR-Endpunkt senden. Normale Autorisierungslinks werden abgelehnt. Nur aktivieren, wenn die Anwendung PAR unterstützt."
             },
             "empty": {
                 "title": "Noch keine Anwendungen",

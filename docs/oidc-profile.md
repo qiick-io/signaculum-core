@@ -42,7 +42,7 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, `amr`, `acr`, plus user claims below
 - `acr_values_supported`: `urn:qiick:loa:pwd`, `urn:qiick:loa:mfa`
 - `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false` (OIDC Request Objects are not implemented; PAR uses its own `request_uri` values — see below)
-- `require_pushed_authorization_requests`: `false` (PAR is optional; plain `/oauth/authorize` remains allowed)
+- `require_pushed_authorization_requests`: `false` (the server does not require PAR for every client; an application can require it for itself, see below)
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
 - `authorization_response_iss_parameter_supported`: `true` (RFC 9207)
@@ -53,6 +53,10 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 `POST /oauth/par` (`application/x-www-form-urlencoded`) accepts the full authorization request (PKCE S256, `nonce` for `openid`, exact `redirect_uri`, scopes) with the same client authentication as `/oauth/token`. Validation happens **before** storage. Success is HTTP 201 with `request_uri` (`urn:ietf:params:oauth:request_uri:…`) and short `expires_in` (`OIDC_PAR_EXPIRES_IN`, default 60s). The URI is single-use and bound to the pushing `client_id`.
 
 `/oauth/authorize` then accepts `client_id` + that `request_uri`; other authorize parameters are ignored (RFC 9126 §4). Mismatched client, expired or reused URIs → HTTP 400 `invalid_request`. A non-PAR `request_uri` (for example a remote JAR URL) still yields `request_uri_not_supported` (#113). The OIDC `request` parameter stays `request_not_supported`. Rate limit: same named limiter as the token endpoint (`oidc-token`).
+
+**Requiring PAR per application (RFC 9126 §6 `require_pushed_authorization_requests`).** Admin → Applications → “Require pushed authorization requests (PAR)” (column `oauth_clients.is_pushed_authorization_required`, default off). For such an application, `/oauth/authorize` without a PAR `request_uri` is refused with `error=invalid_request` on the registered `redirect_uri` (with `state` and `iss`); an unregistered `redirect_uri` gets HTTP 401 and no redirect. RFC 9126 defines no dedicated error code: `invalid_request` is RFC 6749 §4.1.2.1's “missing a required parameter” (`request_uri`). Public applications may require PAR too: it keeps the parameters off the front channel, but a public push is not client-authenticated.
+
+**Login in the middle of a pushed request.** The `request_uri` is spent on its first use. When that use sends the browser to log in (no session, `prompt=login`, `max_age`), the expanded request is kept in that browser's session and the intended URL is `/oauth/authorize?client_id=…&request_uri=…`, so the pushed parameters never appear in the browser and only the session that spent the URI can finish it, also after `expires_in` has passed. `prompt` and `max_age` from the push are honoured like those of a plain request.
 
 ## Authorization response `iss` (RFC 9207)
 

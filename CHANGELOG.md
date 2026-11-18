@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - RFC 8628 device authorization grant for applications that opt in, with an `id_token` from the approving session, user-code entry rate limited per IP and per account, a final first decision per device code, single-use exchange, and the organisation MFA gate on approval (#64).
-- RFC 9126 Pushed Authorization Requests at `POST /oauth/par` (`pushed_authorization_request_endpoint`), with discovery `require_pushed_authorization_requests: false`; `/oauth/authorize` accepts the issued single-use `request_uri` (#62).
+- RFC 9126 Pushed Authorization Requests at `POST /oauth/par` (`pushed_authorization_request_endpoint`), with discovery `require_pushed_authorization_requests: false`; `/oauth/authorize` accepts the issued single-use `request_uri`; an application can be set to require PAR (RFC 9126 §6), and its plain authorization requests are then refused with `invalid_request` (#62).
 
 ### Fixed
 
