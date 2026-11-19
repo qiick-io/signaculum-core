@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\ApiKey;
+use App\Models\Client;
+use App\Models\Organization;
 use App\Models\User;
+use App\Models\Webhook;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use LogicException;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -64,12 +69,28 @@ final class ActivityLogResource extends JsonResource
     }
 
     /**
-     * A readable label for the subject: its name, or `#id`.
+     * A readable label for the subject, chosen explicitly per logged model (#171).
+     *
+     * Guessing attributes like `name` breaks under Model::shouldBeStrict() for models
+     * that lack that column (Webhook). Unknown subjects throw so a new logged model
+     * fails a coverage test instead of the activity log page.
+     *
+     * @throws LogicException when the subject class has no label arm
      */
     private function subjectLabel(Model $subject): string
     {
-        $name = $subject->getAttribute('name');
+        $label = match ($subject::class) {
+            User::class,
+            Client::class,
+            ApiKey::class,
+            Organization::class => trim((string) $subject->name),
+            // url is the admin-facing identity; secret must never appear in the label.
+            Webhook::class => trim((string) $subject->url),
+            default => throw new LogicException(
+                'No activity subject label for '.$subject::class.'; add an arm in ActivityLogResource::subjectLabel().',
+            ),
+        };
 
-        return is_string($name) && trim($name) !== '' ? trim($name) : '#'.$subject->getKey();
+        return $label !== '' ? $label : '#'.$subject->getKey();
     }
 }
