@@ -583,7 +583,7 @@ class AppServiceProvider extends ServiceProvider
             $activity->properties = $properties->merge([
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent(),
-                ...($apiKey instanceof ApiKey ? ['api_key_uuid' => $apiKey->uuid] : []),
+                ...($apiKey instanceof ApiKey ? ['api_key_id' => $apiKey->id] : []),
             ]);
         });
     }
