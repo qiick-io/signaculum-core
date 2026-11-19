@@ -33,6 +33,15 @@ enum ActivityEventEnum: string
     case SecretRotated = 'secret_rotated';
     case Rotated = 'rotated';
     case Revoked = 'revoked';
+    case OrganizationCreated = 'organization_created';
+    case OrganizationUpdated = 'organization_updated';
+    case OrganizationDeleted = 'organization_deleted';
+    case OrganizationMemberAdded = 'organization_member_added';
+    case OrganizationMemberRemoved = 'organization_member_removed';
+    case OrganizationMemberRolesUpdated = 'organization_member_roles_updated';
+    case OrganizationInvitationCreated = 'organization_invitation_created';
+    case OrganizationInvitationResent = 'organization_invitation_resent';
+    case OrganizationInvitationRevoked = 'organization_invitation_revoked';
     case OrganizationMfaRequirementUpdated = 'organization_mfa_requirement_updated';
     case OrganizationMemberTokensRevoked = 'organization_member_tokens_revoked';
     case OrganizationMemberBackchannelLogoutDispatched = 'organization_member_backchannel_logout_dispatched';
