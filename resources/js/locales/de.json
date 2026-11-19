@@ -693,6 +693,7 @@
             "locked": "Konto gesperrt",
             "organization_mfa_requirement_updated": "MFA-Pflicht der Organisation geändert",
             "organization_member_tokens_revoked": "Mitglieder-Tokens widerrufen",
+            "organization_member_backchannel_logout_dispatched": "Back-Channel-Logout der Mitglieder ausgelöst",
             "ldap_sync_completed": "LDAP-Synchronisierung abgeschlossen",
             "ldap_sync_conflict": "LDAP-Synchronisierungskonflikt"
         },
@@ -803,7 +804,7 @@
             "saveBranding": "Branding speichern",
             "requireMfa": "Mitglieder müssen die Zwei-Faktor-Authentifizierung nutzen",
             "requireMfaHint": "Mitglieder ohne TOTP oder Passkey werden zur Sicherheit geleitet, bevor sie eine Anwendung autorisieren können. Signaculum behauptet MFA in amr oder acr nie, wenn kein zweiter Faktor verwendet wurde.",
-            "requireMfaRevokesTokens": "Beim Aktivieren werden die bestehenden Access- und Refresh-Tokens aller Mitglieder widerrufen. Verbundene Anwendungen verlieren den Zugriff, bis sich jedes Mitglied erneut mit einem zweiten Faktor anmeldet."
+            "requireMfaRevokesTokens": "Beim Aktivieren werden die Access- und Refresh-Tokens aller Mitglieder widerrufen und sie von verbundenen Apps abgemeldet, die Back-Channel-Logout unterstützen. Front-Channel-Logout braucht den Browser jedes Mitglieds; Apps ohne Back-Channel-Logout-URI behalten ihre eigene Sitzung bis zum Ablauf. Mitglieder müssen sich erneut mit einem zweiten Faktor anmelden."
         },
         "accept": {
             "head": "Organisationseinladung",

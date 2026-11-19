@@ -13,12 +13,14 @@ use App\Models\User;
  *
  * Side effects: activity log when `is_mfa_required` changes (keys only, never secrets). Turning
  * the requirement on revokes the members' OAuth grants (RevokeOrganizationMemberTokensAction),
- * so tokens issued without a second factor do not outlive it (#163).
+ * so tokens issued without a second factor do not outlive it (#163), then queues back-channel
+ * logout for every member's open OIDC sessions (#174). Create never sets MFA (default false).
  */
 final class UpdateOrganizationAction
 {
     public function __construct(
         private readonly RevokeOrganizationMemberTokensAction $revokeOrganizationMemberTokensAction,
+        private readonly DispatchOrganizationMfaBackChannelLogoutAction $dispatchOrganizationMfaBackChannelLogoutAction,
     ) {}
 
     public function execute(Organization $organization, OrganizationData $organizationData, ?User $actor = null): Organization
@@ -49,6 +51,7 @@ final class UpdateOrganizationAction
 
         if (! $previousIsMfaRequired && $organizationData->isMfaRequired) {
             $this->revokeOrganizationMemberTokensAction->execute($organization, $actor);
+            $this->dispatchOrganizationMfaBackChannelLogoutAction->execute($organization, $actor);
         }
 
         return $organization->refresh();
