@@ -46,19 +46,16 @@ final class StoreApplicationRequest extends FormRequest
         ];
     }
 
+    /**
+     * The admin form and the Admin REST API build the payload in one place (#186), so a
+     * field cannot reach this door without reaching the other.
+     */
     public function toData(): ApplicationData
     {
-        return new ApplicationData(
-            name: $this->string('name')->toString(),
-            redirectUris: $this->parsedRedirectUris(),
-            isConfidential: $this->boolean('is_confidential'),
-            isFirstParty: $this->boolean('is_first_party'),
-            isClientCredentialsEnabled: $this->boolean('is_client_credentials_enabled'),
-            isDeviceAuthorizationEnabled: $this->boolean('is_device_authorization_enabled'),
-            isPushedAuthorizationRequired: $this->boolean('is_pushed_authorization_required'),
-            frontchannelLogoutUri: $this->normalizedFrontchannelLogoutUri(),
-            isFrontchannelLogoutSessionRequired: $this->boolean('is_frontchannel_logout_session_required'),
-        );
+        /** @var array<string, mixed> $validated */
+        $validated = $this->validated();
+
+        return ApplicationData::fromValidated($validated);
     }
 
     public function withValidator(Validator $validator): void

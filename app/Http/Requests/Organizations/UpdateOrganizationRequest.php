@@ -43,12 +43,14 @@ final class UpdateOrganizationRequest extends FormRequest
         ];
     }
 
+    /**
+     * The web form and the Admin REST API build the payload in one place (#186).
+     */
     public function toData(): OrganizationData
     {
-        return new OrganizationData(
-            name: (string) $this->validated('name'),
-            slug: (string) $this->validated('slug'),
-            isMfaRequired: $this->boolean('is_mfa_required'),
-        );
+        /** @var array<string, mixed> $validated */
+        $validated = $this->validated();
+
+        return OrganizationData::fromValidated($validated);
     }
 }

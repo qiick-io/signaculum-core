@@ -30,6 +30,7 @@ final class ApplicationResource extends JsonResource
             'is_confidential' => $application->confidential(),
             'is_first_party' => (bool) $application->is_first_party,
             'is_client_credentials_enabled' => $application->hasGrantType('client_credentials'),
+            'is_device_authorization_enabled' => $application->hasGrantType('urn:ietf:params:oauth:grant-type:device_code'),
             'is_pushed_authorization_required' => $application->requiresPushedAuthorizationRequests(),
             'frontchannel_logout_uri' => $application->frontchannel_logout_uri,
             'is_frontchannel_logout_session_required' => (bool) $application->is_frontchannel_logout_session_required,

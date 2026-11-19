@@ -187,3 +187,26 @@ it('lets an organizations write key read as well', function (): void {
     $this->withToken($plain)->getJson('/api/v1/organizations')->assertOk();
     $this->withToken($plain)->getJson('/api/v1/organizations/readable')->assertOk();
 });
+
+/*
+ * #186: OrganizationData carries the MFA requirement, the organisation settings page
+ * writes it and the middleware enforces it, but the Admin REST API resource left it
+ * out — the same split that hid `is_device_authorization_enabled` on applications.
+ * The API has no organisation update endpoint yet, so this is the read half.
+ */
+it('reports whether an organization requires MFA', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::OrganizationsRead->value]);
+    $organization = Organization::factory()->create([
+        'name' => 'Mfa Corp',
+        'slug' => 'mfa-corp',
+        'is_mfa_required' => true,
+    ]);
+
+    $this->withToken($plain)->getJson('/api/v1/organizations/'.$organization->slug)
+        ->assertOk()
+        ->assertJsonPath('data.is_mfa_required', true);
+
+    $this->withToken($plain)->getJson('/api/v1/organizations')
+        ->assertOk()
+        ->assertJsonPath('data.0.is_mfa_required', true);
+});
