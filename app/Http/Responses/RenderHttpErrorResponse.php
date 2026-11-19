@@ -77,7 +77,7 @@ final class RenderHttpErrorResponse
 
     private static function shouldUseDefaultResponse(Request $request): bool
     {
-        return $request->is('api/*')
+        return $request->is('api/*', 'mcp', 'mcp/*')
             || $request->is('.well-known/*')
             || $request->is('oauth/userinfo')
             || $request->expectsJson();

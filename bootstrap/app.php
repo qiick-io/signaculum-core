@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApiErrorCodeEnum;
 use App\Http\Middleware\CaptureOrganizationBrandingMiddleware;
 use App\Http\Middleware\EnsureOrganizationMfaIsSatisfiedMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
@@ -16,9 +17,11 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -60,10 +63,17 @@ return Application::configure(basePath: dirname(__DIR__))
             // Last so defense headers apply to the final HTML (app-ui security-headers.md).
             SetSecurityHeadersMiddleware::class,
         ]);
+
+        // Locale and Content-Language on the machine doors too, including their error responses.
+        $middleware->api(append: [SetLocaleMiddleware::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $isMachineDoor = static fn (Request $request): bool => $request->is('api/*', 'mcp', 'mcp/*');
+        $isJsonDoor = static fn (Request $request): bool => $isMachineDoor($request)
+            || $request->is('oauth/userinfo', 'oauth/introspect', 'oauth/revoke', 'oauth/par', '.well-known/*');
+
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*', 'oauth/userinfo', 'oauth/introspect', 'oauth/revoke', 'oauth/par', '.well-known/*') || $request->expectsJson(),
+            fn (Request $request) => $isJsonDoor($request) || $request->expectsJson(),
         );
 
         // RFC 6750 §3: a protected resource answers a missing or bad token with a challenge.
@@ -79,5 +89,36 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (HttpExceptionInterface $exception, Request $request) {
             return RenderHttpErrorResponse::render($exception, $request);
+        });
+
+        /*
+         * Fleet API error code standard: one mapping, one render hook. Laravel renders its own
+         * JSON (message, field errors, rate-limit headers); the final-response callback below
+         * only adds `error`, and leaves an existing RFC 6750 `error` key untouched.
+         */
+        $exceptions->render(function (Throwable $exception, Request $request) use ($exceptions, $isMachineDoor): null {
+            if (! $isMachineDoor($request)) {
+                return null;
+            }
+
+            $errorCode = ApiErrorCodeEnum::forException($exception);
+
+            $exceptions->respond(static function (Response $response, Throwable $thrown, Request $currentRequest) use ($errorCode, $isMachineDoor): Response {
+                if (! $response instanceof JsonResponse
+                    || $response->getStatusCode() < 400
+                    || ! $isMachineDoor($currentRequest)) {
+                    return $response;
+                }
+
+                $payload = $response->getData(true);
+
+                if (! is_array($payload) || array_key_exists('error', $payload)) {
+                    return $response;
+                }
+
+                return $response->setData([...$payload, 'error' => $errorCode->value]);
+            });
+
+            return null;
         });
     })->create();
