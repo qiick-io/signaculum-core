@@ -25,6 +25,8 @@ use Throwable;
  *
  * Creates/updates users linked by `ldap_guid`, deactivates directory-missing LDAP
  * users, and logs email conflicts when a local-only account already owns the address.
+ * Active Directory accounts with ACCOUNTDISABLE stay deactivated even when they still
+ * match the filter (#187). Synced users get no local password (bind-on-login only).
  * Never writes to the directory.
  *
  * Side effects: user rows, activity log, optional deactivation (tokens/sessions), webhooks.
@@ -85,11 +87,21 @@ final class LdapUserSyncService
                 ?? 'User';
             $lastName = $this->firstAttribute($directoryUser, $settingsData->attributeFamilyName);
             $distinguishedName = $directoryUser->getDn();
+            $isDirectoryAccountDisabled = $directoryUser instanceof DirectoryUser
+                ? $directoryUser->isDirectoryAccountDisabled()
+                : $this->isAccountControlDisabled($directoryUser);
 
             $linkedUser = User::query()->where('ldap_guid', $guid)->first();
 
             if ($linkedUser !== null) {
-                if ($this->updateLinkedUser($linkedUser, $firstName, $lastName, $email, $distinguishedName)) {
+                if ($this->updateLinkedUser(
+                    $linkedUser,
+                    $firstName,
+                    $lastName,
+                    $email,
+                    $distinguishedName,
+                    $isDirectoryAccountDisabled,
+                )) {
                     $updated++;
                 } else {
                     $conflicts++;
@@ -113,7 +125,14 @@ final class LdapUserSyncService
                 continue;
             }
 
-            $this->createLinkedUser($firstName, $lastName, $email, $guid, $distinguishedName);
+            $this->createLinkedUser(
+                $firstName,
+                $lastName,
+                $email,
+                $guid,
+                $distinguishedName,
+                $isDirectoryAccountDisabled,
+            );
             $created++;
         }
 
@@ -210,6 +229,7 @@ final class LdapUserSyncService
         ?string $lastName,
         string $email,
         ?string $distinguishedName,
+        bool $isDirectoryAccountDisabled,
     ): bool {
         $emailOwner = User::query()
             ->where('email', $email)
@@ -227,9 +247,20 @@ final class LdapUserSyncService
             'last_name' => $lastName,
             'email' => $email,
             'ldap_dn' => $distinguishedName,
+            'password' => null,
         ])->save();
 
-        if (! $user->is_active) {
+        if ($isDirectoryAccountDisabled) {
+            if ($user->is_active) {
+                try {
+                    $this->deactivateUserAction->execute($user);
+                } catch (ValidationException) {
+                    Log::warning('LDAP sync could not deactivate disabled directory user', [
+                        'user_subject' => $user->subject,
+                    ]);
+                }
+            }
+        } elseif (! $user->is_active) {
             $this->reactivateUserAction->execute($user);
         }
 
@@ -248,13 +279,14 @@ final class LdapUserSyncService
         string $email,
         string $guid,
         ?string $distinguishedName,
+        bool $isDirectoryAccountDisabled,
     ): void {
         $user = (new User)->forceFill([
             'first_name' => $firstName,
             'last_name' => $lastName,
             'email' => $email,
-            'password' => Str::password(32),
-            'is_active' => true,
+            'password' => null,
+            'is_active' => ! $isDirectoryAccountDisabled,
             'email_verified_at' => now(),
             'ldap_guid' => $guid,
             'ldap_dn' => $distinguishedName,
@@ -266,6 +298,20 @@ final class LdapUserSyncService
             'email' => $user->email,
             'name' => $user->name,
         ]);
+    }
+
+    /**
+     * ACCOUNTDISABLE (0x2) on userAccountControl when the model is not a DirectoryUser.
+     */
+    private function isAccountControlDisabled(LdapModel $directoryUser): bool
+    {
+        $control = $this->firstAttribute($directoryUser, 'userAccountControl');
+
+        if ($control === null) {
+            return false;
+        }
+
+        return ((int) $control & 0x2) === 0x2;
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LogoutResponse;
 use App\Models\User;
+use App\Services\LdapBindAuthenticationService;
 use App\Services\LoginLockoutService;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -24,6 +25,7 @@ use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use Laravel\Passkeys\Contracts\PasskeyUser;
 use Laravel\Passkeys\Passkeys;
+use RuntimeException;
 
 /**
  * Fortify views, actions and rate limiters. Registration stays registered as a Fortify feature
@@ -62,6 +64,10 @@ class FortifyServiceProvider extends ServiceProvider
 
     /**
      * Refuse inactive users on every local login path (password, two-factor and passkey).
+     *
+     * LDAP-sourced users authenticate only by binding to the directory (#187); the local
+     * password hash is never consulted for them. Directory unreachable fails closed with a
+     * distinct message so local and break-glass admins keep working.
      */
     private function configureAuthentication(): void
     {
@@ -79,10 +85,33 @@ class FortifyServiceProvider extends ServiceProvider
                 ]);
             }
 
-            if (! $user->is_active || ! Hash::check((string) $request->input('password'), $user->password)) {
-                if ($user->is_active) {
-                    $loginLockoutService->recordFailure($user);
+            if (! $user->is_active) {
+                return null;
+            }
+
+            if ($user->isLdapSourced()) {
+                try {
+                    $isBound = app(LdapBindAuthenticationService::class)
+                        ->attempt($user, (string) $request->input('password'));
+                } catch (RuntimeException) {
+                    throw ValidationException::withMessages([
+                        Fortify::username() => __('The identity directory is unreachable. Sign in with a local account or try again later.'),
+                    ]);
                 }
+
+                if (! $isBound) {
+                    $loginLockoutService->recordFailure($user);
+
+                    return null;
+                }
+
+                $loginLockoutService->clear($user);
+
+                return $user;
+            }
+
+            if ($user->password === null || ! Hash::check((string) $request->input('password'), $user->password)) {
+                $loginLockoutService->recordFailure($user);
 
                 return null;
             }

@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -30,14 +31,14 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property-read string $name first and last name
  * @property string $email
  * @property string|null $ldap_guid converted objectGUID / entryUUID when synced from LDAP
- * @property string|null $ldap_dn directory distinguished name for bind-on-login later
+ * @property string|null $ldap_dn directory distinguished name for bind-on-login
  * @property string|null $locale UI language, also the OIDC `locale` claim
  * @property Carbon|null $email_verified_at
  * @property bool $is_instance_admin may edit instance settings (SettingPolicy)
  * @property bool $is_active false refuses login (Fortify + EnsureUserIsActiveMiddleware)
  * @property int $failed_login_attempts consecutive wrong passwords since last success
  * @property Carbon|null $locked_until when set in the future, password login is refused
- * @property string $password
+ * @property string|null $password null for LDAP-sourced users (directory bind only, #187)
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -73,6 +74,30 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     public function preferredLocale(): ?string
     {
         return $this->locale;
+    }
+
+    /**
+     * Linked to a directory entry by sync (`ldap_guid` set). Credentials live in the directory.
+     */
+    public function isLdapSourced(): bool
+    {
+        return $this->ldap_guid !== null && $this->ldap_guid !== '';
+    }
+
+    /**
+     * Refuse Fortify password-reset mail for directory-managed accounts (#187).
+     *
+     * @param  string  $token
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        if ($this->isLdapSourced()) {
+            throw ValidationException::withMessages([
+                'email' => __('This account\'s password is managed by the directory. Contact your administrator.'),
+            ]);
+        }
+
+        parent::sendPasswordResetNotification($token);
     }
 
     /**
