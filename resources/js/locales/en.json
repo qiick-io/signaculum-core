@@ -400,6 +400,16 @@
             "permissionsLabel": "Requested permissions",
             "approve": "Authorize"
         },
+        "device": {
+            "userCodeTitle": "Enter device code",
+            "userCodeDescription": "Type the code shown on your device or CLI to continue.",
+            "userCodeLabel": "Device code",
+            "userCodePlaceholder": "ABCD-EFGH",
+            "continue": "Continue",
+            "authorizeTitle": "Authorize device",
+            "authorizeDescription": "Confirm that this device may access your account.",
+            "requestingAccess": "is requesting access from a device."
+        },
         "logout": {
             "title": "Sign out",
             "description": "Confirm that you want to sign out of Signaculum.",
@@ -596,7 +606,9 @@
                 "firstParty": "First-party qiick app",
                 "firstPartyHint": "Skips the consent screen for signed-in users.",
                 "clientCredentials": "Allow client credentials",
-                "clientCredentialsHint": "Machine-to-machine access token without a user. Use for jobs, MCP agents and services — not for browser SSO."
+                "clientCredentialsHint": "Machine-to-machine access token without a user. Use for jobs, MCP agents and services — not for browser SSO.",
+                "deviceAuthorization": "Allow device authorization",
+                "deviceAuthorizationHint": "RFC 8628 device flow for CLI, TV and IoT clients. Users enter a code at /oauth/device."
             },
             "empty": {
                 "title": "No applications yet",

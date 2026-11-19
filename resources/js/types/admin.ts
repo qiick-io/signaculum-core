@@ -59,6 +59,7 @@ export type AdminApplicationRow = {
     is_confidential: boolean;
     is_first_party: boolean;
     is_client_credentials_enabled: boolean;
+    is_device_authorization_enabled: boolean;
     discovery_url: string;
     configure_command: string;
     created_at: string | null;

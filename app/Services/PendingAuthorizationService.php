@@ -122,4 +122,27 @@ final class PendingAuthorizationService
             request()->session()->put(self::AUTH_TIME_SESSION_KEY, Date::now()->getTimestamp());
         }
     }
+
+    /**
+     * OpenID Connect context from the approving browser session for a device grant.
+     *
+     * RFC 8628 has no authorization-request `nonce` or `acr_values`; `auth_time`,
+     * `sid` and `amr` come from how this browser session authenticated (OIDC Core §2;
+     * RFC 8176). Does not touch a pending authorization-code request.
+     */
+    public function approvingSessionContext(): AuthorizationContextData
+    {
+        $user = request()->user();
+        $oidcSessionId = $user instanceof User
+            ? $this->oidcSessionService->currentOidcSessionId($user)
+            : null;
+
+        return new AuthorizationContextData(
+            nonce: null,
+            authTime: $this->authenticationTime(),
+            oidcSessionId: $oidcSessionId,
+            authenticationMethods: $this->authenticationContextService->amrValues(),
+            isAcrRequested: false,
+        );
+    }
 }

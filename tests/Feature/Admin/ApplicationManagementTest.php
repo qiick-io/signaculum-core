@@ -26,6 +26,7 @@ function applicationFormPayload(array $overrides = []): array
         'is_confidential' => true,
         'is_first_party' => true,
         'is_client_credentials_enabled' => false,
+        'is_device_authorization_enabled' => false,
         ...$overrides,
     ];
 }

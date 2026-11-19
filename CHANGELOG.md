@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- RFC 8628 device authorization grant for applications that opt in, with an `id_token` from the approving session, user-code entry rate limited per IP and per account, a final first decision per device code, single-use exchange, and the organisation MFA gate on approval (#64).
+
 ### Fixed
 
 - `signaculum:install` checks for and generates the Passport keys at `Passport::keyPath()`, so a key directory set with `Passport::loadKeysFrom()` is honoured; its tests use their own key directory instead of deleting the shared pair, which made the parallel suite flaky (#144).
@@ -16,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- The organisation MFA gate also covers the RFC 8628 device flow: code entry, the device consent screen and the approving `POST` are gated by route name, so a requirement switched on while a device consent screen is open still applies. A refused device approval leaves the code pending (the device keeps polling `authorization_pending`) and sends the user to enrolment or step-up and then back to code entry; denying a device code is never gated (#64).
 - The organisation MFA gate now also checks the consent approval, not only the consent screen: a member whose organisation started requiring MFA after the screen opened could still approve and the client received an authorization code. The gate matches route names instead of the `oauth/authorize` path, so Passport's route prefix cannot move a route out of it, and denying consent stays allowed (extracted from #110).
 - Every second-factor change (TOTP enable, confirm and disable, recovery-code regeneration, passkey registration and deletion, the admin TOTP reset) mails the account owner and writes an `auth` activity event. A password alone can still enrol a factor; this makes it visible to the owner until factor management requires a proven second factor (#168).
 - Organisation MFA gate no longer accepts enrolment alone; session `amr` must contain a second factor before `/oauth/authorize` completes (#131).

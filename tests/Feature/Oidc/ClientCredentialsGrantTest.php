@@ -39,15 +39,12 @@ function createMachineCapableClient(): Client
 }
 
 test('discovery advertises client_credentials among grant_types_supported', function () {
-    $this->get('/.well-known/openid-configuration')
+    $grantTypes = $this->get('/.well-known/openid-configuration')
         ->assertOk()
-        ->assertJsonFragment([
-            'grant_types_supported' => [
-                'authorization_code',
-                'refresh_token',
-                'client_credentials',
-            ],
-        ]);
+        ->json('grant_types_supported');
+
+    expect($grantTypes)->toContain('client_credentials')
+        ->and($grantTypes)->toContain('urn:ietf:params:oauth:grant-type:device_code');
 });
 
 test('an opted-in confidential client receives an access token without id_token', function () {

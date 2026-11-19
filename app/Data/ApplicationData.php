@@ -18,13 +18,15 @@ final readonly class ApplicationData
         public bool $isConfidential,
         public bool $isFirstParty,
         public bool $isClientCredentialsEnabled = false,
+        public bool $isDeviceAuthorizationEnabled = false,
     ) {}
 
     /**
      * Passport `grant_types` for this application.
      *
      * Authorization code (+ refresh) is the interactive SSO path. `client_credentials`
-     * is opt-in for confidential machine clients only (OAuth 2.0 §4.4).
+     * is opt-in for confidential machine clients only (OAuth 2.0 §4.4). Device
+     * authorization (RFC 8628) is opt-in for CLI / TV / IoT clients.
      *
      * @return list<string>
      */
@@ -34,6 +36,10 @@ final readonly class ApplicationData
 
         if ($this->isConfidential && $this->isClientCredentialsEnabled) {
             $grantTypes[] = 'client_credentials';
+        }
+
+        if ($this->isDeviceAuthorizationEnabled) {
+            $grantTypes[] = 'urn:ietf:params:oauth:grant-type:device_code';
         }
 
         return $grantTypes;

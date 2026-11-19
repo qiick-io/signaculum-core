@@ -400,6 +400,16 @@
             "permissionsLabel": "Permessi richiesti",
             "approve": "Autorizza"
         },
+        "device": {
+            "userCodeTitle": "Inserisci codice dispositivo",
+            "userCodeDescription": "Digita il codice mostrato sul dispositivo o nella CLI per continuare.",
+            "userCodeLabel": "Codice dispositivo",
+            "userCodePlaceholder": "ABCD-EFGH",
+            "continue": "Continua",
+            "authorizeTitle": "Autorizza dispositivo",
+            "authorizeDescription": "Conferma che questo dispositivo può accedere al tuo account.",
+            "requestingAccess": "sta richiedendo l'accesso da un dispositivo."
+        },
         "logout": {
             "title": "Esci",
             "description": "Conferma di voler uscire da Signaculum.",
@@ -596,7 +606,9 @@
                 "firstParty": "App qiick first-party",
                 "firstPartyHint": "Salta la schermata di consenso per gli utenti autenticati.",
                 "clientCredentials": "Consenti client credentials",
-                "clientCredentialsHint": "Access token macchina senza utente. Per job, agenti MCP e servizi — non per SSO nel browser."
+                "clientCredentialsHint": "Access token macchina senza utente. Per job, agenti MCP e servizi — non per SSO nel browser.",
+                "deviceAuthorization": "Consenti autorizzazione dispositivo",
+                "deviceAuthorizationHint": "Flusso dispositivo RFC 8628 per CLI, TV e IoT. Gli utenti inseriscono un codice su /oauth/device."
             },
             "empty": {
                 "title": "Nessuna applicazione",

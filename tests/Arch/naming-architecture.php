@@ -18,6 +18,8 @@ declare(strict_types=1);
  * OpenID Connect Passport extension points live under `App\Oidc` (not a single shared suffix):
  * - `OidcAuthCodeGrant` (`*Grant`): replaces Passport's authorization_code grant (PKCE S256, nonce).
  * - `OidcAuthCodeRepository` (`*Repository`): persists `nonce` / `auth_time` / `sid` / `amr` with the auth code.
+ * - `OidcDeviceCodeGrant` (`*Grant`): replaces Passport's device_code grant (RFC 8628 + id_token context).
+ * - `OidcDeviceCodeRepository` (`*Repository`): persists `auth_time` / `sid` / `amr` with the device code.
  * - `IdTokenResponse` (`*Response`): adds the RS256 `id_token` to the token response.
  * They keep those role nouns because they extend league/Passport / oauth2-server types; the
  * shared suffix table does not cover `App\Oidc`, and renaming them would break the wiring in
