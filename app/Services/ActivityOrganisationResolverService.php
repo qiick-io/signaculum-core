@@ -13,7 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  * Resolves the organisation id that should stamp an activity row.
  *
  * Prefer an explicit property, then the subject when it is an organisation or
- * belongs to one. Non-organisation actions stay null.
+ * belongs to one. Non-organisation actions stay null. Do not probe arbitrary
+ * models for `organization_id`: under Model::shouldBeStrict() that throws.
  */
 final class ActivityOrganisationResolverService
 {
@@ -45,12 +46,6 @@ final class ActivityOrganisationResolverService
             $organizationId = $subject->organization_id;
 
             return $organizationId !== '' ? $organizationId : null;
-        }
-
-        $organizationId = $subject->getAttribute('organization_id');
-
-        if (is_string($organizationId) && $organizationId !== '') {
-            return $organizationId;
         }
 
         return null;
