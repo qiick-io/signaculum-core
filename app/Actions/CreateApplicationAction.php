@@ -41,6 +41,8 @@ final class CreateApplicationAction
             'is_first_party' => $applicationData->isFirstParty,
             'is_pushed_authorization_required' => $applicationData->isPushedAuthorizationRequired,
             'grant_types' => $applicationData->grantTypes(),
+            'frontchannel_logout_uri' => $applicationData->frontchannelLogoutUri,
+            'is_frontchannel_logout_session_required' => $applicationData->isFrontchannelLogoutSessionRequired,
         ])->save();
 
         $client->plainSecret = $plainSecret;

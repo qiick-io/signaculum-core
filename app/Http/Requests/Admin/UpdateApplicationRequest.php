@@ -6,6 +6,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Data\ApplicationData;
 use App\Http\Requests\Concerns\ParsesApplicationRedirectUrisTrait;
+use App\Http\Requests\Concerns\ValidatesFrontchannelLogoutUriTrait;
 use App\Models\Client;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -18,6 +19,7 @@ use Illuminate\Validation\Validator;
 final class UpdateApplicationRequest extends FormRequest
 {
     use ParsesApplicationRedirectUrisTrait;
+    use ValidatesFrontchannelLogoutUriTrait;
 
     public function authorize(): bool
     {
@@ -40,6 +42,8 @@ final class UpdateApplicationRequest extends FormRequest
             'is_client_credentials_enabled' => ['required', 'boolean'],
             'is_device_authorization_enabled' => ['required', 'boolean'],
             'is_pushed_authorization_required' => ['required', 'boolean'],
+            'frontchannel_logout_uri' => ['sometimes', 'nullable', 'string', 'max:2048'],
+            'is_frontchannel_logout_session_required' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -53,6 +57,8 @@ final class UpdateApplicationRequest extends FormRequest
             isClientCredentialsEnabled: $this->boolean('is_client_credentials_enabled'),
             isDeviceAuthorizationEnabled: $this->boolean('is_device_authorization_enabled'),
             isPushedAuthorizationRequired: $this->boolean('is_pushed_authorization_required'),
+            frontchannelLogoutUri: $this->normalizedFrontchannelLogoutUri(),
+            isFrontchannelLogoutSessionRequired: $this->boolean('is_frontchannel_logout_session_required'),
         );
     }
 
@@ -60,6 +66,7 @@ final class UpdateApplicationRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             $this->validateParsedRedirectUris($validator);
+            $this->validateFrontchannelLogoutUri($validator);
 
             if ($this->boolean('is_client_credentials_enabled') && ! $this->boolean('is_confidential')) {
                 $validator->errors()->add(

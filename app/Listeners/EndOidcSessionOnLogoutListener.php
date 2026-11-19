@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Listeners;
 
 use App\Actions\DispatchBackChannelLogoutAction;
+use App\Actions\ResolveFrontChannelLogoutUrlsAction;
 use App\Models\User;
 use App\Services\AuthenticationContextService;
 use App\Services\OidcReauthenticationService;
@@ -12,7 +13,8 @@ use App\Services\OidcSessionService;
 use Illuminate\Auth\Events\Logout;
 
 /**
- * When the web guard logs out, fan out back-channel logout for the browser `sid`.
+ * When the web guard logs out, fan out back-channel logout for the browser `sid`
+ * and stash front-channel iframe URLs on the request for the logout response.
  *
  * Runs after the session may already be cleared, so the `sid` is read before Auth
  * tears the session down when possible, and falls back to the binding table.
@@ -24,6 +26,7 @@ final class EndOidcSessionOnLogoutListener
 {
     public function __construct(
         private readonly DispatchBackChannelLogoutAction $dispatchBackChannelLogoutAction,
+        private readonly ResolveFrontChannelLogoutUrlsAction $resolveFrontChannelLogoutUrlsAction,
         private readonly OidcSessionService $oidcSessionService,
         private readonly OidcReauthenticationService $oidcReauthenticationService,
         private readonly AuthenticationContextService $authenticationContextService,
@@ -55,6 +58,17 @@ final class EndOidcSessionOnLogoutListener
             } else {
                 $oidcSessionId = $this->oidcSessionService->oidcSessionIdForLaravelSession(request()->session()->getId());
             }
+        }
+
+        // Collect before back-channel ends the client_sessions rows; stash on the
+        // request so Fortify's LogoutResponse can render iframes after invalidate().
+        $iframeUrls = $this->resolveFrontChannelLogoutUrlsAction->execute(
+            user: $user,
+            oidcSessionId: $oidcSessionId,
+        );
+
+        if ($iframeUrls !== []) {
+            request()->attributes->set('oidc.frontchannel_logout_urls', $iframeUrls);
         }
 
         $this->dispatchBackChannelLogoutAction->execute(

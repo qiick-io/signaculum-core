@@ -280,3 +280,64 @@ it('defaults the per-application PAR requirement to off when the field is omitte
 
     expect($application->requiresPushedAuthorizationRequests())->toBeFalse();
 });
+
+/*
+ * #128 gave applications a second door. A per-client setting the admin form writes
+ * must mean the same thing through the Admin REST API: validated on the way in,
+ * visible on the way out. Front-channel logout (#65) adds two of them.
+ */
+it('accepts the front-channel logout settings on create and reads them back', function (): void {
+    ['plain' => $plain] = adminApiKey([
+        ApiKeyScopeEnum::ApplicationsWrite->value,
+        ApiKeyScopeEnum::ApplicationsRead->value,
+    ]);
+
+    $this->withToken($plain)
+        ->postJson('/api/v1/applications', applicationApiPayload([
+            'name' => 'Front channel app',
+            'frontchannel_logout_uri' => 'https://front-channel.test/logout',
+            'is_frontchannel_logout_session_required' => true,
+        ]))
+        ->assertCreated()
+        ->assertJsonPath('data.frontchannel_logout_uri', 'https://front-channel.test/logout')
+        ->assertJsonPath('data.is_frontchannel_logout_session_required', true);
+
+    $application = Client::query()->where('name', 'Front channel app')->firstOrFail();
+
+    // The URI the API accepted is the URI the logout flow will load.
+    expect($application->frontchannel_logout_uri)->toBe('https://front-channel.test/logout')
+        ->and($application->is_frontchannel_logout_session_required)->toBeTrue();
+
+    $this->withToken($plain)->getJson('/api/v1/applications/'.$application->getKey())
+        ->assertOk()
+        ->assertJsonPath('data.frontchannel_logout_uri', 'https://front-channel.test/logout')
+        ->assertJsonPath('data.is_frontchannel_logout_session_required', true);
+});
+
+it('defaults the front-channel logout settings to unset when the fields are omitted', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::ApplicationsWrite->value]);
+
+    $this->withToken($plain)
+        ->postJson('/api/v1/applications', applicationApiPayload(['name' => 'No front channel app']))
+        ->assertCreated()
+        ->assertJsonPath('data.frontchannel_logout_uri', null)
+        ->assertJsonPath('data.is_frontchannel_logout_session_required', false);
+});
+
+it('refuses a front-channel logout URI the admin form would also refuse', function (string $uri): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::ApplicationsWrite->value]);
+
+    $this->withToken($plain)
+        ->postJson('/api/v1/applications', applicationApiPayload([
+            'name' => 'Bad front channel app',
+            'frontchannel_logout_uri' => $uri,
+        ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['frontchannel_logout_uri']);
+
+    expect(Client::query()->where('name', 'Bad front channel app')->exists())->toBeFalse();
+})->with([
+    'plain http' => ['http://front-channel.test/logout'],
+    'carries a fragment' => ['https://front-channel.test/logout#done'],
+    'not a url' => ['not-a-url'],
+]);

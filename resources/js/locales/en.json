@@ -414,6 +414,11 @@
             "title": "Sign out",
             "description": "Confirm that you want to sign out of Signaculum.",
             "confirm": "Sign out"
+        },
+        "frontchannelLogout": {
+            "title": "Signing out",
+            "description": "Signing you out of connected applications…",
+            "iframeTitle": "Application logout"
         }
     },
     "errorBoundary": {
@@ -610,7 +615,11 @@
                 "deviceAuthorization": "Allow device authorization",
                 "deviceAuthorizationHint": "RFC 8628 device flow for CLI, TV and IoT clients. Users enter a code at /oauth/device.",
                 "pushedAuthorization": "Require pushed authorization requests (PAR)",
-                "pushedAuthorizationHint": "The application must send every sign-in request to the PAR endpoint first. Plain authorization links from it are refused. Turn on only when the application supports PAR."
+                "pushedAuthorizationHint": "The application must send every sign-in request to the PAR endpoint first. Plain authorization links from it are refused. Turn on only when the application supports PAR.",
+                "frontchannelLogoutUri": "Front-channel logout URI",
+                "frontchannelLogoutUriHint": "Absolute https URL loaded in a hidden iframe on logout (OIDC Front-Channel Logout). Leave empty to skip. Exact value; no fragment.",
+                "frontchannelLogoutSessionRequired": "Require iss and sid on front-channel logout",
+                "frontchannelLogoutSessionRequiredHint": "When enabled, Signaculum appends issuer and session id query parameters to the logout URI."
             },
             "empty": {
                 "title": "No applications yet",

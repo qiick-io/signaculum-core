@@ -12,6 +12,8 @@ In the Applications drawer set:
 | **Redirect URIs**             | One per line. Exact match at runtime (no wildcards). `https` required except localhost. No fragments.                                   |
 | **Post-logout redirect URIs** | Exact match for RP-initiated logout (`post_logout_redirect_uri`).                                                                       |
 | **Back-channel logout URI**   | Absolute URL that accepts `POST` with `logout_token` (optional).                                                                        |
+| **Front-channel logout URI**  | Absolute https URL loaded in a hidden iframe on logout (optional; OIDC Front-Channel Logout 1.0). Exact value; no fragment.             |
+| **Front-channel session**     | When enabled, Signaculum appends `iss` and `sid` query parameters to the front-channel logout URI.                                      |
 | **Confidential / public**     | Confidential clients have a secret; public clients use PKCE only (`token_endpoint_auth_methods_supported` includes `none`).             |
 | **First-party**               | Skips the consent screen for this instance's own apps.                                                                                  |
 | **Allow client credentials**  | Opt-in for confidential clients only: machine tokens without a user (`grant_type=client_credentials`). No `id_token`, no refresh token. |
@@ -26,7 +28,7 @@ The drawer also shows the discovery URL and a ready-to-run `oidc:configure` exam
 - **`nonce`** required on every `openid` authorize request when `OIDC_REQUIRE_NONCE` is true; echoed in the `id_token`.
 - **`state`** is passed through; clients must validate it.
 - Scopes: `openid`, `profile`, `email`, `qiick.orgs` (organisations — see [Organisations](./organizations.md)).
-- Logout: register post-logout and back-channel URIs; Signaculum supports RP-initiated and back-channel logout (no front-channel).
+- Logout: register post-logout, back-channel and optional front-channel URIs; Signaculum supports RP-initiated, back-channel and front-channel logout.
 
 ## Connect a Laravel app (`qiick/laravel-oidc`)
 

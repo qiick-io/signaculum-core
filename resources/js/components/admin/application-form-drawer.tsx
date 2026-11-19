@@ -39,6 +39,8 @@ const EMPTY_APPLICATION_FORM = {
     is_client_credentials_enabled: false,
     is_device_authorization_enabled: false,
     is_pushed_authorization_required: false,
+    frontchannel_logout_uri: '',
+    is_frontchannel_logout_session_required: false,
 };
 
 export type ApplicationFormDrawerProps = {
@@ -86,6 +88,10 @@ export function ApplicationFormDrawer({
                     editing.is_device_authorization_enabled,
                 is_pushed_authorization_required:
                     editing.is_pushed_authorization_required,
+                frontchannel_logout_uri:
+                    editing.frontchannel_logout_uri ?? '',
+                is_frontchannel_logout_session_required:
+                    editing.is_frontchannel_logout_session_required,
             };
             form.setData(payload);
             form.setDefaults({ ...payload });
@@ -482,6 +488,81 @@ export function ApplicationFormDrawer({
                             </div>
                             <FieldError>
                                 {form.errors.is_pushed_authorization_required}
+                            </FieldError>
+                        </Field>
+
+                        <Field
+                            data-invalid={
+                                !!form.errors.frontchannel_logout_uri ||
+                                undefined
+                            }
+                        >
+                            <FieldLabel htmlFor="application-frontchannel-logout-uri">
+                                {t(
+                                    'admin.applications.form.frontchannelLogoutUri',
+                                )}
+                            </FieldLabel>
+                            <Input
+                                id="application-frontchannel-logout-uri"
+                                name="frontchannel_logout_uri"
+                                value={form.data.frontchannel_logout_uri}
+                                maxLength={STRING_LIMITS.URL}
+                                disabled={readOnly || form.processing}
+                                aria-invalid={
+                                    !!form.errors.frontchannel_logout_uri ||
+                                    undefined
+                                }
+                                onChange={(event) =>
+                                    form.setData(
+                                        'frontchannel_logout_uri',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                            <FieldDescription>
+                                {t(
+                                    'admin.applications.form.frontchannelLogoutUriHint',
+                                )}
+                            </FieldDescription>
+                            <FieldError>
+                                {form.errors.frontchannel_logout_uri}
+                            </FieldError>
+                        </Field>
+
+                        <Field>
+                            <div className="flex items-start gap-3">
+                                <Checkbox
+                                    id="application-frontchannel-session-required"
+                                    checked={
+                                        form.data
+                                            .is_frontchannel_logout_session_required
+                                    }
+                                    disabled={readOnly || form.processing}
+                                    onCheckedChange={(checked) =>
+                                        form.setData(
+                                            'is_frontchannel_logout_session_required',
+                                            checked === true,
+                                        )
+                                    }
+                                />
+                                <div className="grid gap-1.5 leading-none">
+                                    <FieldLabel htmlFor="application-frontchannel-session-required">
+                                        {t(
+                                            'admin.applications.form.frontchannelLogoutSessionRequired',
+                                        )}
+                                    </FieldLabel>
+                                    <FieldDescription>
+                                        {t(
+                                            'admin.applications.form.frontchannelLogoutSessionRequiredHint',
+                                        )}
+                                    </FieldDescription>
+                                </div>
+                            </div>
+                            <FieldError>
+                                {
+                                    form.errors
+                                        .is_frontchannel_logout_session_required
+                                }
                             </FieldError>
                         </Field>
 

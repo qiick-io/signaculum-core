@@ -32,7 +32,7 @@ Every qiick app keeps working standalone with local login. Signaculum is one sta
 - Local accounts: email and password, TOTP two-factor, passkeys, email verification, optional passwordless email one-time code (off by default)
 - Granular password policy (length and character classes); optional Have I Been Pwned check (off by default) — [Password policy](./docs/password-policy.md)
 - Organisations with members and roles `owner`, `admin`, `member`, `billing` (multi-role; never zero owners); optional per-organisation MFA enrolment gate and branding
-- OpenID Connect on Laravel Passport: authorization code + **PKCE S256** (required), RS256 `id_token`, discovery, JWKS with rotation, userinfo, RP-initiated and back-channel logout, token revocation and introspection, optional client credentials
+- OpenID Connect on Laravel Passport: authorization code + **PKCE S256** (required), RS256 `id_token`, discovery, JWKS with rotation, userinfo, RP-initiated, back-channel and front-channel logout, token revocation and introspection, optional client credentials
 - Scopes `openid`, `profile`, `email`, `qiick.orgs` (`orgs` claim), plus `amr` / `acr` for MFA signalling
 - Admin UI for users, OIDC applications, activity log, email templates, API keys and instance settings
 - Admin REST API (`/api/v1`) with scoped Bearer API keys and OpenAPI — [Admin API](./docs/admin-api.md)
@@ -40,7 +40,7 @@ Every qiick app keeps working standalone with local login. Signaculum is one sta
 - Tested against the OpenID Foundation conformance suite (Basic OP, RP-initiated and back-channel logout) — [Conformance](./docs/oidc-conformance.md)
 - Self-registration **off by default** (closed IdP); instance admins enable it under Settings → Authentication & security
 
-Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social logins, front-channel logout.
+Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social logins.
 
 Password rules are configured under Settings → Authentication & security (length and character classes). Rejecting passwords found in known breaches is **off by default** and documented in [docs/password-policy.md](./docs/password-policy.md) (k-anonymity check against Have I Been Pwned when enabled).
 
