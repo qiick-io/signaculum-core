@@ -8,6 +8,7 @@ use App\Actions\RecordClientSessionAction;
 use App\Data\IdTokenRequestData;
 use App\Enums\AuthenticationMethodEnum;
 use DateTimeImmutable;
+use Illuminate\Support\Facades\Date;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Encoding\ChainedFormatter;
 use Lcobucci\JWT\Signer\Key\InMemory;
@@ -43,7 +44,8 @@ final class IdTokenService
             InMemory::plainText($this->nonEmpty($signingKey->public_key)),
         );
 
-        $issuedAt = new DateTimeImmutable('@'.time());
+        // Laravel's clock so tests can freezeTime(); wire still uses unix seconds via the formatter.
+        $issuedAt = new DateTimeImmutable('@'.Date::now()->getTimestamp());
         $userClaims = $this->oidcClaimsService->claimsFor($idTokenRequest->user, $idTokenRequest->scopes);
         $authenticationMethods = $idTokenRequest->context->authenticationMethods;
 

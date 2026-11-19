@@ -32,6 +32,9 @@ test('the id_token carries the standard claims and echoes the nonce', function (
     $this->actingAs($this->user);
     $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
 
+    // Freeze before redeem so exact iat/exp toBe assertions cannot race the wall clock (#170).
+    $this->freezeTime();
+
     $idToken = redeemCode($this->client, $code, $this->pkce['verifier'])->json('id_token');
     $claims = verifiedIdToken($idToken)->claims();
     $rawPayload = json_decode(base64_decode(strtr(explode('.', $idToken)[1], '-_', '+/')), true);
