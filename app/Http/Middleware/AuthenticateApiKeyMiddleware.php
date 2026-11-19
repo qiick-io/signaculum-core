@@ -23,7 +23,8 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Side effects: authenticates the key owner on the separate `api-key` guard (never the session
  * guard, so no web session can come of it), puts the key on the request as `apiKey`, records
- * `last_used_at` / `last_used_ip` and enforces the per-key rate limit.
+ * `last_used_at` / `last_used_ip`, enforces the per-key rate limit and applies the owner's locale
+ * when no supported `Accept-Language` was requested.
  */
 final class AuthenticateApiKeyMiddleware
 {
@@ -78,6 +79,9 @@ final class AuthenticateApiKeyMiddleware
         $request->attributes->set('apiKey', $apiKey);
         Auth::guard('api-key')->setUser($owner);
         Auth::shouldUse('api-key');
+
+        // The global locale middleware ran before key auth; apply the owner's locale here.
+        SetLocaleMiddleware::applyPrincipalLocale($request, is_string($owner->locale) ? $owner->locale : null);
 
         return $next($request);
     }

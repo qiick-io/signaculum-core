@@ -1,3 +1,11 @@
 {
-    "An organisation you belong to requires a second factor. Sign in with your authenticator or a passkey.": "Eine Organisation, der Sie angehören, erfordert einen zweiten Faktor. Melden Sie sich mit Ihrem Authenticator oder einem Passkey an."
+    "An organisation you belong to requires a second factor. Sign in with your authenticator or a passkey.": "Eine Organisation, der Sie angehören, erfordert einen zweiten Faktor. Melden Sie sich mit Ihrem Authenticator oder einem Passkey an.",
+    "api_errors.bad_request": "Ungültige Anfrage.",
+    "api_errors.forbidden": "Zugriff verweigert.",
+    "api_errors.method_not_allowed": "Methode nicht erlaubt.",
+    "api_errors.not_found": "Nicht gefunden.",
+    "api_errors.server_error": "Serverfehler.",
+    "api_errors.too_many_requests": "Zu viele Anfragen.",
+    "api_errors.unauthenticated": "Nicht authentifiziert.",
+    "api_errors.validation_failed": "Validierung fehlgeschlagen."
 }
