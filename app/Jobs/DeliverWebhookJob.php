@@ -98,15 +98,14 @@ final class DeliverWebhookJob implements ShouldQueue
                 'X-Signaculum-Event' => $this->eventType,
                 'User-Agent' => 'Signaculum-Webhooks/1.0',
             ])
-            ->withBody($payload, 'application/json');
-
-        if ($authorized['curl_resolve'] !== []) {
-            $pendingRequest = $pendingRequest->withOptions([
+            ->withBody($payload, 'application/json')
+            // The connection goes to the address the guard checked and nowhere else, however
+            // the URL spells its host (#185).
+            ->withOptions([
                 'curl' => [
-                    CURLOPT_RESOLVE => $authorized['curl_resolve'],
+                    CURLOPT_CONNECT_TO => $authorized['curl_connect_to'],
                 ],
             ]);
-        }
 
         $response = $pendingRequest->post($webhook->url);
 

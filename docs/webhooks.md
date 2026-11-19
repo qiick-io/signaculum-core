@@ -5,10 +5,18 @@ Signaculum POSTs a signed JSON body when a subscribed domain event occurs.
 
 This is not telemetry: deliveries go only to URLs an admin registers. Private,
 loopback and link-local hosts are refused unless **Allow private webhook URLs**
-is enabled (local QA). Cloud metadata hosts stay blocked either way. Hostname
-targets are resolved for A and AAAA; any disallowed address refuses the URL, and
-delivery pins one validated address with `CURLOPT_RESOLVE` so DNS rebinding
-cannot send the POST elsewhere. IPv6 pins use brackets (`host:443:[2001:db8::1]`).
+is enabled (local QA). Cloud metadata hosts stay blocked either way, whether the
+URL names them or a hostname resolves to them.
+
+Every delivery is pinned to an address the guard checked. A hostname is resolved
+once, for A and AAAA (falling back to the system resolver, so a hosts-file entry
+works); any disallowed address refuses the URL, and a hostname that resolves to
+nothing is refused, because there is nothing checked to send to. One validated
+address (IPv4 first) is handed to curl with `CURLOPT_CONNECT_TO` and an empty
+source host (`::93.184.216.34:443`, IPv6 in brackets: `::[2001:db8::1]:443`), so
+neither DNS rebinding nor the way the host is spelt can send the POST elsewhere.
+An IP literal is pinned to itself. An IPv4 address must be written in dotted
+decimal: `2852039166`, `0251.0376.0251.0376` or `169.254.169.254.` are refused.
 
 ## Events
 

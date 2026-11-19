@@ -142,9 +142,11 @@ it('never asks the resolver about a bracketed host at all', function (string $ur
 |--------------------------------------------------------------------------
 */
 
-it('still authorises a public ipv6 literal and does not pin it', function (): void {
+it('still authorises a public ipv6 literal and pins it to itself', function (): void {
+    // #181 removed a nonsense CURLOPT_RESOLVE pin built from the bracketed string; since #185
+    // every destination is pinned, and a literal is pinned to the address it is.
     expect(ipv6Guard()->authorizeOutbound('https://[2606:2800:220:1:248:1893:25c8:1946]/hook'))
-        ->toBe(['ok' => true, 'curl_resolve' => []]);
+        ->toBe(['ok' => true, 'curl_connect_to' => ['::[2606:2800:220:1:248:1893:25c8:1946]:443']]);
 });
 
 it('still authorises a public ipv4 mapped literal', function (): void {
@@ -155,7 +157,7 @@ it('still pins a hostname that resolves to ipv6, brackets and all', function ():
     expect(ipv6Guard(['2606:2800:220:1:248:1893:25c8:1946'])->authorizeOutbound('https://v6.example.com/hook'))
         ->toBe([
             'ok' => true,
-            'curl_resolve' => ['v6.example.com:443:[2606:2800:220:1:248:1893:25c8:1946]'],
+            'curl_connect_to' => ['::[2606:2800:220:1:248:1893:25c8:1946]:443'],
         ]);
 });
 
