@@ -6,12 +6,18 @@ use App\Actions\CreateApiKeyAction;
 use App\Data\ApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Enums\WebhookEventEnum;
+use App\Http\Resources\ActivityLogResource;
+use App\Models\ApiKey;
+use App\Models\Client;
+use App\Models\Organization;
 use App\Models\User;
 use App\Models\Webhook;
 use App\Services\SettingsRepositoryService;
+use App\Traits\LogsApplicationActivityTrait;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Activitylog\Models\Activity;
@@ -168,6 +174,83 @@ it('shows each subject id with its model key type, integer or UUID', function ()
             fn ($rows) => collect($rows)->pluck('subject.id')->contains(fn ($subjectId) => $subjectId === $user->getKey())
                 && collect($rows)->pluck('subject.id')->contains(fn ($subjectId) => $subjectId === $client->getKey()),
         ));
+});
+
+it('requires an explicit subject label arm for every activity-logged model', function () {
+    // Trait users plus models only attached via activity()->performedOn(...) (Organisation).
+    $loggedModelClasses = collect(File::files(app_path('Models')))
+        ->map(fn ($file): string => 'App\\Models\\'.$file->getFilenameWithoutExtension())
+        ->filter(fn (string $class): bool => class_exists($class)
+            && in_array(LogsApplicationActivityTrait::class, class_uses_recursive($class), true))
+        ->push(Organization::class)
+        ->unique()
+        ->sort()
+        ->values()
+        ->all();
+
+    $resource = new ActivityLogResource(new Activity);
+    $subjectLabel = new ReflectionMethod(ActivityLogResource::class, 'subjectLabel');
+
+    foreach ($loggedModelClasses as $modelClass) {
+        $subject = match ($modelClass) {
+            User::class => User::factory()->make(['first_name' => 'Ada', 'last_name' => 'Lovelace']),
+            Client::class => (new Client)->forceFill(['name' => 'Externa', 'id' => '00000000-0000-0000-0000-000000000001']),
+            ApiKey::class => (new ApiKey)->forceFill(['name' => 'CI key', 'id' => 1]),
+            Organization::class => Organization::factory()->make(['name' => 'Acme', 'slug' => 'acme']),
+            Webhook::class => (new Webhook)->forceFill(['url' => 'https://hooks.example.com/label', 'id' => 1]),
+            default => throw new RuntimeException(
+                "Add a subject fixture and ActivityLogResource::subjectLabel() arm for {$modelClass}.",
+            ),
+        };
+
+        expect($subjectLabel->invoke($resource, $subject))->toBeString();
+    }
+});
+
+it('renders the activity log with webhook create update and delete without exposing the secret', function () {
+    $admin = activityAdmin();
+    $this->actingAs($admin);
+
+    $webhookSecret = 'webhook-signing-secret-must-never-appear';
+    $webhookUrl = 'https://hooks.example.com/signaculum-activity';
+
+    $webhook = Webhook::query()->create([
+        'url' => $webhookUrl,
+        'secret' => $webhookSecret,
+        'events' => [WebhookEventEnum::UserCreated->value],
+        'is_active' => true,
+    ]);
+
+    // Flip is_active so an update is logged; url stays the readable label on the live subject.
+    $webhook->update(['is_active' => false]);
+
+    // Subject must still exist so the page resolves a label under Model::shouldBeStrict (#171).
+    $response = $this->get(route('admin.activity-logs.index'))->assertOk();
+
+    expect($response->getContent())->not->toContain($webhookSecret);
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->has('activityLogs.data')
+        ->where(
+            'activityLogs.data',
+            function ($rows) use ($webhookUrl): bool {
+                $webhookRows = collect($rows)->filter(
+                    fn ($row): bool => ($row['subject']['type'] ?? null) === 'Webhook'
+                        && ($row['subject']['label'] ?? null) === $webhookUrl,
+                );
+
+                return $webhookRows->contains(fn ($row): bool => ($row['event'] ?? null) === 'created')
+                    && $webhookRows->contains(fn ($row): bool => ($row['event'] ?? null) === 'updated');
+            },
+        ));
+
+    $webhook->delete();
+
+    $afterDelete = $this->get(route('admin.activity-logs.index'))->assertOk();
+
+    expect($afterDelete->getContent())->not->toContain($webhookSecret)
+        ->and(Activity::query()->where('event', 'deleted')
+            ->where('subject_type', $webhook->getMorphClass())->exists())->toBeTrue();
 });
 
 it('logs instance settings updates with keys only', function () {
