@@ -25,7 +25,7 @@ use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
- * @property string $subject OpenID Connect `sub`: opaque UUID, never reassigned
+ * @property string $subject Fleet public_id and OpenID Connect `sub`: opaque UUID, never reassigned (declared divergence: no second public_id column)
  * @property string $first_name
  * @property string|null $last_name
  * @property-read string $name first and last name
