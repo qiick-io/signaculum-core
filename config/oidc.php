@@ -60,6 +60,11 @@ return [
     'backchannel_logout_tries' => (int) env('OIDC_BACKCHANNEL_LOGOUT_TRIES', 3),
 
     /*
+     * Lifetime of a pushed authorization request URI in seconds (RFC 9126 §2.2).
+     */
+    'par_expires_in' => (int) env('OIDC_PAR_EXPIRES_IN', 60),
+
+    /*
      * Named rate limiters (S6). Values are attempts per minute; tests may lower them.
      */
     'rate_limits' => [

@@ -11,6 +11,7 @@ use App\Http\Controllers\Oidc\AuthorizationEndpointPostController;
 use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
 use App\Http\Middleware\RejectUnsupportedRequestObjectMiddleware;
+use App\Http\Middleware\ResolvePushedAuthorizationRequestMiddleware;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\User;
@@ -92,8 +93,10 @@ class AppServiceProvider extends ServiceProvider
         $this->registerAuthActivityListeners();
         $this->attachOidcRateLimitMiddleware();
         $this->attachAuthorizationResponseIssuerMiddleware();
-        $this->attachMaximumAuthenticationAgeMiddleware();
+        // Order matters: a PAR request_uri is expanded before max_age / prompt=login run.
         $this->attachUnsupportedRequestObjectMiddleware();
+        $this->attachPushedAuthorizationRequestMiddleware();
+        $this->attachMaximumAuthenticationAgeMiddleware();
         $this->configureAuthorizationEndpointPost();
     }
 
@@ -346,6 +349,29 @@ class AppServiceProvider extends ServiceProvider
                     'passport.authorizations.approve',
                 ], true)) {
                     $route->middleware(RejectUnsupportedRequestObjectMiddleware::class);
+                }
+            }
+        });
+    }
+
+    /**
+     * RFC 9126 §4 / §6: expand PAR `request_uri` on the authorization endpoint and
+     * refuse plain requests from clients that require PAR.
+     *
+     * {@see RejectUnsupportedRequestObjectMiddleware} lets PAR URIs through; this
+     * middleware consumes them (or returns `invalid_request`) before Passport runs.
+     */
+    protected function attachPushedAuthorizationRequestMiddleware(): void
+    {
+        $this->app->booted(function (): void {
+            foreach (Route::getRoutes()->getRoutes() as $route) {
+                $routeName = $route->getName();
+
+                if (in_array($routeName, [
+                    'passport.authorizations.authorize',
+                    'passport.authorizations.approve',
+                ], true)) {
+                    $route->middleware(ResolvePushedAuthorizationRequestMiddleware::class);
                 }
             }
         });

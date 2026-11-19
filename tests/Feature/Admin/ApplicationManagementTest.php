@@ -27,6 +27,7 @@ function applicationFormPayload(array $overrides = []): array
         'is_first_party' => true,
         'is_client_credentials_enabled' => false,
         'is_device_authorization_enabled' => false,
+        'is_pushed_authorization_required' => false,
         ...$overrides,
     ];
 }
@@ -144,6 +145,38 @@ test('client credentials cannot be enabled on a public application', function ()
             'is_client_credentials_enabled' => true,
         ]))
         ->assertSessionHasErrors(['is_client_credentials_enabled']);
+});
+
+test('an instance admin requires pushed authorization requests per application', function () {
+    $admin = instanceAdminForApplications();
+
+    $this->actingAs($admin)
+        ->post(route('admin.applications.store'), applicationFormPayload([
+            'name' => 'High assurance',
+            'is_pushed_authorization_required' => true,
+        ]))
+        ->assertRedirect(route('admin.applications.index'));
+
+    $client = Client::query()->where('name', 'High assurance')->sole();
+
+    expect($client->requiresPushedAuthorizationRequests())->toBeTrue();
+
+    $this->actingAs($admin)
+        ->get(route('admin.applications.index'))
+        ->assertInertia(fn (Assert $page) => $page->where(
+            'applications.data.0.is_pushed_authorization_required',
+            true,
+        ));
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', $client), applicationFormPayload([
+            'name' => 'High assurance',
+            'redirect_uris' => 'https://externa.test/auth/oidc/callback',
+            'is_pushed_authorization_required' => false,
+        ]))
+        ->assertRedirect();
+
+    expect($client->refresh()->requiresPushedAuthorizationRequests())->toBeFalse();
 });
 
 test('an instance admin creates a public application that does not skip consent', function () {

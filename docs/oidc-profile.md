@@ -18,6 +18,7 @@ Issuer = `APP_URL` / `OIDC_ISSUER` without a trailing slash (`config/oidc.php`).
 | `/oauth/userinfo`                   | `GET`, `POST`           | Bearer access token; requires `openid` scope                                                                                                                                     |
 | `/oauth/introspect`                 | `POST`                  | RFC 7662 introspection; confidential clients only (`client_secret_basic` / `_post`)                                                                                              |
 | `/oauth/revoke`                     | `POST`                  | RFC 7009 token revocation (`revocation_endpoint`)                                                                                                                                |
+| `/oauth/par`                        | `POST`                  | RFC 9126 Pushed Authorization Requests (`pushed_authorization_request_endpoint`); same client auth as the token endpoint                                                         |
 | `/oauth/end-session`                | `GET`, `POST`           | RP-initiated logout (`end_session_endpoint`); confirmation when hint missing                                                                                                     |
 | `/oauth/end-session/confirm`        | `POST`                  | User confirmation after the logout interstitial                                                                                                                                  |
 
@@ -27,7 +28,7 @@ Known limitation (`/oauth/authorize` form POST): session cookies use `SameSite=L
 
 Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
-- `issuer`, `authorization_endpoint`, `device_authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `introspection_endpoint`, `revocation_endpoint`, `end_session_endpoint`, `jwks_uri`
+- `issuer`, `authorization_endpoint`, `device_authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `introspection_endpoint`, `revocation_endpoint`, `pushed_authorization_request_endpoint`, `end_session_endpoint`, `jwks_uri`
 - `introspection_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post` (no `none`)
 - `scopes_supported`: `openid`, `profile`, `email`, `qiick.orgs`
 - `response_types_supported`: `code`
@@ -40,11 +41,22 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `code_challenge_methods_supported`: `S256`
 - `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, `amr`, `acr`, plus user claims below
 - `acr_values_supported`: `urn:qiick:loa:pwd`, `urn:qiick:loa:mfa`
-- `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false` (Request Objects are not implemented; see Errors)
+- `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false` (OIDC Request Objects are not implemented; PAR uses its own `request_uri` values — see below)
+- `require_pushed_authorization_requests`: `false` (the server does not require PAR for every client; an application can require it for itself, see below)
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
 - `authorization_response_iss_parameter_supported`: `true` (RFC 9207)
 - No front-channel logout fields
+
+## Pushed Authorization Requests (RFC 9126)
+
+`POST /oauth/par` (`application/x-www-form-urlencoded`) accepts the full authorization request (PKCE S256, `nonce` for `openid`, exact `redirect_uri`, scopes) with the same client authentication as `/oauth/token`. Validation happens **before** storage. Success is HTTP 201 with `request_uri` (`urn:ietf:params:oauth:request_uri:…`) and short `expires_in` (`OIDC_PAR_EXPIRES_IN`, default 60s). The URI is single-use and bound to the pushing `client_id`.
+
+`/oauth/authorize` then accepts `client_id` + that `request_uri`; other authorize parameters are ignored (RFC 9126 §4). Mismatched client, expired or reused URIs → HTTP 400 `invalid_request`. A non-PAR `request_uri` (for example a remote JAR URL) still yields `request_uri_not_supported` (#113). The OIDC `request` parameter stays `request_not_supported`. Rate limit: same named limiter as the token endpoint (`oidc-token`).
+
+**Requiring PAR per application (RFC 9126 §6 `require_pushed_authorization_requests`).** Admin → Applications → “Require pushed authorization requests (PAR)” (column `oauth_clients.is_pushed_authorization_required`, default off). For such an application, `/oauth/authorize` without a PAR `request_uri` is refused with `error=invalid_request` on the registered `redirect_uri` (with `state` and `iss`); an unregistered `redirect_uri` gets HTTP 401 and no redirect. RFC 9126 defines no dedicated error code: `invalid_request` is RFC 6749 §4.1.2.1's “missing a required parameter” (`request_uri`). Public applications may require PAR too: it keeps the parameters off the front channel, but a public push is not client-authenticated.
+
+**Login in the middle of a pushed request.** The `request_uri` is spent on its first use. When that use sends the browser to log in (no session, `prompt=login`, `max_age`), the expanded request is kept in that browser's session and the intended URL is `/oauth/authorize?client_id=…&request_uri=…`, so the pushed parameters never appear in the browser and only the session that spent the URI can finish it, also after `expires_in` has passed. `prompt` and `max_age` from the push are honoured like those of a plain request.
 
 ## Authorization response `iss` (RFC 9207)
 
@@ -221,7 +233,9 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | PKCE / nonce / consent deny / `prompt=none` without session / `max_age` exceeded with `prompt=none` / org MFA unsatisfied with `prompt=none` | Redirect to the registered `redirect_uri` with `error`, echoed `state`, and RFC 9207 `iss` |
 | `request` parameter present (OIDC Core §6.1 / §3.1.2.6)                                                                                      | Redirect with `error=request_not_supported`, `state`, `iss`; never a `code`                |
-| `request_uri` parameter present (OIDC Core §6.1 / §3.1.2.6)                                                                                  | Redirect with `error=request_uri_not_supported`, `state`, `iss`; never a `code`            |
+| Non-PAR `request_uri` (OIDC Core §6.1 / §3.1.2.6)                                                                                            | Redirect with `error=request_uri_not_supported`, `state`, `iss`; never a `code`            |
+| PAR `request_uri` expired, reused or bound to another `client_id` (RFC 9126 §4)                                                              | HTTP 400 `invalid_request` (no open redirect)                                              |
+| PAR push with bad client auth / invalid authorization parameters (RFC 9126 §2.3)                                                             | JSON OAuth error (`invalid_client`, `invalid_request`, `invalid_scope`, …)                 |
 | `max_age` exceeded (no `prompt=none`) or `prompt=login`                                                                                      | Redirect to Signaculum `/login` (then back to authorize)                                   |
 | Unknown, revoked or unregistered `redirect_uri`                                                                                              | HTTP 401 (no redirect to an attacker URI)                                                  |
 | Bad token request (verifier, client secret, …)                                                                                               | JSON OAuth error (`invalid_grant`, `invalid_request`, `invalid_client`, …)                 |

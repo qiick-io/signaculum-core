@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Oidc\DiscoveryController;
 use App\Http\Controllers\Oidc\IntrospectionController;
 use App\Http\Controllers\Oidc\JwksController;
+use App\Http\Controllers\Oidc\PushedAuthorizationRequestController;
 use App\Http\Controllers\Oidc\RevokeTokenController;
 use App\Http\Controllers\Oidc\UserinfoController;
 use Illuminate\Support\Facades\Route;
@@ -27,3 +28,7 @@ Route::post('oauth/introspect', IntrospectionController::class)
 Route::post('oauth/revoke', RevokeTokenController::class)
     ->middleware('throttle:oidc-token')
     ->name('oidc.revoke');
+
+Route::post('oauth/par', PushedAuthorizationRequestController::class)
+    ->middleware('throttle:oidc-token')
+    ->name('oidc.par');

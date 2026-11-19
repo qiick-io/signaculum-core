@@ -25,6 +25,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property list<string> $grant_types
  * @property bool $revoked
  * @property bool $is_first_party
+ * @property bool $is_pushed_authorization_required
  * @property list<string>|null $post_logout_redirect_uris
  * @property string|null $backchannel_logout_uri
  * @property bool $is_backchannel_logout_session_required
@@ -44,6 +45,7 @@ class Client extends PassportClient
         'password_client' => 'bool',
         'revoked' => 'bool',
         'is_first_party' => 'bool',
+        'is_pushed_authorization_required' => 'bool',
         'post_logout_redirect_uris' => 'array',
         'is_backchannel_logout_session_required' => 'bool',
     ];
@@ -56,6 +58,15 @@ class Client extends PassportClient
     public function skipsAuthorization(Authenticatable $user, array $scopes): bool
     {
         return (bool) $this->is_first_party;
+    }
+
+    /**
+     * RFC 9126 §6 `require_pushed_authorization_requests`: authorization requests
+     * from this client are accepted only through the PAR endpoint.
+     */
+    public function requiresPushedAuthorizationRequests(): bool
+    {
+        return (bool) $this->is_pushed_authorization_required;
     }
 
     /**

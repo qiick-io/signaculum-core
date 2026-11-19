@@ -25,6 +25,7 @@ test('creating a confidential application flashes the plain secret once', functi
             'is_first_party' => false,
             'is_client_credentials_enabled' => false,
             'is_device_authorization_enabled' => false,
+            'is_pushed_authorization_required' => false,
         ])
         ->assertRedirect(route('admin.applications.index'));
 
@@ -113,6 +114,7 @@ test('redirect uris must be https except localhost and must not contain fragment
             'is_first_party' => false,
             'is_client_credentials_enabled' => false,
             'is_device_authorization_enabled' => false,
+            'is_pushed_authorization_required' => false,
         ])
         ->assertSessionHasErrors('redirect_uris');
 
@@ -124,6 +126,7 @@ test('redirect uris must be https except localhost and must not contain fragment
             'is_first_party' => false,
             'is_client_credentials_enabled' => false,
             'is_device_authorization_enabled' => false,
+            'is_pushed_authorization_required' => false,
         ])
         ->assertRedirect(route('admin.applications.index'));
 });

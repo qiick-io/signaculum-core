@@ -38,6 +38,7 @@ final class StoreApplicationRequest extends FormRequest
             'is_first_party' => ['required', 'boolean'],
             'is_client_credentials_enabled' => ['required', 'boolean'],
             'is_device_authorization_enabled' => ['required', 'boolean'],
+            'is_pushed_authorization_required' => ['required', 'boolean'],
         ];
     }
 
@@ -50,6 +51,7 @@ final class StoreApplicationRequest extends FormRequest
             isFirstParty: $this->boolean('is_first_party'),
             isClientCredentialsEnabled: $this->boolean('is_client_credentials_enabled'),
             isDeviceAuthorizationEnabled: $this->boolean('is_device_authorization_enabled'),
+            isPushedAuthorizationRequired: $this->boolean('is_pushed_authorization_required'),
         );
     }
 

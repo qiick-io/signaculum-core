@@ -14,6 +14,8 @@ test('discovery publishes the qiick protocol profile', function () {
             'userinfo_endpoint' => 'https://id.example.test/oauth/userinfo',
             'introspection_endpoint' => 'https://id.example.test/oauth/introspect',
             'revocation_endpoint' => 'https://id.example.test/oauth/revoke',
+            'pushed_authorization_request_endpoint' => 'https://id.example.test/oauth/par',
+            'require_pushed_authorization_requests' => false,
             'jwks_uri' => 'https://id.example.test/.well-known/jwks.json',
             'response_types_supported' => ['code'],
             'response_modes_supported' => ['query'],

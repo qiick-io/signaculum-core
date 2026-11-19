@@ -11,7 +11,7 @@ use Laravel\Passport\ClientRepository;
 
 /**
  * Updates an OIDC application's name, redirect URIs, confidentiality, first-party
- * flag and optional client_credentials grant.
+ * flag, PAR requirement and optional client_credentials grant.
  *
  * Side effects: may generate or clear the client secret when confidentiality changes.
  * Plain-text secret display belongs to the regenerate flow (sibling issue).
@@ -33,6 +33,7 @@ final class UpdateApplicationAction
         $wasConfidential = $application->confidential();
         $attributes = [
             'is_first_party' => $applicationData->isFirstParty,
+            'is_pushed_authorization_required' => $applicationData->isPushedAuthorizationRequired,
             'grant_types' => $applicationData->grantTypes(),
         ];
 

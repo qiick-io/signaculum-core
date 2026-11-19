@@ -61,6 +61,7 @@ final class ApplicationController extends Controller
             'is_confidential' => ['required', 'boolean'],
             'is_first_party' => ['required', 'boolean'],
             'is_client_credentials_enabled' => ['sometimes', 'boolean'],
+            'is_pushed_authorization_required' => ['sometimes', 'boolean'],
         ]);
 
         /** @var list<string> $redirectUris */
@@ -72,6 +73,7 @@ final class ApplicationController extends Controller
             isConfidential: (bool) $validated['is_confidential'],
             isFirstParty: (bool) $validated['is_first_party'],
             isClientCredentialsEnabled: (bool) ($validated['is_client_credentials_enabled'] ?? false),
+            isPushedAuthorizationRequired: (bool) ($validated['is_pushed_authorization_required'] ?? false),
         ));
 
         $resource = (new ApplicationResource($application))->resolve();

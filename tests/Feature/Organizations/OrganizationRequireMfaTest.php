@@ -541,6 +541,7 @@ test('every oauth route is classified for the organisation MFA gate', function (
         'passport.token.refresh',                   // first-party session cookie, no client involved
         'oidc.userinfo',                            // reads with an issued token
         'oidc.introspect',                          // client-authenticated read
+        'oidc.par',                                 // no user: stores a pending authorization request; its consent step is gated
         'oidc.revoke',                              // revocation only
         'oidc.end-session',                         // logout
         'oidc.end-session.confirm',                 // logout
