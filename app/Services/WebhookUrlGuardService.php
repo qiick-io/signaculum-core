@@ -70,6 +70,10 @@ final class WebhookUrlGuardService
         'metadata.google.internal',
         '169.254.169.254',
         'fd00:ec2::254',
+        // These sit in CGNAT / reserved ranges instead of 169.254.0.0/16, so only this list
+        // keeps them blocked once private webhook URLs are allowed (#190).
+        '100.100.100.200',
+        '192.0.0.192',
     ];
 
     /**
