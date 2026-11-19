@@ -211,6 +211,8 @@ test('an instance admin can persist front-channel logout fields on an applicatio
             'is_confidential' => true,
             'is_first_party' => false,
             'is_client_credentials_enabled' => false,
+            'is_device_authorization_enabled' => false,
+            'is_pushed_authorization_required' => false,
             'frontchannel_logout_uri' => 'https://rp.example.test/frontchannel-logout',
             'is_frontchannel_logout_session_required' => true,
         ])
@@ -232,6 +234,8 @@ test('front-channel logout uri must be https without a fragment', function () {
             'is_confidential' => true,
             'is_first_party' => false,
             'is_client_credentials_enabled' => false,
+            'is_device_authorization_enabled' => false,
+            'is_pushed_authorization_required' => false,
             'frontchannel_logout_uri' => 'http://rp.example.test/frontchannel-logout#x',
             'is_frontchannel_logout_session_required' => false,
         ])
