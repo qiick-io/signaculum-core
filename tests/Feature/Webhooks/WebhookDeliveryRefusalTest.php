@@ -183,21 +183,23 @@ it('refuses a url the guard will not authorise, before any request is made', fun
 ]);
 
 /**
- * The blocklist and the metadata list are reached only for a host `filter_var()` accepts as an
- * IP, and `parse_url()` hands back an IPv6 literal with its brackets still on
- * (`[fd00:ec2::254]`), which it does not. So every IPv6 literal skips both lists: with the
- * setting off it is refused only incidentally, by the DNS lookup of the bracketed string
- * failing, and with the setting on it is authorised outright.
+ * `parse_url()` hands back an IPv6 literal with its brackets still on (`[fd00:ec2::254]`) and
+ * `filter_var()` rejects that, so until #181 the blocklist and the metadata list were both
+ * unreachable for every IPv6 destination: with the setting off a bracketed literal was refused
+ * only incidentally, by the DNS lookup of the bracketed string failing, and with the setting on
+ * it was authorised outright. The guard now unwraps the brackets, so both lists run.
  *
- * Reported as #181 with a fix rather than written up as expected behaviour; this stays skipped
- * until the guard strips the brackets, and then it passes unchanged.
+ * These two were written against #181 and un-skipped by its fix, unchanged. The resolver here
+ * answers with a public address on purpose: it proves the refusal comes from the guard and not
+ * from a lookup that happened to fail. The rest of the IPv6 surface is in
+ * WebhookUrlGuardIpv6Test.
  */
 it('keeps the ipv6 metadata host blocked when private urls are allowed', function (): void {
     app(SettingsRepositoryService::class)->save(['webhooks_allow_private_urls' => true]);
 
     expect(app(WebhookUrlGuardService::class)->validate('http://[fd00:ec2::254]/latest/'))
         ->toBe('Host is not allowed.');
-})->skip('Guard does not strip IPv6 brackets before the metadata check (#181).');
+});
 
 it('refuses a bracketed ipv6 literal on the blocklist for the stated reason', function (string $url): void {
     expect(deliveryGuardResolvingTo(['93.184.216.34'])->validate($url))->toBe('Host is not allowed.');
@@ -205,7 +207,7 @@ it('refuses a bracketed ipv6 literal on the blocklist for the stated reason', fu
     'loopback' => 'http://[::1]/hook',
     'unique local' => 'http://[fc00::1]/hook',
     'link local' => 'http://[fe80::1]/hook',
-])->skip('Guard does not strip IPv6 brackets before the address blocklist (#181).');
+]);
 
 it('keeps the metadata hosts blocked even when private urls are allowed', function (): void {
     app(SettingsRepositoryService::class)->save(['webhooks_allow_private_urls' => true]);
