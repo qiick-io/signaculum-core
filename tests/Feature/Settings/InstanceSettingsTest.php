@@ -308,7 +308,15 @@ it('names every preset with a translation key present in all locales', function 
 });
 
 it('falls back to Ciclamino for a stored slug that is no longer offered', function () {
-    Setting::query()->updateOrCreate(['key' => 'theme_preset'], ['value' => 'teal']);
+    Setting::query()->updateOrCreate(
+        [
+            'scope' => SettingsRepositoryService::SCOPE_INSTANCE,
+            'scope_id' => null,
+            'group' => SettingsRepositoryService::GROUP_APP,
+            'key' => 'theme_preset',
+        ],
+        ['value' => 'teal'],
+    );
 
     expect(app(SettingsRepositoryService::class)->themePreset())->toBe('ciclamino')
         ->and(app(ThemePresetService::class)->current()['light']['primary'])->toBe('#A24A7B');

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\ThemePresetEnum;
 use App\Models\Setting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
 
@@ -18,10 +19,18 @@ use Illuminate\Validation\Rules\Password;
  * externa-core / Excubia names (`project_color`, `project_logo`, …) so the three apps read the
  * same way; in Signaculum "project" means this instance.
  *
+ * Storage is scoped (fleet / externa-core shape): every Signaculum setting lives at
+ * scope=`instance`, scope_id=null, group=`app`. Public method signatures stay flat-keyed so
+ * callers do not change.
+ *
  * Registered as a singleton; values are read once per instance and reloaded after a write.
  */
 final class SettingsRepositoryService
 {
+    public const string SCOPE_INSTANCE = 'instance';
+
+    public const string GROUP_APP = 'app';
+
     public const int PASSWORD_MIN_LENGTH_FLOOR = 6;
 
     public const int PASSWORD_MIN_LENGTH_CEILING = 128;
@@ -108,7 +117,7 @@ final class SettingsRepositoryService
     {
         return $this->values ??= array_merge(
             $this->defaults(),
-            Setting::query()->pluck('value', 'key')->all(),
+            $this->instanceAppQuery()->pluck('value', 'key')->all(),
         );
     }
 
@@ -132,11 +141,32 @@ final class SettingsRepositoryService
     {
         DB::transaction(function () use ($values): void {
             foreach ($values as $key => $value) {
-                Setting::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+                Setting::query()->updateOrCreate(
+                    [
+                        'scope' => self::SCOPE_INSTANCE,
+                        'scope_id' => null,
+                        'group' => self::GROUP_APP,
+                        'key' => $key,
+                    ],
+                    ['value' => $value],
+                );
             }
         });
 
         $this->values = null;
+    }
+
+    /**
+     * Instance-scoped rows in the shared `app` group.
+     *
+     * @return Builder<Setting>
+     */
+    private function instanceAppQuery(): Builder
+    {
+        return Setting::query()
+            ->where('scope', self::SCOPE_INSTANCE)
+            ->whereNull('scope_id')
+            ->where('group', self::GROUP_APP);
     }
 
     /**
