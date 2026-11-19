@@ -55,6 +55,17 @@ final class UpdateOrganizationMemberRolesAction
             return $membership->refresh();
         });
 
+        activity()
+            ->performedOn($organization)
+            ->useLog('organizations')
+            ->event('organization_member_roles_updated')
+            ->withProperties([
+                'organisation_id' => $organization->getKey(),
+                'user_id' => $member->subject,
+                'roles' => $roles,
+            ])
+            ->log('Organisation member roles updated');
+
         $this->webhookDispatcher->dispatch(WebhookEventEnum::OrganizationMembershipChanged, [
             'organization_id' => $organization->getKey(),
             'organization_slug' => $organization->slug,

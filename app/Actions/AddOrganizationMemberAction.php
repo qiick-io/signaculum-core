@@ -47,6 +47,17 @@ final class AddOrganizationMemberAction
             ]);
         });
 
+        activity()
+            ->performedOn($organization)
+            ->useLog('organizations')
+            ->event('organization_member_added')
+            ->withProperties([
+                'organisation_id' => $organization->getKey(),
+                'user_id' => $user->subject,
+                'roles' => $roles,
+            ])
+            ->log('Organisation member added');
+
         $this->webhookDispatcher->dispatch(WebhookEventEnum::OrganizationMembershipChanged, [
             'organization_id' => $organization->getKey(),
             'organization_slug' => $organization->slug,

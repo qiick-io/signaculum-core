@@ -47,6 +47,16 @@ final class RemoveOrganizationMemberAction
             $membership->delete();
         });
 
+        activity()
+            ->performedOn($organization)
+            ->useLog('organizations')
+            ->event('organization_member_removed')
+            ->withProperties([
+                'organisation_id' => $organization->getKey(),
+                'user_id' => $member->subject,
+            ])
+            ->log('Organisation member removed');
+
         $this->webhookDispatcher->dispatch(WebhookEventEnum::OrganizationMembershipChanged, [
             'organization_id' => $organization->getKey(),
             'organization_slug' => $organization->slug,

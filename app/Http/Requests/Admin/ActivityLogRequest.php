@@ -9,7 +9,7 @@ use App\Http\Requests\Concerns\ValidatesListPerPageTrait;
 use App\Http\Requests\Concerns\ValidatesSearchQueryTrait;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
-use Spatie\Activitylog\Models\Activity;
+use App\Models\Activity;
 
 /**
  * Validates the activity log filters (user, action, log, date range) on top of search and

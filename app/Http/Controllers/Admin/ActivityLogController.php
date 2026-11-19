@@ -13,7 +13,7 @@ use App\Services\ActivityLogService;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
-use Spatie\Activitylog\Models\Activity;
+use App\Models\Activity;
 
 /**
  * Activity log browser with user, action, log and date filters, for instance admins

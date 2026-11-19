@@ -9,11 +9,11 @@ use App\Models\Client;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\Webhook;
+use App\Models\Activity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use LogicException;
-use Spatie\Activitylog\Models\Activity;
 
 /**
  * An activity log entry for the activity log page, as in qiick-io/excubia-app.

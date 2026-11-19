@@ -55,6 +55,17 @@ final class ResendOrganizationInvitationAction
                 $invitedBy->locale,
             ));
 
+        activity()
+            ->performedOn($organization)
+            ->causedBy($invitedBy)
+            ->useLog('organizations')
+            ->event('organization_invitation_resent')
+            ->withProperties([
+                'organisation_id' => $organization->getKey(),
+                'email' => $invitation->email,
+            ])
+            ->log('Organisation invitation resent');
+
         return $invitation;
     }
 }

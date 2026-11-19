@@ -12,7 +12,7 @@ use App\Services\OrganizationBrandingService;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
-use Spatie\Activitylog\Models\Activity;
+use App\Models\Activity;
 
 /**
  * Shares Inertia props every page needs (auth user, branding, locale, flash)

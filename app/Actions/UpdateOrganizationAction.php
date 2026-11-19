@@ -33,12 +33,30 @@ final class UpdateOrganizationAction
             'is_mfa_required' => $organizationData->isMfaRequired,
         ]);
 
+        $updateActivity = activity()
+            ->performedOn($organization)
+            ->useLog('organizations')
+            ->event('organization_updated')
+            ->withProperties([
+                'organisation_id' => $organization->getKey(),
+                'name' => $organization->name,
+                'slug' => $organization->slug,
+                'is_mfa_required' => $organizationData->isMfaRequired,
+            ]);
+
+        if ($actor !== null) {
+            $updateActivity->causedBy($actor);
+        }
+
+        $updateActivity->log('Organisation updated');
+
         if ($previousIsMfaRequired !== $organizationData->isMfaRequired) {
             $activity = activity()
                 ->performedOn($organization)
                 ->useLog('organizations')
                 ->event('organization_mfa_requirement_updated')
                 ->withProperties([
+                    'organisation_id' => $organization->getKey(),
                     'is_mfa_required' => $organizationData->isMfaRequired,
                 ]);
 
