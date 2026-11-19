@@ -112,7 +112,7 @@ test('an instance admin creates a verified active user', function () {
         ->and($user->last_name)->toBe('Hopper')
         ->and($user->hasVerifiedEmail())->toBeTrue()
         ->and($user->is_active)->toBeTrue()
-        ->and($user->is_instance_admin)->toBeFalse();
+        ->and($user->isSuperAdmin())->toBeFalse();
 });
 
 test('creating a user validates email uniqueness and password', function () {

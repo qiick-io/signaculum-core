@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\TestLdapConnectionAction;
 use App\Enums\ActivityEventEnum;
 use App\Enums\LdapEncryptionEnum;
+use App\Enums\RoleEnum;
 use App\Jobs\SyncLdapUsersJob;
 use App\Ldap\DirectoryUser;
 use App\Models\User;
@@ -480,12 +481,13 @@ test('the last instance admin is kept active when they leave the directory', fun
     enableLdapSettings();
     $logger = Log::spy();
 
+    syncPermissions();
     $admin = User::factory()->create([
         'email' => 'admin@example.com',
         'ldap_guid' => Str::lower((string) Str::uuid()),
         'is_active' => true,
-        'is_instance_admin' => true,
     ]);
+    $admin->assignRole(RoleEnum::SuperAdmin->value);
 
     $result = app(LdapUserSyncService::class)->sync();
 

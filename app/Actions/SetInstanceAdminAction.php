@@ -4,34 +4,49 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\RoleEnum;
 use App\Models\User;
+use App\Services\Authorization\EffectivePermissionResolverService;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
- * Grant or revoke the instance-admin flag. Never leaves the instance with zero
- * instance admins (same invariant as {@see MakeInstanceAdminCommand}).
+ * Grants or revokes the `super-admin` role (replaces the former `is_instance_admin` flag).
+ * Refuses to remove the last super-admin so the instance cannot lock itself out.
  */
 final class SetInstanceAdminAction
 {
+    public function __construct(
+        private readonly EffectivePermissionResolverService $permissionResolver,
+    ) {}
+
     /**
-     * @throws ValidationException when revoking the last instance admin
+     * @throws ValidationException when revoking the last super-admin
      */
     public function execute(User $user, bool $isInstanceAdmin): void
     {
-        if (! $isInstanceAdmin && $user->is_instance_admin && $this->isLastInstanceAdmin($user)) {
+        $holdsSuperAdmin = $this->permissionResolver->isSuperAdmin($user);
+
+        if (! $isInstanceAdmin && $holdsSuperAdmin && $this->isLastSuperAdmin($user)) {
             throw ValidationException::withMessages([
-                'user' => __('Cannot revoke the last instance admin.'),
+                'user' => __('At least one super-admin must remain.'),
             ]);
         }
 
-        $user->forceFill(['is_instance_admin' => $isInstanceAdmin])->save();
+        if ($isInstanceAdmin) {
+            $user->assignRole(RoleEnum::SuperAdmin->value);
+        } else {
+            $user->removeRole(RoleEnum::SuperAdmin->value);
+        }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->permissionResolver->forget($user);
     }
 
-    private function isLastInstanceAdmin(User $user): bool
+    private function isLastSuperAdmin(User $user): bool
     {
-        return User::query()
-            ->where('is_instance_admin', true)
-            ->whereKeyNot($user->getKey())
-            ->doesntExist();
+        $superAdmins = User::role(RoleEnum::SuperAdmin->value)->get();
+
+        return $superAdmins->count() === 1 && $superAdmins->first()?->is($user);
     }
 }

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Actions\RecordApiKeyUsageAction;
+use App\Enums\PermissionEnum;
 use App\Http\Responses\BearerTokenErrorResponse;
 use App\Models\ApiKey;
 use App\Services\ApiKeySecretService;
+use App\Services\Authorization\EffectivePermissionResolverService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -62,7 +64,7 @@ final class AuthenticateApiKeyMiddleware
         // A key never does more than its owner: a deactivated or demoted admin stops their keys.
         $owner = $apiKey->owner;
 
-        if ($owner === null || ! $owner->is_active || ! $owner->is_instance_admin) {
+        if ($owner === null || ! $owner->is_active || ! app(EffectivePermissionResolverService::class)->hasPermission($owner, PermissionEnum::CanManageApiKeys->value)) {
             return BearerTokenErrorResponse::invalidToken(__('API key owner may not use the API.'));
         }
 

@@ -13,11 +13,13 @@ use App\Actions\UpdateOrganizationBrandingAction;
 use App\Data\ApplicationData;
 use App\Data\OrganizationData;
 use App\Enums\OrganizationRoleEnum;
+use App\Enums\RoleEnum;
 use App\Models\User;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
 
 /**
  * Fictional demo data for product screenshots and walkthroughs.
@@ -39,6 +41,8 @@ final class DemoSeeder extends Seeder
         CreateApplicationAction $createApplication,
         RegenerateApplicationSecretAction $regenerateApplicationSecret,
     ): void {
+        Artisan::call('signaculum:sync-permissions');
+
         $instanceAdministrator = $this->createDemoUser('Mara', 'Lind', 'mara.lind@acme.example', isInstanceAdmin: true);
         $acmeAdministrator = $this->createDemoUser('Jonas', 'Weber', 'jonas.weber@acme.example');
         $acmeMember = $this->createDemoUser('Priya', 'Nair', 'priya.nair@acme.example');
@@ -93,12 +97,17 @@ final class DemoSeeder extends Seeder
 
     private function createDemoUser(string $firstName, string $lastName, string $email, bool $isInstanceAdmin = false): User
     {
-        return User::factory()->create([
+        $user = User::factory()->create([
             'first_name' => $firstName,
             'last_name' => $lastName,
             'email' => $email,
-            'is_instance_admin' => $isInstanceAdmin,
         ]);
+
+        if ($isInstanceAdmin) {
+            $user->assignRole(RoleEnum::SuperAdmin->value);
+        }
+
+        return $user;
     }
 
     /**

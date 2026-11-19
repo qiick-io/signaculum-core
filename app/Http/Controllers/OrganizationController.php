@@ -7,11 +7,13 @@ namespace App\Http\Controllers;
 use App\Actions\CreateOrganizationAction;
 use App\Actions\DeleteOrganizationAction;
 use App\Actions\UpdateOrganizationAction;
+use App\Enums\PermissionEnum;
 use App\Http\Requests\Organizations\StoreOrganizationRequest;
 use App\Http\Requests\Organizations\UpdateOrganizationRequest;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
+use App\Services\Authorization\EffectivePermissionResolverService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -32,7 +34,10 @@ final class OrganizationController extends Controller
 
         $organizations = Organization::query()
             ->when(
-                ! (bool) $user->is_instance_admin,
+                ! app(EffectivePermissionResolverService::class)->hasPermission(
+                    $user,
+                    PermissionEnum::CanManageOrganizations->value,
+                ),
                 fn ($query) => $query->whereHas(
                     'memberships',
                     fn ($membershipQuery) => $membershipQuery->where('user_id', $user->getKey()),

@@ -77,6 +77,13 @@ final class UpgradeCommand extends Command
             }
         }
 
+        $this->components->info('Syncing permissions…');
+        $syncCode = $this->call('signaculum:sync-permissions');
+
+        if ($syncCode !== self::SUCCESS) {
+            return $syncCode;
+        }
+
         $this->runVersionSteps();
 
         $this->components->info('Clearing caches…');

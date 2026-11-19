@@ -4,42 +4,48 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Enums\PermissionEnum;
+use App\Enums\RoleEnum;
 use App\Models\User;
+use App\Services\Authorization\EffectivePermissionResolverService;
 
 /**
- * Instance admins manage every account on this IdP. Organisation roles never
- * grant user-admin access (same rule as {@see SettingPolicy}).
+ * Authorizes IdP user administration. Record-level rules still bind super-admins
+ * (cannot impersonate another super-admin; last-super-admin guards live in actions).
  */
-final class UserPolicy
+class UserPolicy
 {
+    public function __construct(
+        private readonly EffectivePermissionResolverService $permissionResolver,
+    ) {}
+
     public function viewAny(User $actor): bool
     {
-        return (bool) $actor->is_instance_admin;
+        return $this->permissionResolver->hasPermission($actor, PermissionEnum::CanShowUsers->value);
     }
 
     public function view(User $actor, User $target): bool
     {
-        return (bool) $actor->is_instance_admin;
+        return $this->permissionResolver->hasPermission($actor, PermissionEnum::CanShowUsers->value);
     }
 
     public function create(User $actor): bool
     {
-        return (bool) $actor->is_instance_admin;
+        return $this->permissionResolver->hasPermission($actor, PermissionEnum::CanCreateUsers->value);
     }
 
     public function update(User $actor, User $target): bool
     {
-        return (bool) $actor->is_instance_admin;
+        return $this->permissionResolver->hasPermission($actor, PermissionEnum::CanEditUsers->value);
     }
 
     /**
-     * Start a time-boxed session as another user (Admin → Users → Impersonate).
-     * Instance admins cannot be impersonated; the actor cannot impersonate themselves;
+     * Impersonation: needs the permission; cannot target a super-admin or oneself;
      * the target must be active.
      */
     public function impersonate(User $actor, User $target): bool
     {
-        if (! $actor->is_instance_admin) {
+        if (! $this->permissionResolver->hasPermission($actor, PermissionEnum::CanImpersonateUsers->value)) {
             return false;
         }
 
@@ -47,7 +53,7 @@ final class UserPolicy
             return false;
         }
 
-        if ($target->is_instance_admin) {
+        if (in_array(RoleEnum::SuperAdmin->value, $this->permissionResolver->roleNamesFor($target), true)) {
             return false;
         }
 

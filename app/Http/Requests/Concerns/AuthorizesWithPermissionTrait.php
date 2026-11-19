@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Requests\Concerns;
+
+use App\Services\Authorization\EffectivePermissionResolverService;
+
+/**
+ * Shared helper for form requests that gate access on effective permissions.
+ */
+trait AuthorizesWithPermissionTrait
+{
+    /**
+     * Abort with 403 when the current user lacks the given permission.
+     */
+    protected function authorizePermission(string $permission): void
+    {
+        $user = auth()->user();
+
+        if ($user === null || ! app(EffectivePermissionResolverService::class)->hasPermission($user, $permission)) {
+            abort(403);
+        }
+    }
+}

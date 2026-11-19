@@ -131,13 +131,13 @@ test('an instance admin grants and revokes instance admin when another remains',
         ->put(route('admin.users.instance-admin.update', $target), ['is_instance_admin' => '1'])
         ->assertRedirect(route('admin.users.index'));
 
-    expect($target->refresh()->is_instance_admin)->toBeTrue();
+    expect($target->refresh()->isSuperAdmin())->toBeTrue();
 
     $this->actingAs($admin)
         ->put(route('admin.users.instance-admin.update', $target), ['is_instance_admin' => '0'])
         ->assertRedirect(route('admin.users.index'));
 
-    expect($target->refresh()->is_instance_admin)->toBeFalse();
+    expect($target->refresh()->isSuperAdmin())->toBeFalse();
 });
 
 test('the last instance admin flag cannot be revoked', function () {
@@ -149,5 +149,5 @@ test('the last instance admin flag cannot be revoked', function () {
         ->assertRedirect(route('admin.users.index'))
         ->assertSessionHasErrors('user');
 
-    expect($admin->refresh()->is_instance_admin)->toBeTrue();
+    expect($admin->refresh()->isSuperAdmin())->toBeTrue();
 });

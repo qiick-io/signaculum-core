@@ -257,7 +257,7 @@ test('expired and consumed email login codes are pruned', function () {
 test('an instance admin can enable email code login from security settings', function () {
     app(SettingsRepositoryService::class)->save(['email_code_login_enabled' => false]);
 
-    $admin = User::factory()->create(['is_instance_admin' => true]);
+    $admin = User::factory()->instanceAdmin()->create();
 
     $this->actingAs($admin)
         ->put(route('instance.security.update'), securitySettingsPayload([

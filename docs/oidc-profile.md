@@ -153,7 +153,7 @@ Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_nam
 
 ### Still planned (not on this branch)
 
-- `preferred_username`, `picture`
+- `preferred_username` (emitted when `users.username` is set; omitted otherwise), `picture`
 
 ## Token lifetimes
 

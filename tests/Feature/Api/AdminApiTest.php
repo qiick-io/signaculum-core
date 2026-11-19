@@ -73,7 +73,7 @@ it('rejects missing bearer tokens', function (): void {
 });
 
 it('lets an instance admin create and revoke an api key in the ui', function (): void {
-    $admin = User::factory()->create(['is_instance_admin' => true]);
+    $admin = User::factory()->instanceAdmin()->create();
 
     $this->actingAs($admin)
         ->post(route('admin.api-keys.store'), [

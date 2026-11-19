@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\RoleEnum;
 use App\Models\SigningKey;
 use App\Models\User;
 use Illuminate\Console\Attributes\Description;
@@ -125,6 +126,12 @@ final class InstallCommand extends Command
         }
 
         $this->useInstallConnection($connection);
+        $permissions = $this->call('signaculum:sync-permissions');
+
+        if ($permissions !== self::SUCCESS) {
+            return $permissions;
+        }
+
         $administrator = $this->createFirstAdministrator();
 
         if ($administrator !== self::SUCCESS) {
@@ -275,7 +282,7 @@ final class InstallCommand extends Command
     }
 
     /**
-     * Creates the first sign-in account as an instance admin (`is_instance_admin`).
+     * Creates the first sign-in account as a super-admin via `signaculum:create-user`.
      */
     private function createFirstAdministrator(): int
     {
@@ -286,15 +293,18 @@ final class InstallCommand extends Command
         }
 
         $email = $this->isNonInteractive()
-            ? $this->environmentValue('SIGNACULUM_ADMIN_EMAIL', 'admin@example.com')
-            : text('Administrator email', default: 'admin@example.com', required: true);
+            ? $this->environmentValue('INITIAL_SUPER_ADMIN_EMAIL', $this->environmentValue('SIGNACULUM_ADMIN_EMAIL', 'superadmin@example.com'))
+            : text('Administrator email', default: (string) config('super_admin.email', 'superadmin@example.com'), required: true);
         $firstName = $this->isNonInteractive()
-            ? $this->environmentValue('SIGNACULUM_ADMIN_FIRST_NAME', $this->environmentValue('SIGNACULUM_ADMIN_NAME', 'Administrator'))
-            : text('Administrator first name', default: 'Administrator', required: true);
+            ? $this->environmentValue('INITIAL_SUPER_ADMIN_FIRST_NAME', $this->environmentValue('SIGNACULUM_ADMIN_FIRST_NAME', $this->environmentValue('SIGNACULUM_ADMIN_NAME', 'Super')))
+            : text('Administrator first name', default: (string) config('super_admin.first_name', 'Super'), required: true);
         $lastName = $this->isNonInteractive()
-            ? $this->environmentValue('SIGNACULUM_ADMIN_LAST_NAME', '')
-            : text('Administrator last name', default: '');
-        $passwordFromEnvironment = $this->environmentValue('SIGNACULUM_ADMIN_PASSWORD', '');
+            ? $this->environmentValue('INITIAL_SUPER_ADMIN_LAST_NAME', $this->environmentValue('SIGNACULUM_ADMIN_LAST_NAME', 'Admin'))
+            : text('Administrator last name', default: (string) config('super_admin.last_name', 'Admin'));
+        $passwordFromEnvironment = $this->environmentValue(
+            'INITIAL_SUPER_ADMIN_PASSWORD',
+            $this->environmentValue('SIGNACULUM_ADMIN_PASSWORD', ''),
+        );
         $shouldPrintPassword = false;
 
         if ($passwordFromEnvironment !== '') {
@@ -306,16 +316,18 @@ final class InstallCommand extends Command
             $password = password('Administrator password', required: true);
         }
 
-        $administrator = (new User)->forceFill([
-            'first_name' => $firstName,
-            'last_name' => $lastName !== '' ? $lastName : null,
-            'email' => $email,
-            'password' => $password,
-            'is_active' => true,
-            'is_instance_admin' => true,
-            'email_verified_at' => now(),
+        $exitCode = $this->call('signaculum:create-user', [
+            '--first-name' => $firstName,
+            '--last-name' => $lastName !== '' ? $lastName : null,
+            '--email' => $email,
+            '--password' => $password,
+            '--role' => RoleEnum::SuperAdmin->value,
+            '--no-interaction' => true,
         ]);
-        $administrator->save();
+
+        if ($exitCode !== self::SUCCESS) {
+            return $exitCode;
+        }
 
         $this->components->info("Created the first administrator [{$email}].");
 

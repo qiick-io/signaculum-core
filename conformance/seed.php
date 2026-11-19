@@ -34,7 +34,6 @@ $user->forceFill([
     'password' => $password,
     'email_verified_at' => now(),
     'is_active' => true,
-    'is_instance_admin' => false,
     'locale' => 'en',
     'failed_login_attempts' => 0,
     'locked_until' => null,

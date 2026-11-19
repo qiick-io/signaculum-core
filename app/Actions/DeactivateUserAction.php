@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\RoleEnum;
 use App\Models\OidcSession;
 use App\Models\Principal;
 use App\Models\User;
@@ -27,13 +28,13 @@ final class DeactivateUserAction
     /**
      * Side effects: token revocation, session row deletes, queued back-channel jobs.
      *
-     * @throws ValidationException when the target is the last instance admin
+     * @throws ValidationException when the target is the last super-admin
      */
     public function execute(User $user): void
     {
-        if ($user->is_instance_admin && $this->isLastInstanceAdmin($user)) {
+        if ($user->isSuperAdmin() && $this->isLastSuperAdmin($user)) {
             throw ValidationException::withMessages([
-                'user' => __('Cannot deactivate the last instance admin.'),
+                'user' => __('Cannot deactivate the last super-admin.'),
             ]);
         }
 
@@ -79,11 +80,12 @@ final class DeactivateUserAction
         $this->dispatchBackChannelLogoutAction->execute($user);
     }
 
-    private function isLastInstanceAdmin(User $user): bool
+    private function isLastSuperAdmin(User $user): bool
     {
-        return User::query()
-            ->where('is_instance_admin', true)
+        $otherSuperAdmins = User::role(RoleEnum::SuperAdmin->value)
             ->whereKeyNot($user->getKey())
-            ->doesntExist();
+            ->exists();
+
+        return ! $otherSuperAdmins;
     }
 }

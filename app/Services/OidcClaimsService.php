@@ -28,6 +28,7 @@ final class OidcClaimsService
         'name',
         'given_name',
         'family_name',
+        'preferred_username',
         'locale',
         'updated_at',
         'email',
@@ -49,6 +50,10 @@ final class OidcClaimsService
 
             if ($user->last_name !== null && $user->last_name !== '') {
                 $claims['family_name'] = $user->last_name;
+            }
+
+            if ($user->username !== null && $user->username !== '') {
+                $claims['preferred_username'] = $user->username;
             }
 
             if ($user->locale !== null) {

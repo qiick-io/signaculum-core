@@ -57,7 +57,7 @@ it('falls through an unsupported Accept-Language to the instance default', funct
 
 it('uses the authenticated api principal when no language was requested', function (): void {
     ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
-    User::query()->where('is_instance_admin', true)->update(['locale' => 'de']);
+    User::role('super-admin')->update(['locale' => 'de']);
 
     // Symfony's test client injects `Accept-Language: en-us,en;q=0.5` when none is sent.
     $response = $this->withServerVariables(['HTTP_ACCEPT_LANGUAGE' => ''])
@@ -69,7 +69,7 @@ it('uses the authenticated api principal when no language was requested', functi
 
 it('lets Accept-Language win over the authenticated api principal', function (): void {
     ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
-    User::query()->where('is_instance_admin', true)->update(['locale' => 'de']);
+    User::role('super-admin')->update(['locale' => 'de']);
 
     $response = $this->withHeader('Accept-Language', 'it')->withToken($plain)->getJson('/api/v1/users');
 

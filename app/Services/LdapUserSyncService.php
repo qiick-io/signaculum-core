@@ -81,6 +81,7 @@ final class LdapUserSyncService
             }
 
             $email = Str::lower($email);
+            $directoryUsername = $this->firstAttribute($directoryUser, $settingsData->attributeUsername);
             $firstName = $this->firstAttribute($directoryUser, $settingsData->attributeGivenName)
                 ?? $this->firstAttribute($directoryUser, $settingsData->attributeDisplayName)
                 ?? $this->firstAttribute($directoryUser, $settingsData->attributeUsername)
@@ -99,6 +100,7 @@ final class LdapUserSyncService
                     $firstName,
                     $lastName,
                     $email,
+                    $directoryUsername,
                     $distinguishedName,
                     $isDirectoryAccountDisabled,
                 )) {
@@ -130,6 +132,7 @@ final class LdapUserSyncService
                 $lastName,
                 $email,
                 $guid,
+                $directoryUsername,
                 $distinguishedName,
                 $isDirectoryAccountDisabled,
             );
@@ -228,6 +231,7 @@ final class LdapUserSyncService
         string $firstName,
         ?string $lastName,
         string $email,
+        ?string $directoryUsername,
         ?string $distinguishedName,
         bool $isDirectoryAccountDisabled,
     ): bool {
@@ -242,13 +246,19 @@ final class LdapUserSyncService
             return false;
         }
 
-        $user->forceFill([
+        $attributes = [
             'first_name' => $firstName,
             'last_name' => $lastName,
             'email' => $email,
             'ldap_dn' => $distinguishedName,
             'password' => null,
-        ])->save();
+        ];
+
+        if ($directoryUsername !== null && $directoryUsername !== '') {
+            $attributes['username'] = $directoryUsername;
+        }
+
+        $user->forceFill($attributes)->save();
 
         if ($isDirectoryAccountDisabled) {
             if ($user->is_active) {
@@ -278,10 +288,11 @@ final class LdapUserSyncService
         ?string $lastName,
         string $email,
         string $guid,
+        ?string $directoryUsername,
         ?string $distinguishedName,
         bool $isDirectoryAccountDisabled,
     ): void {
-        $user = (new User)->forceFill([
+        $attributes = [
             'first_name' => $firstName,
             'last_name' => $lastName,
             'email' => $email,
@@ -290,7 +301,13 @@ final class LdapUserSyncService
             'email_verified_at' => now(),
             'ldap_guid' => $guid,
             'ldap_dn' => $distinguishedName,
-        ]);
+        ];
+
+        if ($directoryUsername !== null && $directoryUsername !== '') {
+            $attributes['username'] = $directoryUsername;
+        }
+
+        $user = (new User)->forceFill($attributes);
         $user->save();
 
         $this->webhookDispatcher->dispatch(WebhookEventEnum::UserCreated, [

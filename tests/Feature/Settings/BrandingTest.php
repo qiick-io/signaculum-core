@@ -23,7 +23,7 @@ function brandingPayload(array $overrides = []): array
 
 function brandingManager(): User
 {
-    return User::factory()->create(['is_instance_admin' => true]);
+    return User::factory()->instanceAdmin()->create();
 }
 
 it('uploads a logo and a favicon, shares their URLs and serves them publicly', function () {

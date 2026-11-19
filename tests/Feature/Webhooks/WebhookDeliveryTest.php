@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Queue;
 it('queues a signed delivery when a subscribed event fires', function (): void {
     Queue::fake();
 
-    $admin = User::factory()->create(['is_instance_admin' => true]);
+    $admin = User::factory()->instanceAdmin()->create();
 
     $webhook = Webhook::query()->create([
         'url' => 'https://hooks.example.com/signaculum',
@@ -33,7 +33,7 @@ it('queues a signed delivery when a subscribed event fires', function (): void {
             && $job->eventType === WebhookEventEnum::UserCreated->value;
     });
 
-    expect($admin->is_instance_admin)->toBeTrue();
+    expect($admin->isSuperAdmin())->toBeTrue();
 });
 
 it('posts an hmac signature and records a delivered attempt', function (): void {
@@ -173,7 +173,7 @@ it('delivers to a hostname using the address pinned by the SSRF guard', function
 });
 
 it('lets an instance admin create a webhook endpoint', function (): void {
-    $admin = User::factory()->create(['is_instance_admin' => true]);
+    $admin = User::factory()->instanceAdmin()->create();
 
     app()->bind(WebhookUrlGuardService::class, fn (): WebhookUrlGuardService => new WebhookUrlGuardService(
         app(SettingsRepositoryService::class),

@@ -9,6 +9,7 @@ import {
     ScrollText,
     Settings,
     Users,
+    UsersRound,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLogo from '@/components/app-logo';
@@ -30,6 +31,7 @@ import { index as adminActivityLogsIndex } from '@/routes/admin/activity-logs';
 import { index as adminApiKeysIndex } from '@/routes/admin/api-keys';
 import { index as adminApplicationsIndex } from '@/routes/admin/applications';
 import { index as adminUsersIndex } from '@/routes/admin/users';
+import { index as adminGroupsIndex } from '@/routes/admin/groups';
 import { index as organizationsIndex } from '@/routes/organizations';
 import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
@@ -44,6 +46,7 @@ export function AppSidebar() {
         canManageUsers,
         canManageApplications,
         canShowActivityLogs,
+        canManageGroups,
         canManageSettings,
     } = usePage().props.auth;
 
@@ -75,6 +78,16 @@ export function AppSidebar() {
                       href: adminUsersIndex(),
                       icon: Users,
                       activePrefix: '/admin/users',
+                  } satisfies MainNavItem,
+              ]
+            : []),
+        ...(canManageGroups
+            ? [
+                  {
+                      title: t('nav.groups'),
+                      href: adminGroupsIndex(),
+                      icon: UsersRound,
+                      activePrefix: '/admin/groups',
                   } satisfies MainNavItem,
               ]
             : []),

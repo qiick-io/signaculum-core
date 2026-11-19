@@ -21,7 +21,7 @@ use Inertia\Testing\AssertableInertia as Assert;
  */
 function emailTemplatesAdmin(): User
 {
-    return User::factory()->create(['is_instance_admin' => true]);
+    return User::factory()->instanceAdmin()->create();
 }
 
 it('exposes branded default templates for every type and locale', function () {

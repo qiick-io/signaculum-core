@@ -11,6 +11,7 @@ use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\UserGroup;
 use App\Models\Webhook;
 use App\Services\SettingsRepositoryService;
 use App\Traits\LogsApplicationActivityTrait;
@@ -198,6 +199,7 @@ it('requires an explicit subject label arm for every activity-logged model', fun
             ApiKey::class => (new ApiKey)->forceFill(['name' => 'CI key', 'id' => 1]),
             Organization::class => Organization::factory()->make(['name' => 'Acme', 'slug' => 'acme']),
             Webhook::class => (new Webhook)->forceFill(['url' => 'https://hooks.example.com/label', 'id' => 1]),
+            UserGroup::class => UserGroup::factory()->make(['name' => 'Operators']),
             default => throw new RuntimeException(
                 "Add a subject fixture and ActivityLogResource::subjectLabel() arm for {$modelClass}.",
             ),

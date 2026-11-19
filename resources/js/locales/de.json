@@ -100,7 +100,8 @@
         "applications": "Anwendungen",
         "activityLog": "Aktivitätsprotokoll",
         "organizations": "Organisationen",
-        "apiKeys": "API-Schlüssel"
+        "apiKeys": "API-Schlüssel",
+        "groups": "Gruppen"
     },
     "realtime": {
         "connected": "Realtime verbunden",
