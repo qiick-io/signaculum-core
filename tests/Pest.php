@@ -9,11 +9,13 @@ use App\Data\LdapSettingsData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Enums\LdapEncryptionEnum;
 use App\Enums\OrganizationRoleEnum;
+use App\Enums\WebhookEventEnum;
 use App\Models\ApiKey;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\SigningKey;
 use App\Models\User;
+use App\Models\Webhook;
 use App\Services\SigningKeyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -269,6 +271,22 @@ function adminApiKey(array $scopes = [ApiKeyScopeEnum::UsersWrite->value], ?ApiK
 function instanceAdmin(): User
 {
     return User::factory()->create(['is_instance_admin' => true]);
+}
+
+/**
+ * An outbound webhook endpoint with a stable URL and signing secret for settings tests.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function existingWebhook(array $attributes = []): Webhook
+{
+    return Webhook::query()->create([
+        'url' => 'https://hooks.example.com/existing',
+        'secret' => 'existing-signing-secret-value',
+        'events' => [WebhookEventEnum::UserCreated->value],
+        'is_active' => true,
+        ...$attributes,
+    ]);
 }
 
 /**
