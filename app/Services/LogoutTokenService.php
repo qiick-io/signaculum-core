@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Data\LogoutTokenRequestData;
 use DateTimeImmutable;
+use Illuminate\Support\Facades\Date;
 use InvalidArgumentException;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Encoding\ChainedFormatter;
@@ -44,7 +45,8 @@ final class LogoutTokenService
             InMemory::plainText($this->nonEmpty($signingKey->public_key)),
         );
 
-        $issuedAt = new DateTimeImmutable('@'.time());
+        // Same Laravel clock as id_token issuance so freezeTime() covers logout_token iat/exp.
+        $issuedAt = new DateTimeImmutable('@'.Date::now()->getTimestamp());
         $ttl = (int) config('oidc.logout_token_ttl');
 
         $tokenBuilder = $jwtConfiguration->builder(ChainedFormatter::withUnixTimestampDates())

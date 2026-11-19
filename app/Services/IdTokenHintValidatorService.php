@@ -104,7 +104,8 @@ final class IdTokenHintValidatorService
     {
         $expiresAt = $token->claims()->get('exp');
 
-        return $expiresAt instanceof DateTimeImmutable && $expiresAt < new DateTimeImmutable('@'.time());
+        return $expiresAt instanceof DateTimeImmutable
+            && $expiresAt < new DateTimeImmutable('@'.Date::now()->getTimestamp());
     }
 
     private function signingKeyForKid(?string $kid): ?SigningKey
