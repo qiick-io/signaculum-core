@@ -14,8 +14,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: oidc-conformance-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  # Never cancel on main or develop: those runs are the release evidence.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
 
 env:
   CONFORMANCE_SUITE_REF: release-v5.1.43
@@ -46,8 +47,61 @@ jobs:
         with:
           persist-credentials: false
           path: signaculum-core
+          # The classify step below compares the diff against the base commit.
+          fetch-depth: 0
+
+      # The suite is the most expensive job in the repository, and a
+      # documentation commit cannot change OIDC behaviour. The steps below are
+      # gated on this classification instead of a workflow-level "paths:"
+      # filter, so the "oidc-conformance" check always reports: a required
+      # check that never runs stays pending forever and blocks the merge.
+      # The classification is deliberately one-sided. Only a diff that is
+      # documentation from end to end skips the suite, and anything unexpected
+      # (a new branch, a force push, a base commit that is not in the
+      # checkout, an empty diff) runs it.
+      - name: Classify the diff
+        id: classify
+        working-directory: signaculum-core
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          run_suite() {
+            echo "$1"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          if [ -z "${BASE_SHA}" ] || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ]; then
+            run_suite "No base commit for this event: running the conformance suite."
+          fi
+
+          if ! git cat-file -e "${BASE_SHA}^{commit}" 2> /dev/null; then
+            run_suite "Base commit ${BASE_SHA} is not in this checkout: running the conformance suite."
+          fi
+
+          changed_files="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
+          echo "Changed files:"
+          echo "${changed_files}"
+
+          if [ -z "${changed_files}" ]; then
+            run_suite "Empty diff: running the conformance suite."
+          fi
+
+          code_files="$(printf '%s\n' "${changed_files}" \
+            | grep -Ev '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$|^LICENSE$)' || true)"
+
+          if [ -n "${code_files}" ]; then
+            run_suite "Changes outside documentation: running the conformance suite."
+          fi
+
+          echo "Documentation-only diff: the conformance suite is not needed."
+          echo "code=false" >> "$GITHUB_OUTPUT"
 
       - name: Setup PHP
+        if: steps.classify.outputs.code == 'true'
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: '8.4'
@@ -56,17 +110,20 @@ jobs:
           extensions: bcmath, intl, pcntl, pdo_sqlite, zip
 
       - name: Setup Node
+        if: steps.classify.outputs.code == 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '26'
 
       - name: Setup Java
+        if: steps.classify.outputs.code == 'true'
         uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Install and build Signaculum
+        if: steps.classify.outputs.code == 'true'
         working-directory: signaculum-core
         run: |
           composer install --no-interaction --prefer-dist --no-progress
@@ -95,10 +152,12 @@ jobs:
           npm run build
 
       - name: Seed conformance user and clients
+        if: steps.classify.outputs.code == 'true'
         working-directory: signaculum-core
         run: php conformance/seed.php
 
       - name: Start Signaculum
+        if: steps.classify.outputs.code == 'true'
         working-directory: signaculum-core
         run: |
           php artisan serve --host=0.0.0.0 --port=8080 > ../signaculum-server.log 2>&1 &
@@ -113,12 +172,14 @@ jobs:
           exit 1
 
       - name: Checkout OpenID conformance suite
+        if: steps.classify.outputs.code == 'true'
         run: |
           git clone --depth 1 --branch "${CONFORMANCE_SUITE_REF}" --single-branch \
             https://gitlab.com/openid/conformance-suite.git conformance-suite
           echo "Using OpenID conformance suite ${CONFORMANCE_SUITE_REF} at $(git -C conformance-suite rev-parse HEAD)"
 
       - name: Build and start OpenID conformance suite
+        if: steps.classify.outputs.code == 'true'
         env:
           SIGNACULUM_CONFORMANCE_DIR: ${{ github.workspace }}/signaculum-core/conformance
         run: |
@@ -151,6 +212,7 @@ jobs:
           exit 1
 
       - name: Trust suite TLS certificate for back-channel logout
+        if: steps.classify.outputs.code == 'true'
         working-directory: signaculum-core
         run: |
           set -euo pipefail
@@ -186,9 +248,11 @@ jobs:
           sudo update-ca-certificates 2>&1 | tee -a ../conformance-tls.log
 
       - name: Install conformance runner dependencies
+        if: steps.classify.outputs.code == 'true'
         run: python3 -m pip install --user httpx selenium
 
       - name: Write conformance plan configs
+        if: steps.classify.outputs.code == 'true'
         run: |
           mkdir -p conformance-results conformance-config
           python3 signaculum-core/conformance/write-config.py \
@@ -205,6 +269,7 @@ jobs:
           python3 -m json.tool conformance-config/backchannel.json > /dev/null
 
       - name: Run OIDC conformance plans
+        if: steps.classify.outputs.code == 'true'
         env:
           CONFORMANCE_DEV_MODE: 1
           CONFORMANCE_SERVER: https://nginx:8443/
@@ -308,7 +373,7 @@ jobs:
           fi
 
       - name: Collect conformance diagnostics
-        if: always()
+        if: always() && steps.classify.outputs.code == 'true'
         env:
           SIGNACULUM_CONFORMANCE_DIR: ${{ github.workspace }}/signaculum-core/conformance
         run: |
@@ -326,7 +391,7 @@ jobs:
           fi
 
       - name: Upload conformance results
-        if: always()
+        if: always() && steps.classify.outputs.code == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: oidc-conformance-results
