@@ -45,6 +45,14 @@ test('a non admin cannot open the applications list or mutate applications', fun
     ]))->assertForbidden();
 });
 
+test('an instance admin gets 404 for an application route key that is not a uuid', function () {
+    $admin = instanceAdminForApplications();
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', 'not-a-uuid'), applicationFormPayload())
+        ->assertNotFound();
+});
+
 test('an instance admin lists applications with the inertia page', function () {
     $admin = instanceAdminForApplications();
     createOidcClient();

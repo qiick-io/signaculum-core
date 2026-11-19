@@ -9,6 +9,7 @@ use App\Models\SigningKey;
 use App\Models\User;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Str;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
@@ -94,6 +95,11 @@ final class IdTokenHintValidatorService
 
     public function userForSubject(string $subject): ?User
     {
+        // `sub` is stored as uuid; a forged hint with a non-UUID must not 500 on PostgreSQL (#197).
+        if (! Str::isUuid($subject)) {
+            return null;
+        }
+
         return User::query()->where('subject', $subject)->first();
     }
 

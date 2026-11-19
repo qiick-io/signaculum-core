@@ -197,3 +197,11 @@ it('revokes a key and keeps the row', function (): void {
 
     expect(Activity::query()->where('log_name', 'api-keys')->where('event', 'revoked')->count())->toBe(1);
 });
+
+it('answers 404 for an api key route key that is not a uuid', function (): void {
+    $admin = apiKeyIssuingAdmin();
+
+    $this->actingAs($admin)
+        ->delete(route('admin.api-keys.destroy', 'not-a-uuid'))
+        ->assertNotFound();
+});

@@ -10,6 +10,7 @@ use App\Models\WebhookDelivery;
 use App\Policies\SettingPolicy;
 use App\Services\SettingsRepositoryService;
 use App\Services\WebhookUrlGuardService;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
@@ -94,10 +95,16 @@ it('does not let an organisation owner reach the instance webhook endpoints', fu
 it('lists the endpoints for an instance admin with their recent deliveries', function (): void {
     $webhook = existingWebhook();
 
+    $eventIds = [];
+
     foreach (range(1, 6) as $index) {
+        // event_id is a uuid column (production uses Str::uuid()); non-UUID fixtures 500 on PostgreSQL (#197).
+        $eventId = (string) Str::uuid();
+        $eventIds[$index] = $eventId;
+
         WebhookDelivery::query()->create([
             'webhook_id' => $webhook->getKey(),
-            'event_id' => 'event-'.$index,
+            'event_id' => $eventId,
             'event_type' => WebhookEventEnum::UserCreated->value,
             'attempt' => 1,
             'http_status' => 200,
@@ -117,12 +124,24 @@ it('lists the endpoints for an instance admin with their recent deliveries', fun
             ->where('webhooks.data.0.is_active', true)
             // The resource shows at most five attempts, newest first.
             ->has('webhooks.data.0.recent_deliveries', 5)
-            ->where('webhooks.data.0.recent_deliveries.0.event_id', 'event-6')
+            ->where('webhooks.data.0.recent_deliveries.0.event_id', $eventIds[6])
             ->where('webhooks.data.0.recent_deliveries.0.status', WebhookDelivery::STATUS_DELIVERED)
             ->where('webhooks.data.0.recent_deliveries.0.http_status', 200)
             ->where('webhooks.data.0.recent_deliveries.0.attempt', 1)
             ->has('availableEvents')
             ->has('settings'));
+});
+
+it('answers 404 for a webhook route key that is not a uuid', function (): void {
+    existingWebhook();
+
+    $this->actingAs(instanceAdmin())
+        ->put(route('instance.webhooks.update', ['webhook' => 'not-a-uuid']), webhookPayload())
+        ->assertNotFound();
+
+    $this->actingAs(instanceAdmin())
+        ->delete(route('instance.webhooks.destroy', ['webhook' => 'not-a-uuid']))
+        ->assertNotFound();
 });
 
 it('never puts a signing secret on the webhooks page', function (): void {
