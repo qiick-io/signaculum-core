@@ -29,17 +29,6 @@ function webhookSettingsGuardResolvingTo(array $addresses = ['93.184.216.34']): 
     ));
 }
 
-function existingWebhook(array $attributes = []): Webhook
-{
-    return Webhook::query()->create([
-        'url' => 'https://hooks.example.com/existing',
-        'secret' => 'existing-signing-secret-value',
-        'events' => [WebhookEventEnum::UserCreated->value],
-        'is_active' => true,
-        ...$attributes,
-    ]);
-}
-
 function webhookPayload(array $overrides = []): array
 {
     return [
