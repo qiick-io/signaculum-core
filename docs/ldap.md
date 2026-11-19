@@ -35,8 +35,11 @@ TLS (LDAPS) or StartTLS is **required by default**. Enabling the connector with
 2. Search under `base_dn` with the user filter.
 3. For each entry with a stable GUID (`objectGUID` / `entryUUID` / configured attribute)
    and a valid `mail`:
-    - **Create** a local user linked by `users.ldap_guid` (random unusable local password).
-    - **Update** name / email / DN when already linked.
+    - **Create** a local user linked by `users.ldap_guid` with **no local password**
+      (`password` null; bind-on-login only).
+    - **Update** name / email / DN when already linked (and clear any leftover local password).
+    - **Disabled in AD** (`userAccountControl` ACCOUNTDISABLE bit `0x2`) → keep / create
+      the local user **inactive**, even when the entry still matches the filter (#187).
     - **Conflict**: a local account already owns that email and is not LDAP-linked →
       skip and write an activity-log `ldap_sync_conflict` (never overwrite).
 4. LDAP-linked users missing from this run are **deactivated** (`is_active=false`),
@@ -59,9 +62,16 @@ LDAP is disabled or the sync interval since `last_synced_at` has not elapsed.
 
 ## Bind-on-login
 
-Not wired in this change. LDAP-linked users currently hold a random local password
-hash. Optional bind-on-login (verify against LDAP, no usable local password) needs a
-Fortify / user-provider hook and should be a dedicated follow-up if still desired.
+LDAP-sourced users (`ldap_guid` set) authenticate **only** by binding to the directory
+with their `ldap_dn` and the submitted password (Fortify `authenticateUsing`, #187). The
+local password hash is never consulted. Password reset, “set password”, email login codes,
+and passkey **login** (first factor) are refused with a clear message that the directory
+manages sign-in. Passkey **confirm** (already signed in) remains available as a second
+factor after a successful bind. Fortify password confirmation also binds to the directory.
+
+If the directory is unreachable at login, LDAP users are refused (fail closed) with a
+distinct message. Local non-LDAP users and the instance’s break-glass local admin keep
+working. Organisation MFA requirements still apply after a successful bind.
 
 ## Operations
 

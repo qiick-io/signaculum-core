@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Ldap;
 
+use LdapRecord\Models\Attributes\AccountControl;
 use LdapRecord\Models\Model;
 
 /**
@@ -23,4 +24,22 @@ class DirectoryUser extends Model
         'top',
         'person',
     ];
+
+    /**
+     * Whether Active Directory marks this entry disabled (userAccountControl ACCOUNTDISABLE 0x2).
+     *
+     * OpenLDAP entries without `userAccountControl` are treated as enabled; their
+     * presence in the sync filter is the only enablement signal (#187).
+     */
+    public function isDirectoryAccountDisabled(): bool
+    {
+        $control = $this->getFirstAttribute('userAccountControl')
+            ?? $this->getFirstAttribute('useraccountcontrol');
+
+        if ($control === null || $control === '') {
+            return false;
+        }
+
+        return (new AccountControl((int) $control))->hasFlag(AccountControl::ACCOUNTDISABLE);
+    }
 }

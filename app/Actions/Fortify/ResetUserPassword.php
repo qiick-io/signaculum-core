@@ -7,6 +7,7 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 
 /**
@@ -21,9 +22,17 @@ class ResetUserPassword implements ResetsUserPasswords
      * Validate and reset the user's forgotten password.
      *
      * @param  array<string, string>  $input
+     *
+     * @throws ValidationException when the account is LDAP-sourced (#187)
      */
     public function reset(User $user, array $input): void
     {
+        if ($user->isLdapSourced()) {
+            throw ValidationException::withMessages([
+                'email' => __('This account\'s password is managed by the directory. Contact your administrator.'),
+            ]);
+        }
+
         Validator::make($input, [
             'password' => $this->passwordRules(),
         ])->validate();
