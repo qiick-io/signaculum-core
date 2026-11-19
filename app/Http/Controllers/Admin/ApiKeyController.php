@@ -33,6 +33,7 @@ final class ApiKeyController extends Controller
         $apiKeys = ApiKey::query()
             ->where('owner_id', $user->getKey())
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get()
             ->map(static fn (ApiKey $apiKey): array => [
                 'uuid' => $apiKey->uuid,

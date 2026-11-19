@@ -29,7 +29,8 @@ final class OrganizationInvitationController extends Controller
         $organization->load([
             'invitations' => fn ($query) => $query
                 ->whereNull('accepted_at')
-                ->orderByDesc('created_at'),
+                ->orderByDesc('created_at')
+                ->orderByDesc('id'),
         ]);
 
         return Inertia::render('organizations/invitations', [

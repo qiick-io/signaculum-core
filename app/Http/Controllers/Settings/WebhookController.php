@@ -35,8 +35,11 @@ final class WebhookController extends Controller
     public function index(): Response
     {
         $webhooks = Webhook::query()
-            ->with(['deliveries' => static fn ($query) => $query->latest()])
+            ->with(['deliveries' => static fn ($query) => $query
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')])
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
 
         return Inertia::render('settings/instance/webhooks', [
