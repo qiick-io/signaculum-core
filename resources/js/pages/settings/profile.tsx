@@ -193,9 +193,7 @@ export default function Profile({
 
                                         <Field
                                             data-invalid={
-                                                errors.locale
-                                                    ? true
-                                                    : undefined
+                                                errors.locale ? true : undefined
                                             }
                                         >
                                             <FieldLabel htmlFor="locale">
@@ -248,9 +246,7 @@ export default function Profile({
                                             }
                                         >
                                             <FieldLabel htmlFor="timezone">
-                                                {t(
-                                                    'settings.profile.timezone',
-                                                )}
+                                                {t('settings.profile.timezone')}
                                             </FieldLabel>
 
                                             <NativeSelect
