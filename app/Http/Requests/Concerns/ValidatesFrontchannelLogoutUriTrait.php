@@ -14,15 +14,7 @@ trait ValidatesFrontchannelLogoutUriTrait
 {
     protected function normalizedFrontchannelLogoutUri(): ?string
     {
-        $raw = $this->input('frontchannel_logout_uri');
-
-        if (! is_string($raw)) {
-            return null;
-        }
-
-        $uri = trim($raw);
-
-        return $uri !== '' ? $uri : null;
+        return FrontchannelLogoutUriRule::normalize($this->input('frontchannel_logout_uri'));
     }
 
     protected function validateFrontchannelLogoutUri(Validator $validator): void

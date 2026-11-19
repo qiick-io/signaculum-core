@@ -11,11 +11,13 @@ use App\Data\ApplicationFilterData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ApplicationResource;
 use App\Models\Client;
+use App\Rules\FrontchannelLogoutUriRule;
 use App\Services\ApplicationQueryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Admin REST API: applications list/show/create/rotate secret.
@@ -62,7 +64,21 @@ final class ApplicationController extends Controller
             'is_first_party' => ['required', 'boolean'],
             'is_client_credentials_enabled' => ['sometimes', 'boolean'],
             'is_pushed_authorization_required' => ['sometimes', 'boolean'],
+            'frontchannel_logout_uri' => ['sometimes', 'nullable', 'string', 'max:2048'],
+            'is_frontchannel_logout_session_required' => ['sometimes', 'boolean'],
         ]);
+
+        // Same normalisation and same rule as the admin form (StoreApplicationRequest),
+        // so a URI is accepted or refused identically at both doors.
+        $frontchannelLogoutUri = FrontchannelLogoutUriRule::normalize($validated['frontchannel_logout_uri'] ?? null);
+
+        if ($frontchannelLogoutUri !== null) {
+            $message = FrontchannelLogoutUriRule::failureMessageFor($frontchannelLogoutUri);
+
+            if ($message !== null) {
+                throw ValidationException::withMessages(['frontchannel_logout_uri' => $message]);
+            }
+        }
 
         /** @var list<string> $redirectUris */
         $redirectUris = array_values($validated['redirect_uris']);
@@ -74,6 +90,8 @@ final class ApplicationController extends Controller
             isFirstParty: (bool) $validated['is_first_party'],
             isClientCredentialsEnabled: (bool) ($validated['is_client_credentials_enabled'] ?? false),
             isPushedAuthorizationRequired: (bool) ($validated['is_pushed_authorization_required'] ?? false),
+            frontchannelLogoutUri: $frontchannelLogoutUri,
+            isFrontchannelLogoutSessionRequired: (bool) ($validated['is_frontchannel_logout_session_required'] ?? false),
         ));
 
         $resource = (new ApplicationResource($application))->resolve();

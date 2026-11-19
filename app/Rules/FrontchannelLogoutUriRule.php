@@ -17,6 +17,23 @@ use Illuminate\Support\Str;
 final class FrontchannelLogoutUriRule implements ValidationRule
 {
     /**
+     * Trims the submitted value and treats an empty string as "not registered".
+     *
+     * Shared by the admin form requests and the Admin REST API so a value means
+     * the same thing whichever door it arrives through.
+     */
+    public static function normalize(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $uri = trim($value);
+
+        return $uri !== '' ? $uri : null;
+    }
+
+    /**
      * Returns a translated error message when the URI is invalid, otherwise null.
      */
     public static function failureMessageFor(mixed $value): ?string
