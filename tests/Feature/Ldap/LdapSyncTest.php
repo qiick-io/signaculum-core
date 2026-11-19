@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use App\Actions\TestLdapConnectionAction;
-use App\Actions\UpdateLdapSettingsAction;
-use App\Data\LdapSettingsData;
 use App\Enums\ActivityEventEnum;
 use App\Enums\LdapEncryptionEnum;
 use App\Jobs\SyncLdapUsersJob;
@@ -15,60 +13,19 @@ use App\Services\LdapUserSyncService;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use LdapRecord\Container;
 use LdapRecord\Laravel\Testing\DirectoryEmulator;
+use LdapRecord\Testing\ConnectionFake;
+use LdapRecord\Testing\LdapFake;
 use Spatie\Activitylog\Models\Activity;
 
 beforeEach(function () {
-    config([
-        'ldap.default' => 'default',
-        'ldap.connections.default' => [
-            'hosts' => ['127.0.0.1'],
-            'username' => 'cn=admin,dc=local,dc=com',
-            'password' => 'secret',
-            'port' => 636,
-            'base_dn' => 'dc=local,dc=com',
-            'timeout' => 5,
-            'use_tls' => true,
-            'use_starttls' => false,
-            'use_sasl' => false,
-        ],
-        'ldap.logging.enabled' => false,
-    ]);
-
-    DirectoryEmulator::setup('default');
+    fakeLdapDirectory();
 });
 
 afterEach(function () {
     DirectoryEmulator::tearDown();
 });
-
-/**
- * @param  array<string, mixed>  $overrides
- */
-function enableLdapSettings(array $overrides = []): void
-{
-    $defaults = [
-        'isEnabled' => true,
-        'hosts' => ['127.0.0.1'],
-        'port' => 636,
-        'encryption' => LdapEncryptionEnum::Tls,
-        'bindDn' => 'cn=admin,dc=local,dc=com',
-        'bindPassword' => 'bind-secret-value',
-        'baseDn' => 'dc=local,dc=com',
-        'userFilter' => '(objectClass=person)',
-        'attributeMail' => 'mail',
-        'attributeGivenName' => 'givenName',
-        'attributeFamilyName' => 'sn',
-        'attributeDisplayName' => 'displayName',
-        'attributeUsername' => 'uid',
-        'attributeGuid' => 'objectGUID',
-        'syncIntervalMinutes' => 60,
-    ];
-
-    $merged = array_merge($defaults, $overrides);
-
-    app(UpdateLdapSettingsAction::class)->execute(new LdapSettingsData(...$merged));
-}
 
 test('TLS encryption is required by default', function () {
     $defaults = LdapSettingsService::defaults();
@@ -303,4 +260,319 @@ test('TestLdapConnectionAction reports success against the emulator', function (
     expect($result->isSuccessful)->toBeTrue()
         ->and($result->message)->toContain('successful')
         ->and($result->message)->not->toContain('bind-secret-value');
+});
+
+test('the sync does nothing at all while the connector is off', function () {
+    enableLdapSettings(['isEnabled' => false]);
+
+    DirectoryUser::create([
+        'cn' => 'Off Person',
+        'givenname' => 'Off',
+        'sn' => 'Person',
+        'mail' => 'off@example.com',
+        'objectguid' => (string) Str::uuid(),
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($result->created)->toBe(0)
+        ->and($result->updated)->toBe(0)
+        ->and($result->deactivated)->toBe(0)
+        ->and(User::query()->where('email', 'off@example.com')->exists())->toBeFalse()
+        ->and(app(LdapSettingsService::class)->lastSyncedAt())->toBeNull()
+        ->and(Activity::query()->where('event', ActivityEventEnum::LdapSyncCompleted->value)->exists())->toBeFalse();
+});
+
+/**
+ * An entry the directory cannot identify is skipped, never created under a guessed
+ * identity: a user row without a stable `ldap_guid` could never be matched again.
+ */
+test('a directory entry without a resolvable guid is skipped', function () {
+    enableLdapSettings();
+
+    DirectoryUser::create([
+        'cn' => 'Anonymous Person',
+        'givenname' => 'Anonymous',
+        'sn' => 'Person',
+        'mail' => 'anonymous@example.com',
+        'entryuuid' => '',
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($result->skipped)->toBe(1)
+        ->and($result->created)->toBe(0)
+        ->and(User::query()->where('email', 'anonymous@example.com')->exists())->toBeFalse();
+});
+
+test('a guid is taken from entryUUID when the directory has no objectGUID', function () {
+    enableLdapSettings();
+
+    DirectoryUser::create([
+        'cn' => 'OpenLDAP Person',
+        'givenname' => 'Open',
+        'sn' => 'Person',
+        'mail' => 'openldap@example.com',
+        'entryuuid' => 'C0FFEE00-1234-4000-8000-ABCDEF123456',
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($result->created)->toBe(1)
+        ->and(User::query()->where('email', 'openldap@example.com')->value('ldap_guid'))
+        ->toBe('c0ffee00-1234-4000-8000-abcdef123456');
+});
+
+test('a directory entry without a usable email address is skipped', function () {
+    enableLdapSettings();
+
+    DirectoryUser::create([
+        'cn' => 'No Mail',
+        'givenname' => 'No',
+        'sn' => 'Mail',
+        'objectguid' => (string) Str::uuid(),
+    ]);
+
+    DirectoryUser::create([
+        'cn' => 'Bad Mail',
+        'givenname' => 'Bad',
+        'sn' => 'Mail',
+        'mail' => 'not-an-email-address',
+        'objectguid' => (string) Str::uuid(),
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($result->skipped)->toBe(2)
+        ->and($result->created)->toBe(0)
+        ->and(User::query()->count())->toBe(0);
+});
+
+test('a directory entry with no name attributes still gets a usable account', function () {
+    enableLdapSettings();
+
+    DirectoryUser::create([
+        'cn' => 'Mail Only',
+        'mail' => 'mailonly@example.com',
+        'objectguid' => (string) Str::uuid(),
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+    $user = User::query()->where('email', 'mailonly@example.com')->first();
+
+    expect($result->created)->toBe(1)
+        ->and($user?->first_name)->toBe('User')
+        ->and($user?->last_name)->toBeNull();
+});
+
+test('an attribute left blank in the settings is never read from the directory', function () {
+    enableLdapSettings(['attributeFamilyName' => '']);
+
+    DirectoryUser::create([
+        'cn' => 'Blank Attribute',
+        'givenname' => 'Blank',
+        'sn' => 'Attribute',
+        'mail' => 'blank-attribute@example.com',
+        'objectguid' => (string) Str::uuid(),
+    ]);
+
+    app(LdapUserSyncService::class)->sync();
+    $user = User::query()->where('email', 'blank-attribute@example.com')->first();
+
+    expect($user?->first_name)->toBe('Blank')
+        ->and($user?->last_name)->toBeNull();
+});
+
+test('a linked user is never moved onto an email another account already owns', function () {
+    enableLdapSettings();
+
+    $guid = (string) Str::uuid();
+
+    $linkedUser = User::factory()->create([
+        'first_name' => 'Linked',
+        'last_name' => 'Person',
+        'email' => 'linked@example.com',
+        'ldap_guid' => Str::lower($guid),
+        'is_active' => true,
+    ]);
+
+    $localOwner = User::factory()->create(['email' => 'owned@example.com', 'ldap_guid' => null]);
+
+    DirectoryUser::create([
+        'cn' => 'Linked Person',
+        'givenname' => 'Renamed',
+        'sn' => 'Person',
+        'mail' => 'owned@example.com',
+        'objectguid' => $guid,
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+    $conflict = Activity::query()->where('event', ActivityEventEnum::LdapSyncConflict->value)->first();
+
+    expect($result->conflicts)->toBe(1)
+        ->and($result->updated)->toBe(0)
+        ->and($linkedUser->refresh()->email)->toBe('linked@example.com')
+        ->and($linkedUser->first_name)->toBe('Linked')
+        ->and($localOwner->refresh()->ldap_guid)->toBeNull()
+        ->and($conflict?->properties['email'])->toBe('owned@example.com')
+        ->and($conflict?->properties['local_user_subject'])->toBe($localOwner->subject);
+});
+
+test('a directory entry whose email belongs to another linked account is skipped', function () {
+    enableLdapSettings();
+
+    User::factory()->create([
+        'email' => 'shared@example.com',
+        'ldap_guid' => Str::lower((string) Str::uuid()),
+        'is_active' => false,
+    ]);
+
+    DirectoryUser::create([
+        'cn' => 'Second Entry',
+        'givenname' => 'Second',
+        'sn' => 'Entry',
+        'mail' => 'shared@example.com',
+        'objectguid' => (string) Str::uuid(),
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($result->skipped)->toBe(1)
+        ->and($result->created)->toBe(0)
+        ->and($result->conflicts)->toBe(0)
+        ->and(User::query()->where('email', 'shared@example.com')->count())->toBe(1)
+        ->and(Activity::query()->where('event', ActivityEventEnum::LdapSyncConflict->value)->exists())->toBeFalse();
+});
+
+test('a user who returns to the directory is reactivated', function () {
+    enableLdapSettings();
+
+    $guid = (string) Str::uuid();
+
+    $user = User::factory()->create([
+        'first_name' => 'Returning',
+        'last_name' => 'Person',
+        'email' => 'returning@example.com',
+        'ldap_guid' => Str::lower($guid),
+        'is_active' => false,
+    ]);
+
+    DirectoryUser::create([
+        'cn' => 'Returning Person',
+        'givenname' => 'Returning',
+        'sn' => 'Person',
+        'mail' => 'returning@example.com',
+        'objectguid' => $guid,
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($result->updated)->toBe(1)
+        ->and($result->deactivated)->toBe(0)
+        ->and($user->refresh()->is_active)->toBeTrue();
+});
+
+/**
+ * The directory must not be able to lock everyone out of the instance: the last
+ * instance admin stays active and the refusal is logged instead of counted.
+ */
+test('the last instance admin is kept active when they leave the directory', function () {
+    enableLdapSettings();
+    $logger = Log::spy();
+
+    $admin = User::factory()->create([
+        'email' => 'admin@example.com',
+        'ldap_guid' => Str::lower((string) Str::uuid()),
+        'is_active' => true,
+        'is_instance_admin' => true,
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($result->deactivated)->toBe(0)
+        ->and($admin->refresh()->is_active)->toBeTrue();
+
+    $logger->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => $message === 'LDAP sync could not deactivate user'
+            && $context['user_subject'] === $admin->subject);
+});
+
+/**
+ * Record the LDAP filter the sync sends, with a connection that returns no entries.
+ */
+function filterSentByTheSync(): string
+{
+    DirectoryEmulator::tearDown();
+
+    $sentFilter = '';
+    $connection = ConnectionFake::make([
+        'hosts' => ['127.0.0.1'],
+        'base_dn' => 'dc=local,dc=com',
+        'use_tls' => true,
+    ])->shouldBeConnected();
+
+    $connection->getLdapConnection()->expect(
+        LdapFake::operation('search')->with([
+            fn (string $distinguishedName): bool => true,
+            function (string $filter) use (&$sentFilter): bool {
+                $sentFilter = $filter;
+
+                return true;
+            },
+        ])->andReturn([]),
+    );
+
+    Container::getInstance()->addConnection($connection, 'default');
+
+    app(LdapUserSyncService::class)->sync();
+
+    return $sentFilter;
+}
+
+/**
+ * A filter the settings cannot express as one equality must reach the directory
+ * verbatim: escaping it as a single value would silently match nothing.
+ */
+test('a compound user filter reaches the directory unchanged', function () {
+    enableLdapSettings(['userFilter' => '(&(objectClass=person)(department=Engineering))']);
+
+    expect(filterSentByTheSync())->toContain('(&(objectClass=person)(department=Engineering))');
+});
+
+test('a simple equality filter is escaped before it reaches the directory', function () {
+    enableLdapSettings(['userFilter' => '(department=Engineering)']);
+
+    $sentFilter = filterSentByTheSync();
+
+    expect($sentFilter)->toContain('department=')
+        ->and($sentFilter)->not->toContain('department=Engineering');
+});
+
+/**
+ * Active Directory installs commonly map the address to `userPrincipalName` and have
+ * no `givenName`: the configured attribute map is what the sync reads, not the defaults.
+ */
+test('a custom attribute map is what the sync reads from the directory', function () {
+    enableLdapSettings([
+        'attributeMail' => 'userprincipalname',
+        'attributeGivenName' => 'notpresent',
+        'attributeDisplayName' => 'displayname',
+    ]);
+
+    DirectoryUser::create([
+        'cn' => 'Mapped Person',
+        'mail' => 'wrong@example.com',
+        'userprincipalname' => 'mapped@example.com',
+        'displayname' => 'Mapped Person',
+        'sn' => 'Person',
+        'objectguid' => (string) Str::uuid(),
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+    $user = User::query()->where('email', 'mapped@example.com')->first();
+
+    expect($result->created)->toBe(1)
+        ->and($user?->first_name)->toBe('Mapped Person')
+        ->and($user?->last_name)->toBe('Person')
+        ->and(User::query()->where('email', 'wrong@example.com')->exists())->toBeFalse();
 });
