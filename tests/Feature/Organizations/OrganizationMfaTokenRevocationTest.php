@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Enums\ApiKeyScopeEnum;
 use App\Enums\OrganizationRoleEnum;
+use App\Jobs\EndOrganizationMemberOidcSessionsJob;
 use App\Models\Organization;
+use App\Models\OrganizationInvitation;
 use App\Models\OrganizationMembership;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Passport\Client;
@@ -14,9 +18,8 @@ use Laravel\Passport\Passport;
 use Spatie\Activitylog\Models\Activity;
 
 /**
- * MFA-related token behaviour reported in #163. Turning the requirement on revokes existing
- * grants, while changing a password or joining an already-required organisation does not; the
- * one-year Passport defaults are pinned because they bound every one of those gaps.
+ * MFA-related token behaviour for #163: turning the requirement on, joining an already-required
+ * organisation, password changes, and short token lifetimes.
  */
 beforeEach(function () {
     config(['oidc.issuer' => 'https://id.example.test']);
@@ -224,7 +227,9 @@ test('issue 163 five-step reproduction pins the step-up and the revoked grant', 
         ->assertUnauthorized();
 });
 
-test('issue 163: joining an already-required organisation leaves earlier grants intact', function () {
+test('joining an already-required organisation revokes earlier grants and queues back-channel logout', function () {
+    Queue::fake();
+
     $member = User::factory()->withTwoFactor()->create();
     $requiredOrganization = createOrganizationWithOwner($this->owner, ['slug' => 'already-required-org']);
     setOrganizationMfaRequirement($this->owner, $requiredOrganization, true);
@@ -237,19 +242,129 @@ test('issue 163: joining an already-required organisation leaves earlier grants 
         ->assertOk()
         ->assertJsonPath('orgs', []);
 
-    addOrganizationMember($requiredOrganization, $member);
+    $this->actingAs($this->owner)
+        ->post(route('organizations.members.store', $requiredOrganization), [
+            'user_id' => $member->getKey(),
+            'roles' => [OrganizationRoleEnum::Member->value],
+        ])
+        ->assertRedirect(route('organizations.show', $requiredOrganization));
+    forgetAuthenticatedSession();
 
-    // Characterisation of the remaining gap, not the desired behaviour: adding a member does
-    // not revoke a grant issued before the requirement was turned on (#163).
     $this->withToken($tokens['access_token'])
         ->get('/oauth/userinfo')
-        ->assertOk()
-        ->assertJsonPath('orgs.0.slug', $requiredOrganization->slug);
+        ->assertUnauthorized();
 
-    $refreshed = refreshGrant($this->client, $tokens['refresh_token'])->assertOk();
+    refreshGrant($this->client, $tokens['refresh_token'])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_grant');
 
-    expect((int) $refreshed->json('expires_in'))->toBeGreaterThanOrEqual(31535999)
-        ->toBeLessThanOrEqual(31536000);
+    Queue::assertPushed(
+        EndOrganizationMemberOidcSessionsJob::class,
+        fn (EndOrganizationMemberOidcSessionsJob $job): bool => $job->userId === (int) $member->getKey(),
+    );
+});
+
+test('joining an organisation without MFA leaves earlier grants intact', function () {
+    Queue::fake();
+
+    $member = User::factory()->create();
+    $plainOrganization = createOrganizationWithOwner($this->owner, ['slug' => 'plain-join-org']);
+
+    $tokens = issueGrantForOrganizationMember($member, $this->client);
+    forgetAuthenticatedSession();
+
+    $this->actingAs($this->owner)
+        ->post(route('organizations.members.store', $plainOrganization), [
+            'user_id' => $member->getKey(),
+            'roles' => [OrganizationRoleEnum::Member->value],
+        ])
+        ->assertRedirect(route('organizations.show', $plainOrganization));
+    forgetAuthenticatedSession();
+
+    $this->withToken($tokens['access_token'])->get('/oauth/userinfo')->assertOk();
+    refreshGrant($this->client, $tokens['refresh_token'])->assertOk();
+
+    Queue::assertNotPushed(EndOrganizationMemberOidcSessionsJob::class);
+});
+
+test('admin API membership create on an MFA organisation revokes the new members grants', function () {
+    Queue::fake();
+
+    $member = User::factory()->withTwoFactor()->create();
+    $requiredOrganization = createOrganizationWithOwner($this->owner, ['slug' => 'api-mfa-join']);
+    setOrganizationMfaRequirement($this->owner, $requiredOrganization, true);
+
+    $tokens = issueGrantForOrganizationMember($member, $this->client);
+    forgetAuthenticatedSession();
+
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::OrganizationsWrite->value]);
+
+    $this->withToken($plain)
+        ->postJson('/api/v1/organizations/api-mfa-join/memberships', [
+            'user_id' => $member->subject,
+            'roles' => [OrganizationRoleEnum::Member->value],
+        ])
+        ->assertCreated();
+
+    refreshGrant($this->client, $tokens['refresh_token'])->assertStatus(400);
+    Queue::assertPushed(
+        EndOrganizationMemberOidcSessionsJob::class,
+        fn (EndOrganizationMemberOidcSessionsJob $job): bool => $job->userId === (int) $member->getKey(),
+    );
+});
+
+test('accepting an invitation to an MFA organisation revokes earlier grants', function () {
+    Queue::fake();
+    Notification::fake();
+
+    $invitee = User::factory()->withTwoFactor()->create(['email' => 'mfa-invitee@example.test']);
+    $requiredOrganization = createOrganizationWithOwner($this->owner, ['slug' => 'invite-mfa-org']);
+    setOrganizationMfaRequirement($this->owner, $requiredOrganization, true);
+
+    $tokens = issueGrantForOrganizationMember($invitee, $this->client);
+    forgetAuthenticatedSession();
+
+    $plainToken = 'mfa-invite-accept-token';
+    OrganizationInvitation::query()->create([
+        'organization_id' => $requiredOrganization->getKey(),
+        'email' => 'mfa-invitee@example.test',
+        'roles' => [OrganizationRoleEnum::Member->value],
+        'token_hash' => hash('sha256', $plainToken),
+        'invited_by_user_id' => $this->owner->getKey(),
+        'expires_at' => now()->addDay(),
+    ]);
+
+    $this->actingAs($invitee)
+        ->post(route('invitations.accept.store', ['token' => $plainToken]))
+        ->assertRedirect();
+
+    refreshGrant($this->client, $tokens['refresh_token'])->assertStatus(400);
+    Queue::assertPushed(
+        EndOrganizationMemberOidcSessionsJob::class,
+        fn (EndOrganizationMemberOidcSessionsJob $job): bool => $job->userId === (int) $invitee->getKey(),
+    );
+});
+
+test('joining an MFA organisation also revokes an unredeemed authorization code', function () {
+    $member = User::factory()->withTwoFactor()->create();
+    $requiredOrganization = createOrganizationWithOwner($this->owner, ['slug' => 'code-mfa-join']);
+    setOrganizationMfaRequirement($this->owner, $requiredOrganization, true);
+
+    $this->actingAs($member);
+    $pkce = pkcePair();
+    $code = approveAuthorization($this->client, $pkce['challenge'])['code'];
+    forgetAuthenticatedSession();
+
+    $this->actingAs($this->owner)
+        ->post(route('organizations.members.store', $requiredOrganization), [
+            'user_id' => $member->getKey(),
+            'roles' => [OrganizationRoleEnum::Member->value],
+        ])
+        ->assertRedirect(route('organizations.show', $requiredOrganization));
+
+    redeemCode($this->client, $code, $pkce['verifier'])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_grant');
 });
 
 test('issue 163: changing a password leaves outstanding grants intact', function () {
