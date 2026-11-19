@@ -44,11 +44,13 @@ final class ActivityOrganisationResolverService
         if ($subject instanceof OrganizationMembership || $subject instanceof OrganizationInvitation) {
             $organizationId = $subject->organization_id;
 
-            return is_string($organizationId) && $organizationId !== '' ? $organizationId : null;
+            return $organizationId !== '' ? $organizationId : null;
         }
 
-        if (isset($subject->organization_id) && is_string($subject->organization_id) && $subject->organization_id !== '') {
-            return $subject->organization_id;
+        $organizationId = $subject->getAttribute('organization_id');
+
+        if (is_string($organizationId) && $organizationId !== '') {
+            return $organizationId;
         }
 
         return null;
