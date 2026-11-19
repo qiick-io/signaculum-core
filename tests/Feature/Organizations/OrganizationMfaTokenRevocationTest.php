@@ -6,15 +6,17 @@ use App\Enums\OrganizationRoleEnum;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Passport\Client;
+use Laravel\Passport\Passport;
 use Spatie\Activitylog\Models\Activity;
 
 /**
- * Turning on an organisation's MFA requirement revokes its members' existing grants (#163):
- * the gate runs only at `/oauth/authorize`, so a refresh token issued before the requirement
- * would otherwise keep minting access tokens for its whole lifetime.
+ * MFA-related token behaviour reported in #163. Turning the requirement on revokes existing
+ * grants, while changing a password or joining an already-required organisation does not; the
+ * one-year Passport defaults are pinned because they bound every one of those gaps.
  */
 beforeEach(function () {
     config(['oidc.issuer' => 'https://id.example.test']);
@@ -39,7 +41,7 @@ function addOrganizationMember(Organization $organization, User $member): void
 /**
  * Run the authorization code flow as `$user` and redeem the code.
  *
- * @return array{access_token: string, refresh_token: string}
+ * @return array{access_token: string, refresh_token: string, expires_in: int}
  */
 function issueGrantForOrganizationMember(User $user, Client $client): array
 {
@@ -51,6 +53,7 @@ function issueGrantForOrganizationMember(User $user, Client $client): array
     return [
         'access_token' => (string) $response->json('access_token'),
         'refresh_token' => (string) $response->json('refresh_token'),
+        'expires_in' => (int) $response->json('expires_in'),
     ];
 }
 
@@ -73,6 +76,15 @@ function setOrganizationMfaRequirement(User $owner, Organization $organization, 
             'is_mfa_required' => $isMfaRequired ? '1' : '0',
         ])
         ->assertRedirect(route('organizations.settings', $organization));
+}
+
+/**
+ * The OIDC helpers leave a session identity behind; later bearer-token requests need it gone.
+ */
+function forgetAuthenticatedSession(): void
+{
+    app('auth')->forgetGuards();
+    test()->flushSession();
 }
 
 test('turning on MFA revokes the members refresh and access tokens', function () {
@@ -176,3 +188,90 @@ test('saving without turning MFA on revokes nothing', function (bool $isMfaRequi
     'off stays off' => [false, false],
     'on is turned off' => [true, false],
 ]);
+
+test('issue 163 five-step reproduction pins the step-up and the revoked grant', function () {
+    $member = User::factory()->withTwoFactor()->create();
+    addOrganizationMember($this->organization, $member);
+    $tokens = issueGrantForOrganizationMember($member, $this->client);
+    forgetAuthenticatedSession();
+
+    // 1. Before the toggle the token carries the organisation and userinfo accepts it.
+    $this->withToken($tokens['access_token'])
+        ->get('/oauth/userinfo')
+        ->assertOk()
+        ->assertJsonPath('orgs.0.slug', $this->organization->slug);
+
+    // 2. The owner turns on the requirement; existing grants are revoked.
+    setOrganizationMfaRequirement($this->owner, $this->organization, true);
+
+    // 3. A password-only session is sent through the step-up gate at /oauth/authorize.
+    $this->actingAs($member)
+        ->get(authorizeUrl($this->client, pkcePair()['challenge'], [
+            'scope' => 'openid profile email qiick.orgs',
+        ]))
+        ->assertRedirect(route('login'));
+    forgetAuthenticatedSession();
+
+    // 4. The issue expected a successful refresh; the revocation makes it fail instead.
+    refreshGrant($this->client, $tokens['refresh_token'])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_grant')
+        ->assertJsonPath('hint', 'Token has been revoked');
+
+    // 5. The issue expected 200 from userinfo; the revoked access token is rejected too.
+    $this->withToken($tokens['access_token'])
+        ->get('/oauth/userinfo')
+        ->assertUnauthorized();
+});
+
+test('issue 163: joining an already-required organisation leaves earlier grants intact', function () {
+    $member = User::factory()->withTwoFactor()->create();
+    $requiredOrganization = createOrganizationWithOwner($this->owner, ['slug' => 'already-required-org']);
+    setOrganizationMfaRequirement($this->owner, $requiredOrganization, true);
+
+    $tokens = issueGrantForOrganizationMember($member, $this->client);
+    forgetAuthenticatedSession();
+
+    $this->withToken($tokens['access_token'])
+        ->get('/oauth/userinfo')
+        ->assertOk()
+        ->assertJsonPath('orgs', []);
+
+    addOrganizationMember($requiredOrganization, $member);
+
+    // Characterisation of the remaining gap, not the desired behaviour: adding a member does
+    // not revoke a grant issued before the requirement was turned on (#163).
+    $this->withToken($tokens['access_token'])
+        ->get('/oauth/userinfo')
+        ->assertOk()
+        ->assertJsonPath('orgs.0.slug', $requiredOrganization->slug);
+
+    $refreshed = refreshGrant($this->client, $tokens['refresh_token'])->assertOk();
+
+    expect((int) $refreshed->json('expires_in'))->toBeGreaterThanOrEqual(31535999)
+        ->toBeLessThanOrEqual(31536000);
+});
+
+test('issue 163: changing a password leaves outstanding grants intact', function () {
+    $tokens = issueGrantForOrganizationMember($this->member, $this->client);
+    forgetAuthenticatedSession();
+
+    $this->withToken($tokens['access_token'])->get('/oauth/userinfo')->assertOk();
+
+    $this->member->forceFill(['password' => Hash::make('a-new-password')])->save();
+
+    // Characterisation of #163: Passport does not tie a grant to the password it was issued with.
+    $this->withToken($tokens['access_token'])->get('/oauth/userinfo')->assertOk();
+
+    refreshGrant($this->client, $tokens['refresh_token'])->assertOk();
+});
+
+test('issue 163: Passport keeps its one-year access and refresh token lifetimes', function () {
+    $tokens = issueGrantForOrganizationMember($this->member, $this->client);
+
+    // Passport rounds the header to whole seconds, so allow a one-second boundary slip.
+    expect($tokens['expires_in'])->toBeGreaterThanOrEqual(31535999)
+        ->toBeLessThanOrEqual(31536000)
+        ->and(Passport::tokensExpireIn()->format('%y-%m-%d-%h-%i-%s'))->toBe('1-0-0-0-0-0')
+        ->and(Passport::refreshTokensExpireIn()->format('%y-%m-%d-%h-%i-%s'))->toBe('1-0-0-0-0-0');
+});
