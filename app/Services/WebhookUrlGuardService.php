@@ -14,9 +14,20 @@ use Symfony\Component\HttpFoundation\IpUtils;
  * link-local / CGNAT / metadata addresses unless the instance setting
  * `webhooks_allow_private_urls` is on. Metadata hosts stay blocked even then.
  *
- * Hostnames are resolved for both A and AAAA; if any address is disallowed the
- * URL is refused. Delivery pins one validated address via CURLOPT_RESOLVE so a
- * later DNS rebinding answer cannot redirect the HTTP connection.
+ * Every authorised destination is pinned (#185): the guard decides which address
+ * the request goes to, and hands curl exactly that address through CURLOPT_CONNECT_TO
+ * with an empty source host, which applies whatever the URL's host looks like. A
+ * hostname is resolved once, for A and AAAA, every answer is checked and one of them
+ * is pinned, so a DNS rebinding answer after the check is never used; a host that
+ * resolves to nothing is refused, because there is nothing checked to pin. An IP
+ * literal is pinned to itself. CURLOPT_RESOLVE cannot do this job: it is a DNS-cache
+ * entry keyed by host name, and curl never consults it for a host it parses as an
+ * address itself, such as `2852039166` or `169.254.169.254.`.
+ *
+ * An IPv4 address written any other way than dotted decimal (`2852039166`,
+ * `0251.0376.0251.0376`, `169.254.43518`, a trailing dot) is read the way curl and
+ * inet_aton(3) read it, checked against the metadata list, and then refused: a webhook
+ * has no reason to spell an address like that, and two parsers can disagree on it.
  *
  * An IPv6 literal arrives from `parse_url()` in URL bracket form and is unwrapped
  * and canonicalised before any check, so it is compared as an address and never
@@ -62,7 +73,7 @@ final class WebhookUrlGuardService
     ];
 
     /**
-     * @param  (Closure(string): list<string>)|null  $hostResolver
+     * @param  (Closure(string): list<mixed>)|null  $hostResolver
      */
     public function __construct(
         private readonly SettingsRepositoryService $settings,
@@ -80,9 +91,9 @@ final class WebhookUrlGuardService
     }
 
     /**
-     * Validate the URL once and return CURLOPT_RESOLVE entries that pin the checked IP.
+     * Validate the URL once and return the CURLOPT_CONNECT_TO entry that pins the checked address.
      *
-     * @return array{ok: true, curl_resolve: list<string>}|array{ok: false, reason: string}
+     * @return array{ok: true, curl_connect_to: list<string>}|array{ok: false, reason: string}
      */
     public function authorizeOutbound(string $url): array
     {
@@ -131,12 +142,32 @@ final class WebhookUrlGuardService
             }
 
             $host = $literal;
+        } else {
+            // A trailing dot is the DNS root (RFC 1034 §3.1): `localhost.` is `localhost`, and
+            // `169.254.169.254.` is the metadata address to curl. The names are compared without it.
+            $name = str_ends_with($host, '.') ? substr($host, 0, -1) : $host;
+
+            if ($name === '') {
+                return ['ok' => false, 'reason' => 'Invalid URL.'];
+            }
+
+            $ipv4 = $this->readIpv4Address($name);
+
+            if ($ipv4 !== null) {
+                if ($this->isMetadataHost($ipv4)) {
+                    return ['ok' => false, 'reason' => 'Host is not allowed.'];
+                }
+
+                if ($ipv4 !== $host) {
+                    return ['ok' => false, 'reason' => 'Invalid URL.'];
+                }
+            }
+
+            $host = $name;
         }
 
-        foreach ($this->addressForms($host) as $form) {
-            if (in_array($form, self::METADATA_HOSTS, true)) {
-                return ['ok' => false, 'reason' => 'Host is not allowed.'];
-            }
+        if ($this->isMetadataHost($host)) {
+            return ['ok' => false, 'reason' => 'Host is not allowed.'];
         }
 
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
@@ -144,8 +175,7 @@ final class WebhookUrlGuardService
                 return ['ok' => false, 'reason' => 'Host is not allowed.'];
             }
 
-            // Literal IP in the URL — curl already connects there; no resolve pin.
-            return ['ok' => true, 'curl_resolve' => []];
+            return $this->authorizedTo($host, $port);
         }
 
         if (! $isPrivateAllowed && $this->isBlockedHostName($host)) {
@@ -154,29 +184,128 @@ final class WebhookUrlGuardService
 
         $resolvedAddresses = $this->resolveHostAddresses($host);
 
+        // Nothing resolved means nothing checked, and so nothing to pin; letting curl resolve
+        // the name itself is how every #185 spelling reached the metadata service.
         if ($resolvedAddresses === []) {
-            if (! $isPrivateAllowed) {
-                return ['ok' => false, 'reason' => 'Host could not be resolved.'];
-            }
-
-            // Admin opted into private URLs and DNS returned nothing — cannot pin.
-            return ['ok' => true, 'curl_resolve' => []];
+            return ['ok' => false, 'reason' => 'Host could not be resolved.'];
         }
 
-        if (! $isPrivateAllowed) {
-            foreach ($resolvedAddresses as $address) {
-                if ($this->isBlockedAddress($address)) {
-                    return ['ok' => false, 'reason' => 'Host resolves to a disallowed address.'];
-                }
+        foreach ($resolvedAddresses as $address) {
+            // The metadata service stays blocked when a name resolves to it, not only when it is
+            // named, or the invariant in the class docblock is one DNS record away from false.
+            if ($this->isMetadataHost($address) || (! $isPrivateAllowed && $this->isBlockedAddress($address))) {
+                return ['ok' => false, 'reason' => 'Host resolves to a disallowed address.'];
             }
         }
 
-        $pinnedAddress = $this->preferredPinnedAddress($resolvedAddresses);
+        return $this->authorizedTo($this->preferredPinnedAddress($resolvedAddresses), $port);
+    }
 
+    /**
+     * Authorise the request and pin its connection to the address the guard checked.
+     *
+     * CURLOPT_CONNECT_TO `::ADDRESS:PORT` leaves the source host and port empty, so it matches
+     * whatever host curl takes from the URL, however that host is spelt; the URL host is still
+     * what TLS verifies and what the Host header says. The address is always an IP literal, so
+     * curl connects without a lookup of its own.
+     *
+     * @return array{ok: true, curl_connect_to: list<string>}
+     */
+    private function authorizedTo(string $address, int $port): array
+    {
         return [
             'ok' => true,
-            'curl_resolve' => [sprintf('%s:%d:%s', $host, $port, $this->formatCurlResolveAddress($pinnedAddress))],
+            'curl_connect_to' => [sprintf('::%s:%d', $this->formatCurlAddress($address), $port)],
         ];
+    }
+
+    private function isMetadataHost(string $host): bool
+    {
+        foreach ($this->addressForms($host) as $form) {
+            if (in_array($form, self::METADATA_HOSTS, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The dotted-decimal address of a host that curl and inet_aton(3) read as IPv4, or null for
+     * a host they read as a name.
+     *
+     * Up to four parts, each decimal, octal (leading `0`) or hexadecimal (`0x`); the last part
+     * fills every byte the earlier ones did not, so `169.254.43518` and `2852039166` are both
+     * 169.254.169.254. Anything else (five parts, a part out of range, an empty part, a letter
+     * outside a `0x` prefix) is a name to both of them, and so to the guard.
+     */
+    private function readIpv4Address(string $host): ?string
+    {
+        if (preg_match('/^[0-9a-fx.]+$/', $host) !== 1) {
+            return null;
+        }
+
+        $parts = explode('.', $host);
+
+        if (count($parts) > 4) {
+            return null;
+        }
+
+        $numbers = [];
+
+        foreach ($parts as $part) {
+            $number = $this->readIpv4Number($part);
+
+            if ($number === null) {
+                return null;
+            }
+
+            $numbers[] = $number;
+        }
+
+        $last = (int) array_pop($numbers);
+        $value = 0;
+
+        foreach ($numbers as $number) {
+            if ($number > 255) {
+                return null;
+            }
+
+            $value = $value * 256 + $number;
+        }
+
+        $remainingBytes = 4 - count($numbers);
+
+        if ($last >= 256 ** $remainingBytes) {
+            return null;
+        }
+
+        return long2ip($value * 256 ** $remainingBytes + $last);
+    }
+
+    private function readIpv4Number(string $part): ?int
+    {
+        [$digits, $base] = match (true) {
+            preg_match('/^0x[0-9a-f]+$/', $part) === 1 => [substr($part, 2), 16],
+            preg_match('/^0[0-7]*$/', $part) === 1 => [$part, 8],
+            preg_match('/^[1-9][0-9]*$/', $part) === 1 => [$part, 10],
+            default => [null, 0],
+        };
+
+        if ($digits === null) {
+            return null;
+        }
+
+        $digits = ltrim($digits, '0');
+
+        // Eleven digits in any of the three bases already exceed 32 bits, without overflowing.
+        if (strlen($digits) > 11) {
+            return null;
+        }
+
+        $number = $digits === '' ? 0 : intval($digits, $base);
+
+        return $number > 0xFFFFFFFF ? null : $number;
     }
 
     /**
@@ -236,9 +365,9 @@ final class WebhookUrlGuardService
     }
 
     /**
-     * CURLOPT_RESOLVE needs brackets around an IPv6 pin (`host:443:[2001:db8::1]`).
+     * curl needs brackets around an IPv6 pin (`::[2001:db8::1]:443`).
      */
-    private function formatCurlResolveAddress(string $address): string
+    private function formatCurlAddress(string $address): string
     {
         if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
             return '['.$address.']';
@@ -248,38 +377,37 @@ final class WebhookUrlGuardService
     }
 
     /**
+     * The canonical IP addresses a hostname resolves to; anything else a resolver returns is
+     * dropped, because only an address may become the pin.
+     *
+     * DNS first, for A and AAAA; when DNS has no answer, the system resolver (hosts file, IPv4),
+     * so a name an admin maps locally keeps working now that an unresolved name is refused.
+     *
      * @return list<string>
      */
     private function resolveHostAddresses(string $host): array
     {
         $resolver = $this->hostResolver ?? static function (string $name): array {
-            $records = dns_get_record($name, DNS_A | DNS_AAAA);
-
-            if ($records === false) {
-                return [];
-            }
-
             $addresses = [];
 
-            foreach ($records as $record) {
-                $type = $record['type'] ?? null;
-
-                if ($type === 'A' && isset($record['ip']) && is_string($record['ip'])) {
-                    $addresses[] = $record['ip'];
-                }
-
-                if ($type === 'AAAA' && isset($record['ipv6']) && is_string($record['ipv6'])) {
-                    $addresses[] = $record['ipv6'];
-                }
+            foreach (@dns_get_record($name, DNS_A | DNS_AAAA) ?: [] as $record) {
+                $addresses[] = $record['ip'] ?? $record['ipv6'] ?? null;
             }
 
-            return array_values(array_unique($addresses));
+            return $addresses !== [] ? $addresses : (gethostbynamel($name) ?: []);
         };
 
-        /** @var list<string> $addresses */
-        $addresses = $resolver($host);
+        $addresses = [];
 
-        return $addresses;
+        foreach ($resolver($host) as $address) {
+            $packed = is_string($address) ? @inet_pton($address) : false;
+
+            if ($packed !== false) {
+                $addresses[] = (string) inet_ntop($packed);
+            }
+        }
+
+        return array_values(array_unique($addresses));
     }
 
     /**

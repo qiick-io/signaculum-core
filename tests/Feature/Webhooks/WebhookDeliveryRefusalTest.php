@@ -221,17 +221,17 @@ it('keeps the metadata hosts blocked even when private urls are allowed', functi
         ->and($guard->validate('http://metadata.google.internal/v1/'))->toBe('Host is not allowed.');
 });
 
-it('refuses a host that does not resolve, unless private urls are allowed', function (): void {
+it('refuses a host that does not resolve, even when private urls are allowed', function (): void {
     $guard = deliveryGuardResolvingTo([]);
 
     expect($guard->validate('https://nxdomain.example.com/hook'))->toBe('Host could not be resolved.');
 
     app(SettingsRepositoryService::class)->save(['webhooks_allow_private_urls' => true]);
 
-    $authorized = deliveryGuardResolvingTo([])->authorizeOutbound('https://nxdomain.example.com/hook');
-
-    // Nothing to pin, so delivery goes out unpinned: the admin asked for private URLs.
-    expect($authorized)->toBe(['ok' => true, 'curl_resolve' => []]);
+    // Until #185 this went out unpinned, and curl resolved the name itself, unchecked: the path
+    // `http://2852039166/` took to the metadata service. Nothing resolved means nothing to pin.
+    expect(deliveryGuardResolvingTo([])->authorizeOutbound('https://nxdomain.example.com/hook'))
+        ->toBe(['ok' => false, 'reason' => 'Host could not be resolved.']);
 });
 
 it('prefers an ipv4 pin when a host resolves to both families', function (): void {
@@ -240,22 +240,24 @@ it('prefers an ipv4 pin when a host resolves to both families', function (): voi
 
     expect($authorized)->toBe([
         'ok' => true,
-        'curl_resolve' => ['dual.example.com:443:93.184.216.34'],
+        'curl_connect_to' => ['::93.184.216.34:443'],
     ]);
 });
 
 it('pins the port the url asked for, not only 443', function (): void {
     $guard = deliveryGuardResolvingTo(['93.184.216.34']);
 
-    expect($guard->authorizeOutbound('http://hooks.example.com/hook')['curl_resolve'])
-        ->toBe(['hooks.example.com:80:93.184.216.34'])
-        ->and($guard->authorizeOutbound('https://hooks.example.com:8443/hook')['curl_resolve'])
-        ->toBe(['hooks.example.com:8443:93.184.216.34']);
+    expect($guard->authorizeOutbound('http://hooks.example.com/hook'))
+        ->toBe(['ok' => true, 'curl_connect_to' => ['::93.184.216.34:80']])
+        ->and($guard->authorizeOutbound('https://hooks.example.com:8443/hook'))
+        ->toBe(['ok' => true, 'curl_connect_to' => ['::93.184.216.34:8443']]);
 });
 
-it('does not pin a literal ip, because curl already connects there', function (): void {
+it('pins a literal ip to itself, without resolving it', function (): void {
+    // Until #185 a literal went out unpinned on the grounds that curl connects there anyway;
+    // curl reads more spellings of an address than the guard does, so it is pinned like a name.
     app(SettingsRepositoryService::class)->save(['webhooks_allow_private_urls' => true]);
 
     expect(deliveryGuardResolvingTo(['93.184.216.34'])->authorizeOutbound('http://198.51.100.9/hook'))
-        ->toBe(['ok' => true, 'curl_resolve' => []]);
+        ->toBe(['ok' => true, 'curl_connect_to' => ['::198.51.100.9:80']]);
 });

@@ -115,14 +115,14 @@ it('pins the validated address so a later private DNS answer cannot be used', fu
 
     expect($authorized)->toMatchArray([
         'ok' => true,
-        'curl_resolve' => ['rebinding.example.com:443:93.184.216.34'],
+        'curl_connect_to' => ['::93.184.216.34:443'],
     ])->and($callCount)->toBe(1);
 
     // A second resolution would flip to loopback; delivery must keep using the pin.
     expect($guard->authorizeOutbound('https://rebinding.example.com/hook')['ok'])->toBeFalse();
 });
 
-it('brackets IPv6 addresses in CURLOPT_RESOLVE pin entries', function (): void {
+it('brackets IPv6 addresses in CURLOPT_CONNECT_TO pin entries', function (): void {
     $guard = new WebhookUrlGuardService(
         app(SettingsRepositoryService::class),
         static fn (string $_host): array => ['2606:2800:220:1:248:1893:25c8:1946'],
@@ -130,7 +130,7 @@ it('brackets IPv6 addresses in CURLOPT_RESOLVE pin entries', function (): void {
 
     expect($guard->authorizeOutbound('https://ipv6.example.com/hook'))->toMatchArray([
         'ok' => true,
-        'curl_resolve' => ['ipv6.example.com:443:[2606:2800:220:1:248:1893:25c8:1946]'],
+        'curl_connect_to' => ['::[2606:2800:220:1:248:1893:25c8:1946]:443'],
     ]);
 });
 
@@ -148,7 +148,7 @@ it('delivers to a hostname using the address pinned by the SSRF guard', function
 
     expect($guard->authorizeOutbound('https://hooks.example.com/signaculum'))->toMatchArray([
         'ok' => true,
-        'curl_resolve' => ['hooks.example.com:443:93.184.216.34'],
+        'curl_connect_to' => ['::93.184.216.34:443'],
     ]);
 
     $webhook = Webhook::query()->create([
