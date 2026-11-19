@@ -82,6 +82,8 @@ final class SettingsRepositoryService
             'email_templates' => [],
             // Off by default: webhook deliveries must not hit private/loopback hosts (SSRF).
             'webhooks_allow_private_urls' => false,
+            // Nested LDAP connector blob; defaults and secret handling live in LdapSettingsService (#77).
+            'ldap' => LdapSettingsService::defaults(),
         ];
     }
 

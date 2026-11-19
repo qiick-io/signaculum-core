@@ -38,6 +38,8 @@ enum ActivityEventEnum: string
     case UserImpersonationStarted = 'user_impersonation_started';
     case UserImpersonationStopped = 'user_impersonation_stopped';
     case UserImpersonationExpired = 'user_impersonation_expired';
+    case LdapSyncCompleted = 'ldap_sync_completed';
+    case LdapSyncConflict = 'ldap_sync_conflict';
 
     /**
      * @return list<string>

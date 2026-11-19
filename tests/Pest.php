@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use App\Actions\CreateApiKeyAction;
+use App\Actions\UpdateLdapSettingsAction;
 use App\Data\ApiKeyData;
+use App\Data\LdapSettingsData;
 use App\Enums\ApiKeyScopeEnum;
+use App\Enums\LdapEncryptionEnum;
 use App\Enums\OrganizationRoleEnum;
 use App\Models\ApiKey;
 use App\Models\Organization;
@@ -26,6 +29,7 @@ use Lcobucci\JWT\Token\Parser;
 use Lcobucci\JWT\UnencryptedToken;
 use Lcobucci\JWT\Validation\Constraint\SignedWith;
 use Lcobucci\JWT\Validation\Validator;
+use LdapRecord\Laravel\Testing\DirectoryEmulator;
 use Tests\TestCase;
 
 /*
@@ -283,6 +287,61 @@ function createOrganizationWithOwner(User $owner, array $attributes = []): Organ
     ]);
 
     return $organization;
+}
+
+/**
+ * LDAP tests: point LdapRecord at an in-memory emulated directory.
+ *
+ * Mirrors the connection shape `LdapConnectionService` writes, so a test that never
+ * calls the service still talks to the emulator instead of a socket.
+ */
+function fakeLdapDirectory(): void
+{
+    config([
+        'ldap.default' => 'default',
+        'ldap.connections.default' => [
+            'hosts' => ['127.0.0.1'],
+            'username' => 'cn=admin,dc=local,dc=com',
+            'password' => 'secret',
+            'port' => 636,
+            'base_dn' => 'dc=local,dc=com',
+            'timeout' => 5,
+            'use_tls' => true,
+            'use_starttls' => false,
+            'use_sasl' => false,
+        ],
+        'ldap.logging.enabled' => false,
+    ]);
+
+    DirectoryEmulator::setup('default');
+}
+
+/**
+ * Store LDAP connector settings, enabled over TLS by default.
+ *
+ * @param  array<string, mixed>  $overrides  any `LdapSettingsData` constructor argument
+ */
+function enableLdapSettings(array $overrides = []): void
+{
+    $defaults = [
+        'isEnabled' => true,
+        'hosts' => ['127.0.0.1'],
+        'port' => 636,
+        'encryption' => LdapEncryptionEnum::Tls,
+        'bindDn' => 'cn=admin,dc=local,dc=com',
+        'bindPassword' => 'bind-secret-value',
+        'baseDn' => 'dc=local,dc=com',
+        'userFilter' => '(objectClass=person)',
+        'attributeMail' => 'mail',
+        'attributeGivenName' => 'givenName',
+        'attributeFamilyName' => 'sn',
+        'attributeDisplayName' => 'displayName',
+        'attributeUsername' => 'uid',
+        'attributeGuid' => 'objectGUID',
+        'syncIntervalMinutes' => 60,
+    ];
+
+    app(UpdateLdapSettingsAction::class)->execute(new LdapSettingsData(...array_merge($defaults, $overrides)));
 }
 
 /**

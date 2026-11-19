@@ -68,7 +68,7 @@ export default function AdminActivityLogsIndex({
     activityLogs: activityLogsProp,
     users: usersProp,
     events = [],
-    logNames = ['default', 'auth', 'settings'],
+    logNames = ['default', 'auth', 'settings', 'ldap'],
     filters = {},
 }: {
     activityLogs:

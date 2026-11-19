@@ -46,7 +46,7 @@ it('shows the activity log to instance admins', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('admin/activity-logs/index')
             ->has('activityLogs.data')
-            ->where('logNames', ['default', 'auth', 'settings'])
+            ->where('logNames', ['default', 'auth', 'settings', 'ldap'])
             ->where('events', fn ($events) => collect($events)->contains('settings_updated'))
             ->where('auth.canShowActivityLogs', true));
 });
