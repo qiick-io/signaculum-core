@@ -68,3 +68,9 @@ test('removing access leaves other users untouched', function () {
 
     expect(DB::table('oauth_access_tokens')->where('user_id', $this->user->getKey())->where('revoked', false)->exists())->toBeTrue();
 });
+
+test('removing access with a non-uuid client id answers 404', function () {
+    $this->actingAs($this->user)
+        ->delete(route('connected-applications.destroy', 'not-a-uuid'))
+        ->assertNotFound();
+});

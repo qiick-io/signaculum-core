@@ -17,10 +17,15 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Admin REST API: organisation memberships list/add/update/remove.
+ *
+ * Members are addressed by `users.subject` (uuid). Non-UUID input must fail closed as
+ * 422 (body) or 404 (path) before the typed column is queried (#197 / PostgreSQL).
  */
 final class OrganizationMembershipController extends Controller
 {
@@ -45,13 +50,12 @@ final class OrganizationMembershipController extends Controller
         Gate::authorize('manageMembers', $organization);
 
         $validated = $request->validate([
-            'user_id' => ['required', 'string', 'exists:users,subject'],
+            'user_id' => ['required', 'string', 'uuid', 'exists:users,subject'],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['required', 'string', Rule::in(OrganizationRoleEnum::values())],
         ]);
 
-        /** @var User $member */
-        $member = User::query()->where('subject', $validated['user_id'])->firstOrFail();
+        $member = $this->memberBySubject($validated['user_id']);
 
         /** @var list<string> $roles */
         $roles = array_values(array_unique($validated['roles']));
@@ -77,8 +81,7 @@ final class OrganizationMembershipController extends Controller
             'roles.*' => ['required', 'string', Rule::in(OrganizationRoleEnum::values())],
         ]);
 
-        /** @var User $member */
-        $member = User::query()->where('subject', $userId)->firstOrFail();
+        $member = $this->memberBySubject($userId);
 
         /** @var list<string> $roles */
         $roles = array_values(array_unique($validated['roles']));
@@ -96,11 +99,24 @@ final class OrganizationMembershipController extends Controller
     ): JsonResponse {
         Gate::authorize('manageMembers', $organization);
 
-        /** @var User $member */
-        $member = User::query()->where('subject', $userId)->firstOrFail();
+        $member = $this->memberBySubject($userId);
 
         $removeOrganizationMemberAction->execute($organization, $member);
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Resolve a member by OIDC subject, or 404 without querying a typed uuid column.
+     *
+     * @throws NotFoundHttpException
+     */
+    private function memberBySubject(string $subject): User
+    {
+        if (! Str::isUuid($subject)) {
+            abort(404);
+        }
+
+        return User::query()->where('subject', $subject)->firstOrFail();
     }
 }

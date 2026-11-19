@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Traits\LogsApplicationActivityTrait;
+use App\Traits\RejectsInvalidUuidRouteKeysTrait;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Passport\Client as PassportClient;
@@ -35,6 +36,7 @@ use Spatie\Activitylog\Support\LogOptions;
 class Client extends PassportClient
 {
     use LogsApplicationActivityTrait;
+    use RejectsInvalidUuidRouteKeysTrait;
 
     /**
      * @var array<string, string>

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\ConnectedApplicationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,6 +31,11 @@ final class ConnectedApplicationController extends Controller
 
     public function destroy(Request $request, string $clientId, RevokeApplicationAccessAction $revokeApplicationAccessAction): RedirectResponse
     {
+        // oauth_clients.id is uuid; a garbage path segment must 404 before the lookup (#197).
+        if (! Str::isUuid($clientId)) {
+            abort(404);
+        }
+
         /** @var User $user */
         $user = $request->user();
 

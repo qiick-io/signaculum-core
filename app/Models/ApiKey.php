@@ -8,6 +8,7 @@ use App\Data\ApiKeyScopesData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Services\ApiKeySecretService;
 use App\Traits\LogsApplicationActivityTrait;
+use App\Traits\RejectsInvalidUuidRouteKeysTrait;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -42,7 +43,7 @@ use Symfony\Component\HttpFoundation\IpUtils;
  */
 class ApiKey extends Model
 {
-    use HasUuids, LogsApplicationActivityTrait;
+    use HasUuids, LogsApplicationActivityTrait, RejectsInvalidUuidRouteKeysTrait;
 
     /**
      * @var list<string>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Traits\LogsApplicationActivityTrait;
+use App\Traits\RejectsInvalidUuidRouteKeysTrait;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,7 +26,7 @@ use Spatie\Activitylog\Support\LogOptions;
  */
 class Webhook extends Model
 {
-    use HasUuids, LogsApplicationActivityTrait;
+    use HasUuids, LogsApplicationActivityTrait, RejectsInvalidUuidRouteKeysTrait;
 
     /**
      * @var list<string>
