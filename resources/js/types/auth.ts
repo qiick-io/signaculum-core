@@ -9,6 +9,7 @@ export type User = {
     avatar?: string;
     email_verified_at: string | null;
     locale?: string;
+    timezone?: string;
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;

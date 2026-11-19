@@ -273,10 +273,12 @@
         },
         "profile": {
             "breadcrumb": "Impostazioni profilo",
-            "description": "Aggiorna i dettagli del profilo e l'indirizzo email",
+            "description": "Aggiorna nome, cognome, email, lingua e fuso orario",
             "head": "Impostazioni profilo",
             "linkSent": "Un nuovo link di verifica è stato inviato al tuo indirizzo email.",
+            "locale": "Lingua",
             "resend": "Clicca qui per reinviare l'email di verifica.",
+            "timezone": "Fuso orario",
             "title": "Informazioni profilo",
             "unverified": "Il tuo indirizzo email non è verificato.",
             "exportTitle": "Scarica i tuoi dati",

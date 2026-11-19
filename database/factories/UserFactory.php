@@ -32,6 +32,7 @@ class UserFactory extends Factory
             'ldap_dn' => null,
             // Keep nullable / default flags in the attribute bag for Model::shouldBeStrict().
             'locale' => null,
+            'timezone' => 'UTC',
             'is_instance_admin' => false,
             'is_active' => true,
             'email_verified_at' => now(),

@@ -273,10 +273,12 @@
         },
         "profile": {
             "breadcrumb": "Profileinstellungen",
-            "description": "Aktualisieren Sie Ihre Profildaten und E-Mail-Adresse",
+            "description": "Vorname, Nachname, E-Mail, Sprache und Zeitzone aktualisieren",
             "head": "Profileinstellungen",
             "linkSent": "Ein neuer Bestätigungslink wurde an Ihre E-Mail-Adresse gesendet.",
+            "locale": "Sprache",
             "resend": "Hier klicken, um die Bestätigungs-E-Mail erneut zu senden.",
+            "timezone": "Zeitzone",
             "title": "Profilinformationen",
             "unverified": "Ihre E-Mail-Adresse ist nicht bestätigt.",
             "exportTitle": "Ihre Daten herunterladen",

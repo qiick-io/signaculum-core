@@ -273,10 +273,12 @@
         },
         "profile": {
             "breadcrumb": "Profile settings",
-            "description": "Update your profile details and email address",
+            "description": "Update your first name, last name, email, language and timezone",
             "head": "Profile settings",
             "linkSent": "A new verification link has been sent to your email address.",
+            "locale": "Language",
             "resend": "Click here to resend the verification email.",
+            "timezone": "Timezone",
             "title": "Profile information",
             "unverified": "Your email address is unverified.",
             "exportTitle": "Download your data",
