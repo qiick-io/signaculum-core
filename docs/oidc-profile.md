@@ -155,13 +155,23 @@ Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_nam
 
 - `preferred_username`, `picture`
 
+## Token lifetimes
+
+| Token           | Config / env                                        | Default          | Notes                                                                                             |
+| --------------- | --------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
+| Access token    | `oidc.access_token_ttl` / `OIDC_ACCESS_TOKEN_TTL`   | `PT1H` (1 hour)  | ISO 8601 duration → Passport `tokensExpireIn`; token response `expires_in` matches (3600).        |
+| Refresh token   | `oidc.refresh_token_ttl` / `OIDC_REFRESH_TOKEN_TTL` | `P30D` (30 days) | Sliding on each successful refresh; Passport rotates the refresh token (reuse → `invalid_grant`). |
+| Personal access | Passport default                                    | unchanged        | Signaculum does not issue PATs; `personalAccessTokensExpireIn` is not set.                        |
+
+RFC 9700 §2.2.1 / §2.2.2: short-lived access tokens, refresh rotation with reuse detection.
+
 ## Token response
 
 Authorization code exchange (Passport + `IdTokenResponse`):
 
-- Always: `token_type`, `expires_in`, `access_token`, `refresh_token` (when issued)
+- Always: `token_type`, `expires_in` (seconds from `OIDC_ACCESS_TOKEN_TTL`, default 3600), `access_token`, `refresh_token` (when issued)
 - `id_token` when the grant included `openid` (JWT, `alg=RS256`, `typ=JWT`, `kid` of the active signing key)
-- Refresh-token grants do **not** mint a new `id_token`
+- Refresh-token grants do **not** mint a new `id_token`; they return a new refresh token (rotation) and the same access-token `expires_in`
 - Redeeming a code records a `client_sessions` row for `(user, client, sid)` used later by back-channel logout
 
 Client credentials exchange:

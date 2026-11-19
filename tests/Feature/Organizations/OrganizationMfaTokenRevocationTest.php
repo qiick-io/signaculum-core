@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\RevokeOnPasswordChangeAction;
 use App\Enums\ApiKeyScopeEnum;
 use App\Enums\OrganizationRoleEnum;
 use App\Jobs\EndOrganizationMemberOidcSessionsJob;
@@ -12,6 +13,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Passport\Client;
@@ -434,7 +436,7 @@ test('an admin setting a password revokes that users grants', function () {
 
 test('ldap password paths remain a no-op for token revocation', function () {
     $ldapUser = User::factory()->create([
-        'ldap_guid' => (string) \Illuminate\Support\Str::uuid(),
+        'ldap_guid' => (string) Str::uuid(),
         'ldap_dn' => 'cn=Directory Person,dc=local,dc=com',
     ]);
 
@@ -443,18 +445,33 @@ test('ldap password paths remain a no-op for token revocation', function () {
     $tokens = issueGrantForOrganizationMember($ldapUser, $this->client);
     forgetAuthenticatedSession();
 
-    app(\App\Actions\RevokeOnPasswordChangeAction::class)->execute($ldapUser);
+    app(RevokeOnPasswordChangeAction::class)->execute($ldapUser);
 
     $this->withToken($tokens['access_token'])->get('/oauth/userinfo')->assertOk();
     refreshGrant($this->client, $tokens['refresh_token'])->assertOk();
 });
 
-test('issue 163: Passport keeps its one-year access and refresh token lifetimes', function () {
+test('access tokens expire in one hour and refresh tokens in thirty days by default', function () {
     $tokens = issueGrantForOrganizationMember($this->member, $this->client);
 
-    // Passport rounds the header to whole seconds, so allow a one-second boundary slip.
-    expect($tokens['expires_in'])->toBeGreaterThanOrEqual(31535999)
-        ->toBeLessThanOrEqual(31536000)
-        ->and(Passport::tokensExpireIn()->format('%y-%m-%d-%h-%i-%s'))->toBe('1-0-0-0-0-0')
-        ->and(Passport::refreshTokensExpireIn()->format('%y-%m-%d-%h-%i-%s'))->toBe('1-0-0-0-0-0');
+    // Passport rounds expires_in to whole seconds; allow a one-second boundary slip.
+    expect($tokens['expires_in'])->toBeGreaterThanOrEqual(3599)
+        ->toBeLessThanOrEqual(3600)
+        ->and(Passport::tokensExpireIn()->format('%y-%m-%d-%h-%i-%s'))->toBe('0-0-0-1-0-0')
+        ->and(Passport::refreshTokensExpireIn()->format('%y-%m-%d-%h-%i-%s'))->toBe('0-0-30-0-0-0')
+        ->and(config('oidc.access_token_ttl'))->toBe('PT1H')
+        ->and(config('oidc.refresh_token_ttl'))->toBe('P30D');
+});
+
+test('a used refresh token is rejected on reuse', function () {
+    $tokens = issueGrantForOrganizationMember($this->member, $this->client);
+
+    $refreshed = refreshGrant($this->client, $tokens['refresh_token'])->assertOk();
+
+    expect((int) $refreshed->json('expires_in'))->toBeGreaterThanOrEqual(3599)
+        ->toBeLessThanOrEqual(3600);
+
+    refreshGrant($this->client, $tokens['refresh_token'])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_grant');
 });

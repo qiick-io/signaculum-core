@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrade notes
+
+- **Access token `expires_in` is now 3600 (1 hour), not ~31536000 (1 year).** Relying parties that assumed Passport's previous one-year default must refresh more often. Override with `OIDC_ACCESS_TOKEN_TTL` / `OIDC_REFRESH_TOKEN_TTL` (ISO 8601 durations, defaults `PT1H` / `P30D`). Refresh tokens rotate on use; replaying a used refresh token returns `invalid_grant`.
+
 ### Added
 
 - RFC 8628 device authorization grant for applications that opt in, with an `id_token` from the approving session, user-code entry rate limited per IP and per account, a final first decision per device code, single-use exchange, and the organisation MFA gate on approval (#64).
@@ -24,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Adding a member to an organisation that already requires MFA (UI, Admin API, or invitation acceptance) revokes that user's access tokens, refresh tokens and unredeemed authorization codes, and queues back-channel logout for their open OIDC sessions. Joining an organisation without MFA changes nothing (#163).
+- A local password change (Security settings, password reset, or admin/API-set password) revokes the user's OAuth grants and ends browser sessions (current browser kept only on self-service change). LDAP-sourced accounts have no local password path (#163).
+- Access tokens default to 1 hour and refresh tokens to 30 days (`OIDC_ACCESS_TOKEN_TTL` / `OIDC_REFRESH_TOKEN_TTL`), with Passport refresh-token rotation (RFC 9700). Personal access token lifetime is untouched (#163).
 - The webhook SSRF guard blocks Alibaba's `100.100.100.200` and Oracle's `192.0.0.192` metadata addresses even with `webhooks_allow_private_urls` on. Both were covered by the private-range blocklist only while the setting was off; they are now in the metadata list, including their alternate IPv4 spellings and IPv4-in-IPv6 forms (#190).
 - The organisation MFA gate also covers the RFC 8628 device flow: code entry, the device consent screen and the approving `POST` are gated by route name, so a requirement switched on while a device consent screen is open still applies. A refused device approval leaves the code pending (the device keeps polling `authorization_pending`) and sends the user to enrolment or step-up and then back to code entry; denying a device code is never gated (#64).
 - The webhook SSRF guard pins every delivery to an address it checked. An IPv4 address spelt other than in dotted decimal (`2852039166`, `0251.0376.0251.0376`, `0xa9.0xfe.0xa9.0xfe`, `169.254.43518`, `169.254.169.254.`) is the EC2 metadata service to curl but not an IP to `filter_var()`, so the guard treated it as a hostname: with `webhooks_allow_private_urls` on it was authorised with no pin, and with it off refused only because the lookup of the string failed. The guard now reads such a host as curl does, refuses it (`Host is not allowed.` for the metadata address, `Invalid URL.` otherwise), and no longer lets any request out unpinned: a hostname that resolves to nothing is refused whatever the setting, a literal is pinned to itself, a hostname resolving to a metadata address is refused even with the setting on, and a trailing dot no longer slips a name such as `metadata.google.internal.` or `localhost.` past the name checks. The pin moves from `CURLOPT_RESOLVE`, which curl ignores for any host it parses as an address, to `CURLOPT_CONNECT_TO` with an empty source host, which applies however the host is spelt (#185).
