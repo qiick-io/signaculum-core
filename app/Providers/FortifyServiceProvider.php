@@ -67,7 +67,9 @@ class FortifyServiceProvider extends ServiceProvider
      *
      * LDAP-sourced users authenticate only by binding to the directory (#187); the local
      * password hash is never consulted for them. Directory unreachable fails closed with a
-     * distinct message so local and break-glass admins keep working.
+     * distinct message so local and break-glass admins keep working. Passkey *login*
+     * (guest / first factor) is refused for LDAP users; `passkey.confirm` stays available
+     * as a second factor after a successful bind. Password confirmation also binds.
      */
     private function configureAuthentication(): void
     {
@@ -121,8 +123,29 @@ class FortifyServiceProvider extends ServiceProvider
             return $user;
         });
 
+        Fortify::confirmPasswordsUsing(function (mixed $user, ?string $password): bool {
+            if (! $user instanceof User) {
+                return false;
+            }
+
+            if ($user->isLdapSourced()) {
+                try {
+                    return app(LdapBindAuthenticationService::class)->attempt($user, (string) $password);
+                } catch (RuntimeException) {
+                    return false;
+                }
+            }
+
+            return $user->password !== null
+                && Hash::check((string) $password, $user->password);
+        });
+
+        // passkey.login is guest-only (first factor). LDAP users must bind first;
+        // passkey.confirm (auth middleware) remains available as a second factor.
         Passkeys::authorizeLoginUsing(
-            fn (Request $request, PasskeyUser $user): bool => $user instanceof User && $user->is_active,
+            fn (Request $request, PasskeyUser $user): bool => $user instanceof User
+                && $user->is_active
+                && ! $user->isLdapSourced(),
         );
     }
 

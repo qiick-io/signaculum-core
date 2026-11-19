@@ -22,7 +22,7 @@ use Illuminate\Validation\ValidationException;
  *
  * Side effects: marks the code consumed; records `otp`; Auth::login + session regenerate
  * when no second factor, otherwise `login.id` / `login.remember` for `two-factor.login`;
- * clears lockout counters on success.
+ * clears lockout counters on success. LDAP-sourced users are refused (#187).
  */
 final class VerifyEmailLoginCodeAction
 {
@@ -47,6 +47,12 @@ final class VerifyEmailLoginCodeAction
         if ($user === null || ! (bool) $user->is_active) {
             throw ValidationException::withMessages([
                 'code' => __('The sign-in code is invalid or has expired.'),
+            ]);
+        }
+
+        if ($user->isLdapSourced()) {
+            throw ValidationException::withMessages([
+                'email' => __('This account\'s sign-in is managed by the directory. Contact your administrator.'),
             ]);
         }
 

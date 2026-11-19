@@ -4,19 +4,30 @@ declare(strict_types=1);
 
 use App\Jobs\SendBackChannelLogoutJob;
 use App\Ldap\DirectoryUser;
+use App\Models\EmailLoginCode;
 use App\Models\User;
+use App\Notifications\EmailLoginCodeNotification;
 use App\Services\LdapUserSyncService;
+use App\Services\SettingsRepositoryService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use Laravel\Passkeys\Actions\VerifyPasskey;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\Events\PasskeyVerified;
+use Laravel\Passkeys\Passkey;
 use LdapRecord\Container;
 use LdapRecord\Laravel\Testing\DirectoryEmulator;
 use LdapRecord\LdapRecordException;
 use LdapRecord\Models\Attributes\AccountControl;
 use LdapRecord\Testing\ConnectionFake;
 use LdapRecord\Testing\LdapFake;
+use ParagonIE\ConstantTime\Base64UrlSafe;
+use Webauthn\PublicKeyCredential;
+use Webauthn\PublicKeyCredentialRequestOptions;
 
 beforeEach(function () {
     fakeLdapDirectory();
@@ -58,6 +69,64 @@ function expectDirectoryBind(string $distinguishedName, string $password): void
     Container::getConnection('default')->getLdapConnection()->expect(
         LdapFake::operation('bind')->twice()->with([$distinguishedName, $password])->andReturnResponse(),
     );
+}
+
+/**
+ * @param  list<string>  $transports
+ */
+function ldapSavedPasskeyFor(User $user, string $credentialId, array $transports): Passkey
+{
+    $passkey = new Passkey([
+        'name' => 'Key '.$credentialId,
+        'credential_id' => $credentialId,
+        'credential' => ['transports' => $transports, 'aaguid' => '00000000-0000-0000-0000-000000000000'],
+    ]);
+    $passkey->user_id = $user->getKey();
+    $passkey->save();
+
+    return $passkey;
+}
+
+/**
+ * Stub VerifyPasskey so the login controller reaches allowsLogin() without WebAuthn crypto.
+ */
+function fakePasskeyVerification(Passkey $passkey): void
+{
+    app()->instance(VerifyPasskey::class, new class($passkey) extends VerifyPasskey
+    {
+        public function __construct(private readonly Passkey $verifiedPasskey) {}
+
+        public function __invoke(
+            PublicKeyCredential $credential,
+            PublicKeyCredentialRequestOptions $options,
+            ?PasskeyUser $user = null,
+        ): Passkey {
+            PasskeyVerified::dispatch($this->verifiedPasskey->user, $this->verifiedPasskey);
+
+            return $this->verifiedPasskey;
+        }
+    });
+}
+
+/**
+ * @return array{id: string, rawId: string, type: string, response: array{clientDataJSON: string, authenticatorData: string, signature: string}}
+ */
+function fakePasskeyCredentialPayload(string $credentialIdBase64): array
+{
+    return [
+        'id' => $credentialIdBase64,
+        'rawId' => $credentialIdBase64,
+        'type' => 'public-key',
+        'response' => [
+            'clientDataJSON' => Base64UrlSafe::encodeUnpadded((string) json_encode([
+                'type' => 'webauthn.get',
+                'challenge' => Base64UrlSafe::encodeUnpadded(random_bytes(32)),
+                'origin' => config('app.url'),
+            ])),
+            'authenticatorData' => Base64UrlSafe::encodeUnpadded(str_repeat("\0", 32)."\x05".str_repeat("\0", 4)),
+            'signature' => Base64UrlSafe::encodeUnpadded('signature'),
+        ],
+    ];
 }
 
 test('an LDAP user cannot sign in with a local password', function () {
@@ -282,4 +351,145 @@ test('sync creates LDAP users without a usable local password', function () {
     expect($created)->not->toBeNull()
         ->and($created?->ldap_guid)->not->toBeNull()
         ->and($created?->password)->toBeNull();
+});
+
+test('an LDAP user cannot receive or redeem an email login code', function () {
+    app(SettingsRepositoryService::class)->save(['email_code_login_enabled' => true]);
+    Notification::fake();
+
+    $user = ldapLinkedUser(['email' => 'ldap-otp@example.com']);
+
+    $this->post(route('login.email-code.store'), ['email' => $user->email])
+        ->assertSessionHasErrors('email');
+
+    Notification::assertNothingSent();
+    expect(EmailLoginCode::query()->count())->toBe(0);
+
+    EmailLoginCode::query()->create([
+        'email' => $user->email,
+        'code_hash' => Hash::make('123456'),
+        'expires_at' => now()->addMinutes(10),
+    ]);
+
+    $this->post(route('login.email-code.verify'), [
+        'email' => $user->email,
+        'code' => '123456',
+    ])->assertSessionHasErrors('email');
+
+    $this->assertGuest();
+});
+
+test('an LDAP user cannot sign in with a passkey as the first factor', function () {
+    $user = ldapLinkedUser(['email' => 'ldap-passkey@example.com']);
+    $passkey = ldapSavedPasskeyFor($user, 'ldap-first-factor-key', ['internal']);
+    fakePasskeyVerification($passkey);
+
+    $this->getJson(route('passkey.login-options'))->assertOk();
+
+    $this->postJson(route('passkey.login'), [
+        'credential' => fakePasskeyCredentialPayload('bGRhcC1maXJzdC1mYWN0b3Ita2V5'),
+    ])->assertStatus(422);
+
+    $this->assertGuest();
+});
+
+test('a directory-disabled LDAP user still active locally cannot use email code or passkey before sync', function () {
+    app(SettingsRepositoryService::class)->save(['email_code_login_enabled' => true]);
+    Notification::fake();
+
+    // Disabled in AD conceptually, but sync has not run yet — local row stays active.
+    $user = ldapLinkedUser([
+        'email' => 'pre-sync-disabled@example.com',
+        'is_active' => true,
+    ]);
+    $passkey = ldapSavedPasskeyFor($user, 'pre-sync-disabled-key', ['usb']);
+
+    $this->post(route('login.email-code.store'), ['email' => $user->email])
+        ->assertSessionHasErrors('email');
+    Notification::assertNothingSent();
+
+    fakePasskeyVerification($passkey);
+
+    $this->getJson(route('passkey.login-options'))->assertOk();
+    $this->postJson(route('passkey.login'), [
+        'credential' => fakePasskeyCredentialPayload('cHJlLXN5bmMtZGlzYWJsZWQta2V5'),
+    ])->assertStatus(422);
+
+    $this->assertGuest();
+});
+
+test('password confirmation for an LDAP user binds to the directory', function () {
+    enableLdapSettings();
+
+    $user = ldapLinkedUser([
+        'email' => 'confirm@example.com',
+        'password' => null,
+    ]);
+
+    Container::getConnection('default')->getLdapConnection()->expect(
+        LdapFake::operation('bind')->once()->with([(string) $user->ldap_dn, 'DirectoryPass1!'])->andReturnResponse(),
+    );
+
+    $this->actingAs($user)
+        ->post(route('password.confirm.store'), ['password' => 'DirectoryPass1!'])
+        ->assertSessionHasNoErrors();
+
+    expect(session('auth.password_confirmed_at'))->not->toBeNull();
+});
+
+test('password confirmation for an LDAP user refuses a wrong directory password', function () {
+    enableLdapSettings();
+
+    $user = ldapLinkedUser([
+        'email' => 'confirm-wrong@example.com',
+        'password' => 'local-password',
+    ]);
+
+    // Local hash would match; directory bind must still refuse.
+    $this->actingAs($user)
+        ->from(route('password.confirm'))
+        ->post(route('password.confirm.store'), ['password' => 'local-password'])
+        ->assertSessionHasErrors('password');
+
+    expect(session('auth.password_confirmed_at'))->toBeNull();
+});
+
+test('a local non-LDAP user still signs in with an email code and a passkey', function () {
+    app(SettingsRepositoryService::class)->save(['email_code_login_enabled' => true]);
+    Notification::fake();
+
+    $emailUser = User::factory()->create(['email' => 'local-otp@example.com', 'ldap_guid' => null]);
+
+    $this->post(route('login.email-code.store'), ['email' => $emailUser->email])
+        ->assertRedirect(route('login.email-code.show', ['email' => $emailUser->email]));
+
+    $plainCode = '';
+    Notification::assertSentTo(
+        $emailUser,
+        EmailLoginCodeNotification::class,
+        function (EmailLoginCodeNotification $notification) use (&$plainCode): bool {
+            $plainCode = $notification->plainCode;
+
+            return strlen($plainCode) === 6;
+        },
+    );
+
+    $this->post(route('login.email-code.verify'), [
+        'email' => $emailUser->email,
+        'code' => $plainCode,
+    ])->assertRedirect(route('dashboard'));
+
+    $this->assertAuthenticatedAs($emailUser);
+    $this->post(route('logout'));
+    $this->assertGuest();
+
+    $passkeyUser = User::factory()->create(['email' => 'local-passkey@example.com', 'ldap_guid' => null]);
+    fakePasskeyVerification(ldapSavedPasskeyFor($passkeyUser, 'local-passkey-key', ['internal']));
+
+    $this->getJson(route('passkey.login-options'))->assertOk();
+    $this->postJson(route('passkey.login'), [
+        'credential' => fakePasskeyCredentialPayload('bG9jYWwtcGFzc2tleS1rZXk'),
+    ])->assertOk();
+
+    $this->assertAuthenticatedAs($passkeyUser);
 });

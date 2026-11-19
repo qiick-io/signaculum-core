@@ -64,8 +64,10 @@ LDAP is disabled or the sync interval since `last_synced_at` has not elapsed.
 
 LDAP-sourced users (`ldap_guid` set) authenticate **only** by binding to the directory
 with their `ldap_dn` and the submitted password (Fortify `authenticateUsing`, #187). The
-local password hash is never consulted. Password reset and “set password” are refused
-with a clear message that the directory manages the credential.
+local password hash is never consulted. Password reset, “set password”, email login codes,
+and passkey **login** (first factor) are refused with a clear message that the directory
+manages sign-in. Passkey **confirm** (already signed in) remains available as a second
+factor after a successful bind. Fortify password confirmation also binds to the directory.
 
 If the directory is unreachable at login, LDAP users are refused (fail closed) with a
 distinct message. Local non-LDAP users and the instance’s break-glass local admin keep
