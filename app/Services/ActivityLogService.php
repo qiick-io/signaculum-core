@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use App\Models\Activity;
 
 /**
  * Builds the filtered, newest-first activity log query of the activity log page.

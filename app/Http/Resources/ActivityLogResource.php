@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\Activity;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\Webhook;
-use App\Models\Activity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

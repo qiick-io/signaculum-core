@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\OrganizationRoleEnum;
 use App\Models\Activity;
+use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
@@ -27,7 +28,7 @@ test('organisation create stamps organisation_id on the activity row', function 
         ])
         ->assertRedirect();
 
-    $organizationId = \App\Models\Organization::query()->where('slug', 'acme-org')->value('id');
+    $organizationId = Organization::query()->where('slug', 'acme-org')->value('id');
 
     $activity = Activity::query()
         ->where('event', 'organization_created')

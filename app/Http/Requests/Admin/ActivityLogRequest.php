@@ -7,9 +7,9 @@ namespace App\Http\Requests\Admin;
 use App\Enums\ActivityEventEnum;
 use App\Http\Requests\Concerns\ValidatesListPerPageTrait;
 use App\Http\Requests\Concerns\ValidatesSearchQueryTrait;
+use App\Models\Activity;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
-use App\Models\Activity;
 
 /**
  * Validates the activity log filters (user, action, log, date range) on top of search and
