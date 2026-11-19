@@ -9,7 +9,8 @@ use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\OrganizationMembership;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -367,17 +368,84 @@ test('joining an MFA organisation also revokes an unredeemed authorization code'
         ->assertJsonPath('error', 'invalid_grant');
 });
 
-test('issue 163: changing a password leaves outstanding grants intact', function () {
+test('changing a password from security settings revokes outstanding grants', function () {
     $tokens = issueGrantForOrganizationMember($this->member, $this->client);
     forgetAuthenticatedSession();
 
     $this->withToken($tokens['access_token'])->get('/oauth/userinfo')->assertOk();
 
-    $this->member->forceFill(['password' => Hash::make('a-new-password')])->save();
+    $this->actingAs($this->member)
+        ->put(route('user-password.update'), [
+            'current_password' => 'password',
+            'password' => 'a-new-password-1A!',
+            'password_confirmation' => 'a-new-password-1A!',
+        ])
+        ->assertRedirect();
+    forgetAuthenticatedSession();
 
-    // Characterisation of #163: Passport does not tie a grant to the password it was issued with.
+    $this->withToken($tokens['access_token'])->get('/oauth/userinfo')->assertUnauthorized();
+    refreshGrant($this->client, $tokens['refresh_token'])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_grant');
+});
+
+test('password reset revokes grants and ends every browser session', function () {
+    Notification::fake();
+
+    $tokens = issueGrantForOrganizationMember($this->member, $this->client);
+    forgetAuthenticatedSession();
+
+    $this->post(route('password.email'), ['email' => $this->member->email]);
+
+    Notification::assertSentTo($this->member, ResetPassword::class, function (ResetPassword $notification) use ($tokens): bool {
+        $this->post(route('password.update'), [
+            'token' => $notification->token,
+            'email' => $this->member->email,
+            'password' => 'reset-password-1A!',
+            'password_confirmation' => 'reset-password-1A!',
+        ])->assertRedirect(route('login'));
+
+        forgetAuthenticatedSession();
+
+        $this->withToken($tokens['access_token'])->get('/oauth/userinfo')->assertUnauthorized();
+        refreshGrant($this->client, $tokens['refresh_token'])->assertStatus(400);
+
+        return true;
+    });
+});
+
+test('an admin setting a password revokes that users grants', function () {
+    $admin = instanceAdmin();
+    $tokens = issueGrantForOrganizationMember($this->member, $this->client);
+    forgetAuthenticatedSession();
+
+    $this->actingAs($admin)
+        ->put(route('admin.users.update', $this->member), [
+            'first_name' => $this->member->first_name,
+            'last_name' => $this->member->last_name,
+            'email' => $this->member->email,
+            'password' => 'admin-set-password-1A!',
+        ])
+        ->assertRedirect(route('admin.users.index'));
+    forgetAuthenticatedSession();
+
+    refreshGrant($this->client, $tokens['refresh_token'])->assertStatus(400);
+});
+
+test('ldap password paths remain a no-op for token revocation', function () {
+    $ldapUser = User::factory()->create([
+        'ldap_guid' => (string) \Illuminate\Support\Str::uuid(),
+        'ldap_dn' => 'cn=Directory Person,dc=local,dc=com',
+    ]);
+
+    expect($ldapUser->isLdapSourced())->toBeTrue();
+
+    $tokens = issueGrantForOrganizationMember($ldapUser, $this->client);
+    forgetAuthenticatedSession();
+
+    app(\App\Actions\RevokeOnPasswordChangeAction::class)->execute($ldapUser);
+
     $this->withToken($tokens['access_token'])->get('/oauth/userinfo')->assertOk();
-
     refreshGrant($this->client, $tokens['refresh_token'])->assertOk();
 });
 

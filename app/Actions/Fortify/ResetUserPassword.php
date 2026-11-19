@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Fortify;
 
+use App\Actions\RevokeOnPasswordChangeAction;
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
@@ -13,10 +14,16 @@ use Laravel\Fortify\Contracts\ResetsUserPasswords;
 /**
  * Fortify action that validates and stores a new password after a reset link.
  * Keeps the upstream Fortify class name; wiring lives in FortifyServiceProvider.
+ *
+ * Side effects: revokes OAuth grants and ends every browser / OIDC session (#163).
  */
 class ResetUserPassword implements ResetsUserPasswords
 {
     use PasswordValidationRules;
+
+    public function __construct(
+        private readonly RevokeOnPasswordChangeAction $revokeOnPasswordChangeAction,
+    ) {}
 
     /**
      * Validate and reset the user's forgotten password.
@@ -40,5 +47,7 @@ class ResetUserPassword implements ResetsUserPasswords
         $user->forceFill([
             'password' => $input['password'],
         ])->save();
+
+        $this->revokeOnPasswordChangeAction->execute($user);
     }
 }

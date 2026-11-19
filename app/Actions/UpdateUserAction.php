@@ -14,12 +14,14 @@ use Illuminate\Validation\ValidationException;
  * current hash. Activation and instance-admin flags are separate actions.
  * LDAP-sourced users cannot receive a local password (#187).
  *
- * Side effects: queues `user.updated` webhooks when endpoints are subscribed.
+ * Side effects: queues `user.updated` webhooks when endpoints are subscribed. Setting a
+ * new password also revokes OAuth grants and ends every browser / OIDC session (#163).
  */
 final class UpdateUserAction
 {
     public function __construct(
         private readonly WebhookDispatcherService $webhookDispatcher,
+        private readonly RevokeOnPasswordChangeAction $revokeOnPasswordChangeAction,
     ) {}
 
     /**
@@ -49,11 +51,17 @@ final class UpdateUserAction
             $user->timezone = $timezone;
         }
 
-        if ($password !== null) {
+        $didChangePassword = $password !== null;
+
+        if ($didChangePassword) {
             $user->password = $password;
         }
 
         $user->save();
+
+        if ($didChangePassword) {
+            $this->revokeOnPasswordChangeAction->execute($user);
+        }
 
         $this->webhookDispatcher->dispatch(WebhookEventEnum::UserUpdated, [
             'id' => $user->subject,

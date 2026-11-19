@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\RevokeOnPasswordChangeAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
@@ -61,15 +62,22 @@ class SecurityController extends Controller
 
     /**
      * Update the user's password.
+     *
+     * Side effects: revokes OAuth grants and other browser sessions (#163); the
+     * current browser stays signed in.
      */
-    public function update(PasswordUpdateRequest $request): RedirectResponse
-    {
+    public function update(
+        PasswordUpdateRequest $request,
+        RevokeOnPasswordChangeAction $revokeOnPasswordChangeAction,
+    ): RedirectResponse {
         /** @var User $user */
         $user = $request->user();
 
         $user->update([
             'password' => $request->password,
         ]);
+
+        $revokeOnPasswordChangeAction->execute($user, $request->session()->getId());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 
