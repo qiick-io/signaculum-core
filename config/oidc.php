@@ -24,6 +24,19 @@ return [
     'id_token_ttl' => (int) env('OIDC_ID_TOKEN_TTL', 600),
 
     /*
+     * Access-token lifetime as an ISO 8601 duration (Passport `tokensExpireIn`).
+     * Default PT1H so `expires_in` on the token response is 3600 (RFC 9700 §2.2.1).
+     * Personal access tokens keep Passport's own default; they are unused here.
+     */
+    'access_token_ttl' => (string) env('OIDC_ACCESS_TOKEN_TTL', 'PT1H'),
+
+    /*
+     * Refresh-token lifetime as an ISO 8601 duration (Passport `refreshTokensExpireIn`).
+     * Default P30D; Passport rotates refresh tokens on use (reuse → invalid_grant).
+     */
+    'refresh_token_ttl' => (string) env('OIDC_REFRESH_TOKEN_TTL', 'P30D'),
+
+    /*
      * Require PKCE with S256 for every client, confidential ones included (RFC 9700 §2.1.1).
      */
     'require_pkce' => (bool) env('OIDC_REQUIRE_PKCE', true),

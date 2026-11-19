@@ -483,6 +483,10 @@ class AppServiceProvider extends ServiceProvider
         Passport::useClientModel(Client::class);
         Gate::policy(Client::class, ApplicationPolicy::class);
 
+        // Short-lived access tokens and sliding refresh (RFC 9700); env ISO 8601 durations (#163).
+        Passport::tokensExpireIn(new DateInterval((string) config('oidc.access_token_ttl', 'PT1H')));
+        Passport::refreshTokensExpireIn(new DateInterval((string) config('oidc.refresh_token_ttl', 'P30D')));
+
         Passport::tokensCan(OidcScopeEnum::descriptions());
         Passport::useAuthorizationServerResponseType(new IdTokenResponse);
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\WebhookEventEnum;
+use App\Jobs\EndOrganizationMemberOidcSessionsJob;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
@@ -15,12 +16,16 @@ use Illuminate\Validation\ValidationException;
 /**
  * Attach a user to an organisation with the given roles.
  *
- * Side effects: queues `organization.membership_changed` webhooks when subscribed.
+ * Side effects: queues `organization.membership_changed` webhooks when subscribed. When the
+ * organisation already requires MFA, also revokes that user's OAuth grants and queues
+ * back-channel logout so a pre-membership token cannot keep refreshing without a step-up (#163).
+ * Joining an organisation without MFA changes nothing about tokens.
  */
 final class AddOrganizationMemberAction
 {
     public function __construct(
         private readonly WebhookDispatcherService $webhookDispatcher,
+        private readonly RevokeUserOidcGrantsAction $revokeUserOidcGrantsAction,
     ) {}
 
     /**
@@ -65,6 +70,11 @@ final class AddOrganizationMemberAction
             'action' => 'added',
             'roles' => $roles,
         ]);
+
+        if ($organization->is_mfa_required) {
+            $this->revokeUserOidcGrantsAction->execute($user);
+            EndOrganizationMemberOidcSessionsJob::dispatch((int) $user->getKey());
+        }
 
         return $membership;
     }
