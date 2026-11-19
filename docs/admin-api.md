@@ -55,3 +55,9 @@ divergence from the app-ui baseline: the identity provider gates its own resourc
 Lists accept `page`, `per_page` (max 100), and where noted `search` / `sort` / `direction`.
 Responses use snake_case JSON resources. Writes reuse the same `*Action` classes as the UI and appear in the activity log, with the
 `api_key_uuid` of the key that authorised them.
+
+Create payloads are built into the same `*Data` object as the admin UI's form requests —
+`ApplicationData::fromValidated()`, `OrganizationData::fromValidated()` — and those refuse to build a
+payload whose property they do not carry, so a field added for the UI reaches the API or fails loudly.
+`tests/Feature/Api/AdminApiApplicationFieldParityTest.php` walks `ApplicationData`'s properties by
+reflection and asserts each one is accepted by the create validation and present in the API resource (#186).

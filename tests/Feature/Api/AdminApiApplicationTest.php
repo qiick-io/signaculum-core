@@ -108,6 +108,7 @@ it('refuses a malformed create payload field by field', function (array $payload
     'first party missing' => [['name' => 'Externa', 'redirect_uris' => ['https://a.test/cb'], 'is_confidential' => true], ['is_first_party']],
     'client credentials not boolean' => [[...applicationApiPayload(), 'is_client_credentials_enabled' => 'yes please'], ['is_client_credentials_enabled']],
     'pushed authorization not boolean' => [[...applicationApiPayload(), 'is_pushed_authorization_required' => 'yes please'], ['is_pushed_authorization_required']],
+    'device authorization not boolean' => [[...applicationApiPayload(), 'is_device_authorization_enabled' => 'yes please'], ['is_device_authorization_enabled']],
 ]);
 
 it('answers 404 for an application id that does not exist', function (): void {
@@ -341,3 +342,46 @@ it('refuses a front-channel logout URI the admin form would also refuse', functi
     'carries a fragment' => ['https://front-channel.test/logout#done'],
     'not a url' => ['not-a-url'],
 ]);
+
+/*
+ * Device authorization (#110) was the third field to exist on one door only: present
+ * twice in StoreApplicationRequest and twice in the web ApplicationResource, absent
+ * from the Admin API's validation and from its resource. An application created
+ * through the API always had the device grant off, and said 201 while doing it.
+ */
+it('accepts the device authorization grant on create and reads it back', function (): void {
+    ['plain' => $plain] = adminApiKey([
+        ApiKeyScopeEnum::ApplicationsWrite->value,
+        ApiKeyScopeEnum::ApplicationsRead->value,
+    ]);
+
+    $this->withToken($plain)
+        ->postJson('/api/v1/applications', applicationApiPayload([
+            'name' => 'Device grant app',
+            'is_device_authorization_enabled' => true,
+        ]))
+        ->assertCreated()
+        ->assertJsonPath('data.is_device_authorization_enabled', true);
+
+    $application = Client::query()->where('name', 'Device grant app')->firstOrFail();
+
+    // The flag the API accepted is the grant the device authorization endpoint honours.
+    expect($application->hasGrantType('urn:ietf:params:oauth:grant-type:device_code'))->toBeTrue();
+
+    $this->withToken($plain)->getJson('/api/v1/applications/'.$application->getKey())
+        ->assertOk()
+        ->assertJsonPath('data.is_device_authorization_enabled', true);
+});
+
+it('defaults the device authorization grant to off when the field is omitted', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::ApplicationsWrite->value]);
+
+    $this->withToken($plain)
+        ->postJson('/api/v1/applications', applicationApiPayload(['name' => 'No device grant app']))
+        ->assertCreated()
+        ->assertJsonPath('data.is_device_authorization_enabled', false);
+
+    $application = Client::query()->where('name', 'No device grant app')->firstOrFail();
+
+    expect($application->hasGrantType('urn:ietf:params:oauth:grant-type:device_code'))->toBeFalse();
+});

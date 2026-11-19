@@ -14,7 +14,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 
 /**
  * Admin REST API: organisations list/show/create.
@@ -59,15 +58,17 @@ final class OrganizationController extends Controller
         /** @var User $creator */
         $creator = $request->user();
 
+        /** @var array<string, mixed> $validated */
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', 'unique:organizations,slug'],
         ]);
 
-        $slug = $validated['slug'] ?? Str::slug($validated['name']);
-
+        // One construction for both doors (#186): the web form requests build the
+        // payload here too, so a field added to OrganizationData cannot reach the
+        // settings page and silently miss the API.
         $organization = $createOrganizationAction->execute(
-            new OrganizationData(name: $validated['name'], slug: $slug),
+            OrganizationData::fromValidated($validated),
             $creator,
         );
 

@@ -27,6 +27,7 @@ final class OrganizationResource extends JsonResource
             'id' => $organization->getKey(),
             'name' => $organization->name,
             'slug' => $organization->slug,
+            'is_mfa_required' => (bool) $organization->is_mfa_required,
             'created_at' => $organization->created_at?->toIso8601String(),
             'updated_at' => $organization->updated_at?->toIso8601String(),
         ];

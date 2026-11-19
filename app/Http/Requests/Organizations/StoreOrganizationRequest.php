@@ -7,7 +7,6 @@ namespace App\Http\Requests\Organizations;
 use App\Data\OrganizationData;
 use App\Models\Organization;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -31,14 +30,14 @@ final class StoreOrganizationRequest extends FormRequest
         ];
     }
 
+    /**
+     * The web form and the Admin REST API build the payload in one place (#186).
+     */
     public function toData(): OrganizationData
     {
-        $name = (string) $this->validated('name');
-        $slug = $this->validated('slug');
+        /** @var array<string, mixed> $validated */
+        $validated = $this->validated();
 
-        return new OrganizationData(
-            name: $name,
-            slug: is_string($slug) && $slug !== '' ? $slug : Str::slug($name),
-        );
+        return OrganizationData::fromValidated($validated);
     }
 }
