@@ -33,6 +33,8 @@ class ProfileUpdateTest extends TestCase
                 'first_name' => 'Test',
                 'last_name' => 'User',
                 'email' => 'test@example.com',
+                'locale' => 'en',
+                'timezone' => 'UTC',
             ]);
 
         $response
@@ -56,6 +58,8 @@ class ProfileUpdateTest extends TestCase
                 'first_name' => 'Test',
                 'last_name' => 'User',
                 'email' => $user->email,
+                'locale' => 'en',
+                'timezone' => 'UTC',
             ]);
 
         $response

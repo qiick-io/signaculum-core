@@ -256,7 +256,7 @@ it('names the key that authorised an admin api write in the activity log', funct
 
     $userCreatedActivity = Activity::query()->where('event', 'created')->where('subject_type', (new User)->getMorphClass())->latest('id')->first();
 
-    expect($userCreatedActivity?->properties?->get('api_key_uuid'))->toBe($apiKey->uuid);
+    expect($userCreatedActivity?->properties?->get('api_key_id'))->toBe($apiKey->id);
 });
 
 it('treats a stored rate limit of zero as the default, never as unlimited', function (): void {

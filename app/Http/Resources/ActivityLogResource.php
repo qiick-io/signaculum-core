@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\Activity;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\Organization;
@@ -13,7 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use LogicException;
-use Spatie\Activitylog\Models\Activity;
 
 /**
  * An activity log entry for the activity log page, as in qiick-io/excubia-app.

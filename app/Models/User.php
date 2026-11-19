@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PrincipalTypeEnum;
 use App\Traits\LogsApplicationActivityTrait;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -25,7 +27,7 @@ use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
- * @property string $subject OpenID Connect `sub`: opaque UUID, never reassigned
+ * @property string $subject Fleet public_id and OpenID Connect `sub`: opaque UUID, never reassigned (declared divergence: no second public_id column)
  * @property string $first_name
  * @property string|null $last_name
  * @property-read string $name first and last name
@@ -33,6 +35,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property string|null $ldap_guid converted objectGUID / entryUUID when synced from LDAP
  * @property string|null $ldap_dn directory distinguished name for bind-on-login
  * @property string|null $locale UI language, also the OIDC `locale` claim
+ * @property string $timezone IANA zone for the account (fleet baseline, default UTC)
  * @property Carbon|null $email_verified_at
  * @property bool $is_instance_admin may edit instance settings (SettingPolicy)
  * @property bool $is_active false refuses login (Fortify + EnsureUserIsActiveMiddleware)
@@ -46,7 +49,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['first_name', 'last_name', 'email', 'locale', 'password', 'ldap_guid', 'ldap_dn'])]
+#[Fillable(['first_name', 'last_name', 'email', 'locale', 'timezone', 'password', 'ldap_guid', 'ldap_dn'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail, OAuthenticatable, PasskeyUser
 {
@@ -61,11 +64,40 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     protected $appends = ['name'];
 
     /**
+     * Every user gets a fleet `user` principal (API-key owner) on create.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (User $user): void {
+            if (Principal::query()->where('user_id', $user->getKey())->exists()) {
+                return;
+            }
+
+            Principal::query()->create([
+                'type' => PrincipalTypeEnum::User,
+                'user_id' => $user->getKey(),
+                'organisation_id' => null,
+                'name' => $user->name !== '' ? $user->name : $user->email,
+            ]);
+        });
+    }
+
+    /**
      * Full display name from first and last name, as in externa-core (OIDC `name`).
      */
     public function getNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    /**
+     * Fleet principal for this person (one per user).
+     *
+     * @return HasOne<Principal, $this>
+     */
+    public function principal(): HasOne
+    {
+        return $this->hasOne(Principal::class);
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Models\OidcSession;
+use App\Models\Principal;
 use App\Models\User;
 use App\Services\OidcSessionService;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,11 @@ final class DeactivateUserAction
 
         DB::transaction(function () use ($user): void {
             $user->forceFill(['is_active' => false])->save();
+
+            Principal::query()
+                ->where('user_id', $user->getKey())
+                ->whereNull('deactivated_at')
+                ->update(['deactivated_at' => now()]);
 
             $accessTokenIds = Passport::token()->newQuery()
                 ->where('user_id', $user->getKey())

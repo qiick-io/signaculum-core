@@ -30,6 +30,7 @@ final class UserResource extends JsonResource
             'last_name' => $user->last_name,
             'name' => $user->name,
             'email' => $user->email,
+            'timezone' => $user->timezone,
             'is_active' => (bool) $user->is_active,
             'is_instance_admin' => (bool) $user->is_instance_admin,
             'has_two_factor' => $user->hasEnabledTwoFactorAuthentication(),

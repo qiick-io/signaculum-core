@@ -27,6 +27,16 @@ final class RevokeOrganizationInvitationAction
             ]);
         }
 
+        activity()
+            ->performedOn($organization)
+            ->useLog('organizations')
+            ->event('organization_invitation_revoked')
+            ->withProperties([
+                'organisation_id' => $organization->getKey(),
+                'email' => $invitation->email,
+            ])
+            ->log('Organisation invitation revoked');
+
         $invitation->delete();
     }
 }

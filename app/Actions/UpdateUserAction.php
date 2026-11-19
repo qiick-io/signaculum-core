@@ -25,8 +25,14 @@ final class UpdateUserAction
     /**
      * @throws ValidationException when setting a password on an LDAP-sourced user
      */
-    public function execute(User $user, string $firstName, ?string $lastName, string $email, ?string $password): User
-    {
+    public function execute(
+        User $user,
+        string $firstName,
+        ?string $lastName,
+        string $email,
+        ?string $password,
+        ?string $timezone = null,
+    ): User {
         if ($user->isLdapSourced() && $password !== null) {
             throw ValidationException::withMessages([
                 'password' => __('This account\'s password is managed by the directory. Contact your administrator.'),
@@ -38,6 +44,10 @@ final class UpdateUserAction
             'last_name' => $lastName,
             'email' => $email,
         ]);
+
+        if ($timezone !== null) {
+            $user->timezone = $timezone;
+        }
 
         if ($password !== null) {
             $user->password = $password;

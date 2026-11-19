@@ -8,9 +8,10 @@ use App\Concerns\ProfileValidationRules;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
- * Validates profile name and email updates for the signed-in user.
+ * Validates profile name, email, locale and timezone updates for the signed-in user.
  */
 class ProfileUpdateRequest extends FormRequest
 {
@@ -26,6 +27,10 @@ class ProfileUpdateRequest extends FormRequest
         /** @var User $user */
         $user = $this->user();
 
-        return $this->profileRules($user->id);
+        return [
+            ...$this->profileRules($user->id),
+            'locale' => ['required', 'string', Rule::in(array_keys((array) config('i18n.available_locales', ['en' => 'English'])))],
+            'timezone' => ['required', 'string', 'timezone:all'],
+        ];
     }
 }

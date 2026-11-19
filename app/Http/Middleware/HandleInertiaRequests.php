@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Activity;
 use App\Models\Client;
 use App\Models\Setting;
 use App\Models\User;
@@ -12,7 +13,6 @@ use App\Services\OrganizationBrandingService;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
-use Spatie\Activitylog\Models\Activity;
 
 /**
  * Shares Inertia props every page needs (auth user, branding, locale, flash)

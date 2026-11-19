@@ -62,6 +62,7 @@ final class UserController extends Controller
             'last_name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', Password::defaults()],
+            'timezone' => ['nullable', 'string', 'timezone:all'],
         ]);
 
         $user = $createUserAction->execute(
@@ -70,6 +71,10 @@ final class UserController extends Controller
             $validated['email'],
             $validated['password'],
         );
+
+        if (isset($validated['timezone'])) {
+            $user->forceFill(['timezone' => $validated['timezone']])->save();
+        }
 
         return (new UserResource($user))
             ->response()
@@ -85,6 +90,7 @@ final class UserController extends Controller
             'last_name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->getKey()],
             'password' => ['nullable', 'string', Password::defaults()],
+            'timezone' => ['nullable', 'string', 'timezone:all'],
         ]);
 
         $user = $updateUserAction->execute(
@@ -93,6 +99,7 @@ final class UserController extends Controller
             $validated['last_name'] ?? null,
             $validated['email'],
             $validated['password'] ?? null,
+            $validated['timezone'] ?? null,
         );
 
         return new UserResource($user);

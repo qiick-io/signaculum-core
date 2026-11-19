@@ -30,6 +30,7 @@ class ProfileController extends Controller
         return Inertia::render('settings/profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'timezones' => timezone_identifiers_list(),
         ]);
     }
 
@@ -47,6 +48,8 @@ class ProfileController extends Controller
             $user->email_verified_at = null;
         }
 
+        $localeChanged = $user->isDirty('locale');
+        $locale = $user->locale;
         $user->save();
 
         app(WebhookDispatcherService::class)->dispatch(WebhookEventEnum::UserUpdated, [
@@ -57,7 +60,13 @@ class ProfileController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 
-        return to_route('profile.edit');
+        $redirect = to_route('profile.edit');
+
+        if ($localeChanged && is_string($locale) && $locale !== '') {
+            return $redirect->cookie('locale', $locale, 60 * 24 * 365);
+        }
+
+        return $redirect;
     }
 
     /**

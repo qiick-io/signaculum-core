@@ -12,6 +12,7 @@ use App\Http\Middleware\AddIssuerToAuthorizationResponseMiddleware;
 use App\Http\Middleware\EnforceMaximumAuthenticationAgeMiddleware;
 use App\Http\Middleware\RejectUnsupportedRequestObjectMiddleware;
 use App\Http\Middleware\ResolvePushedAuthorizationRequestMiddleware;
+use App\Models\Activity as ActivityModel;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\User;
@@ -22,6 +23,7 @@ use App\Oidc\OidcDeviceCodeGrant;
 use App\Oidc\OidcDeviceCodeRepository;
 use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
+use App\Services\ActivityOrganisationResolverService;
 use App\Services\EmailTemplateService;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
@@ -56,7 +58,6 @@ use Laravel\Passport\Passport;
 use Laravel\Passport\Scope;
 use League\OAuth2\Server\AuthorizationServer;
 use Spatie\Activitylog\Facades\Activity;
-use Spatie\Activitylog\Models\Activity as ActivityModel;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -566,13 +567,23 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ActivityModel::class, ActivityPolicy::class);
 
         // An entry written during an Admin API request names the key that authorised it.
+        // Organisation-scoped actions also stamp `organisation_id` (fleet baseline).
         Activity::beforeLogging(function (ActivityModel $activity): void {
             $apiKey = request()->attributes->get('apiKey');
+            $properties = collect($activity->properties ?? []);
+            $organisationId = app(ActivityOrganisationResolverService::class)->resolve(
+                $activity->subject,
+                $properties->all(),
+            );
 
-            $activity->properties = ($activity->properties ?? collect())->merge([
+            if ($organisationId !== null) {
+                $activity->organisation_id = $organisationId;
+            }
+
+            $activity->properties = $properties->merge([
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent(),
-                ...($apiKey instanceof ApiKey ? ['api_key_uuid' => $apiKey->uuid] : []),
+                ...($apiKey instanceof ApiKey ? ['api_key_id' => $apiKey->id] : []),
             ]);
         });
     }

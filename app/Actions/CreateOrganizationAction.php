@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Create an organisation and attach the creating user as the first owner.
+ *
+ * Side effects: activity log `organization_created` with `organisation_id`.
  */
 final class CreateOrganizationAction
 {
@@ -29,6 +31,18 @@ final class CreateOrganizationAction
                 'user_id' => $creator->getKey(),
                 'roles' => [OrganizationRoleEnum::Owner->value],
             ]);
+
+            activity()
+                ->performedOn($organization)
+                ->causedBy($creator)
+                ->useLog('organizations')
+                ->event('organization_created')
+                ->withProperties([
+                    'organisation_id' => $organization->getKey(),
+                    'name' => $organization->name,
+                    'slug' => $organization->slug,
+                ])
+                ->log('Organisation created');
 
             return $organization->fresh(['memberships.user']) ?? $organization;
         });

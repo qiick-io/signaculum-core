@@ -50,11 +50,15 @@ final class CreateApiKeyAction
         $secret = $this->apiKeySecretService->issue();
 
         $apiKey = DB::transaction(function () use ($issuer, $apiKeyData, $grantedScopes, $secret): ApiKey {
+            $ownerPrincipal = $issuer->principal
+                ?? $issuer->principal()->firstOrFail();
+
             $apiKey = ApiKey::query()->create([
                 'name' => $apiKeyData->name,
                 'key_prefix' => $secret->keyPrefix,
                 'key_hash' => $secret->keyHash,
                 'owner_id' => $issuer->getKey(),
+                'owner_principal_id' => $ownerPrincipal->getKey(),
                 'created_by' => $issuer->getKey(),
                 'scopes' => $grantedScopes->scopes,
                 'ip_allowlist' => $apiKeyData->ipAllowlist,

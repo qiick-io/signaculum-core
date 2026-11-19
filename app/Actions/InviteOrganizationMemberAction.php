@@ -68,6 +68,18 @@ final class InviteOrganizationMemberAction
                     $invitedBy->locale,
                 ));
 
+            activity()
+                ->performedOn($organization)
+                ->causedBy($invitedBy)
+                ->useLog('organizations')
+                ->event('organization_invitation_created')
+                ->withProperties([
+                    'organisation_id' => $organization->getKey(),
+                    'email' => $normalizedEmail,
+                    'roles' => $roles,
+                ])
+                ->log('Organisation invitation created');
+
             return $invitation;
         });
     }
