@@ -104,12 +104,12 @@ Device `id_token` rules (OIDC Core §2 / §3.1.3.6; RFC 8628 has no authorizatio
 
 User claims come from `OidcClaimsService` (same values in `id_token` and userinfo). Empty optional claims are omitted, never sent as empty strings.
 
-| Scope        | Claims                                                                                                                                                        |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| _(always)_   | `sub` (opaque UUIDv7 on `users.subject`, not the DB id)                                                                                                       |
-| `profile`    | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
-| `email`      | `email`, `email_verified`                                                                                                                                     |
-| `qiick.orgs` | `orgs`: `[{ id, slug, roles }]` (roles `owner` / `admin` / `member` / `billing`; empty list when the user has no memberships; sorted by `slug`)               |
+| Scope        | Claims                                                                                                                                                                                                                                                                                                    |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _(always)_   | `sub` (opaque UUIDv7 on `users.subject`, not the DB id)                                                                                                                                                                                                                                                   |
+| `profile`    | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `preferred_username` (when `users.username` is set; omitted otherwise — RPs must key on `sub`, not `preferred_username`, which can change), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
+| `email`      | `email`, `email_verified`                                                                                                                                                                                                                                                                                 |
+| `qiick.orgs` | `orgs`: `[{ id, slug, roles }]` (roles `owner` / `admin` / `member` / `billing`; empty list when the user has no memberships; sorted by `slug`)                                                                                                                                                           |
 
 **Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, `auth_time` when known (and **always** when the authorization request carried `max_age`), **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login), **`amr`** (always present; RFC 8176), optional **`acr`** (only when requested).
 
@@ -153,7 +153,7 @@ Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_nam
 
 ### Still planned (not on this branch)
 
-- `preferred_username` (emitted when `users.username` is set; omitted otherwise), `picture`
+- `picture`
 
 ## Token lifetimes
 

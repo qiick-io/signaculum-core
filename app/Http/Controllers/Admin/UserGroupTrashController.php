@@ -8,8 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkUserGroupActionRequest;
 use App\Models\UserGroup;
 use App\Services\Authorization\EffectivePermissionResolverService;
+use App\Services\Authorization\SuperAdminGuardService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 /**
@@ -33,6 +35,13 @@ class UserGroupTrashController extends Controller
     {
         $userGroup = UserGroup::onlyTrashed()->findOrFail($group);
         Gate::authorize('forceDelete', $userGroup);
+
+        if (app(SuperAdminGuardService::class)->wouldRemoveLastActiveSuperAdminViaGroups([$userGroup->id])) {
+            throw ValidationException::withMessages([
+                'group' => __('Cannot permanently delete the group that is the last super-admin path.'),
+            ]);
+        }
+
         $userGroup->forceDelete();
         app(EffectivePermissionResolverService::class)->forget();
 
@@ -46,6 +55,12 @@ class UserGroupTrashController extends Controller
         $ids = $request->input('ids', []);
         $action = $request->string('action')->toString();
         $groups = UserGroup::onlyTrashed()->whereIn('id', $ids)->get();
+
+        if ($action !== 'restore' && app(SuperAdminGuardService::class)->wouldRemoveLastActiveSuperAdminViaGroups($ids)) {
+            throw ValidationException::withMessages([
+                'ids' => __('Cannot permanently delete the group that is the last super-admin path.'),
+            ]);
+        }
 
         foreach ($groups as $group) {
             if ($action === 'restore') {

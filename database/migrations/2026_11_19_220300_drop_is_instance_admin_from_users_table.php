@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -32,5 +33,27 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table): void {
             $table->boolean('is_instance_admin')->default(false)->after('email_verified_at');
         });
+
+        $superAdminRoleId = DB::table('roles')
+            ->where('name', 'super-admin')
+            ->where('guard_name', 'web')
+            ->value('id');
+
+        if ($superAdminRoleId === null) {
+            return;
+        }
+
+        $superAdminUserIds = DB::table('model_has_roles')
+            ->where('role_id', $superAdminRoleId)
+            ->where('model_type', 'App\\Models\\User')
+            ->pluck('model_id');
+
+        if ($superAdminUserIds->isEmpty()) {
+            return;
+        }
+
+        DB::table('users')
+            ->whereIn('id', $superAdminUserIds)
+            ->update(['is_instance_admin' => true]);
     }
 };

@@ -18,7 +18,8 @@ use Spatie\Permission\Models\Role;
  * existing super-admin, requires the acting user to be a super-admin. Without
  * this guard any user manager could promote themselves past `Gate::before`.
  *
- * Copied from externa-core (app-ui roles-and-permissions / #206).
+ * Copied from externa-core (app-ui roles-and-permissions / #206) and extended for
+ * active last-super-admin counting (direct ∪ group).
  */
 class SuperAdminGuardService
 {
@@ -38,6 +39,88 @@ class SuperAdminGuardService
     public function isProtectedFrom(?User $actor, User $target): bool
     {
         return ! $this->canManageSuperAdmins($actor) && $this->permissionResolver->isSuperAdmin($target);
+    }
+
+    /**
+     * Active users who hold super-admin directly or via a (non-trashed) group.
+     *
+     * @param  list<int>  $exceptUserIds
+     */
+    public function countActiveSuperAdmins(array $exceptUserIds = []): int
+    {
+        $isSuperAdminRole = fn (Builder $roleQuery) => $roleQuery->where('name', RoleEnum::SuperAdmin->value);
+
+        return User::query()
+            ->where('is_active', true)
+            ->when($exceptUserIds !== [], fn (Builder $query) => $query->whereKeyNot($exceptUserIds))
+            ->where(fn (Builder $userQuery) => $userQuery
+                ->whereHas('roles', $isSuperAdminRole)
+                ->orWhereHas('groups.roles', $isSuperAdminRole))
+            ->count();
+    }
+
+    /**
+     * Whether `$user` is the sole active super-admin (direct or via group).
+     */
+    public function isLastActiveSuperAdmin(User $user): bool
+    {
+        if (! $user->is_active || ! $this->permissionResolver->isSuperAdmin($user)) {
+            return false;
+        }
+
+        return $this->countActiveSuperAdmins() === 1;
+    }
+
+    /**
+     * Whether removing these groups (or stripping their roles) would leave zero active super-admins.
+     *
+     * @param  array<int, mixed>  $groupIds
+     */
+    public function wouldRemoveLastActiveSuperAdminViaGroups(array $groupIds): bool
+    {
+        $groupIds = $this->integerIds($groupIds);
+
+        if ($groupIds === [] || ! $this->hasSuperAdminGroup($groupIds)) {
+            return false;
+        }
+
+        $memberIds = User::query()
+            ->where('is_active', true)
+            ->whereHas('groups', fn (Builder $groupQuery) => $groupQuery->whereIn('user_groups.id', $groupIds))
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        if ($memberIds === []) {
+            return false;
+        }
+
+        // Members who only get super-admin through these groups (no other path).
+        $solelyViaTheseGroups = 0;
+
+        foreach ($memberIds as $memberId) {
+            $member = User::query()->find($memberId);
+
+            if ($member === null || ! $this->permissionResolver->isSuperAdmin($member)) {
+                continue;
+            }
+
+            $hasDirect = $member->roles()->where('name', RoleEnum::SuperAdmin->value)->exists();
+            $hasOtherGroup = $member->groups()
+                ->whereNotIn('user_groups.id', $groupIds)
+                ->whereHas('roles', fn (Builder $roleQuery) => $roleQuery->where('name', RoleEnum::SuperAdmin->value))
+                ->exists();
+
+            if (! $hasDirect && ! $hasOtherGroup) {
+                $solelyViaTheseGroups++;
+            }
+        }
+
+        if ($solelyViaTheseGroups === 0) {
+            return false;
+        }
+
+        return $this->countActiveSuperAdmins() <= $solelyViaTheseGroups;
     }
 
     /**
@@ -77,7 +160,7 @@ class SuperAdminGuardService
     }
 
     /**
-     * Whether any of the given users (including soft-deleted ones) is a super-admin, directly or via a group.
+     * Whether any of the given users is a super-admin, directly or via a group.
      *
      * @param  array<int, mixed>  $userIds
      */

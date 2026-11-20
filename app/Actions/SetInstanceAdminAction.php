@@ -7,27 +7,37 @@ namespace App\Actions;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use App\Services\Authorization\EffectivePermissionResolverService;
+use App\Services\Authorization\SuperAdminGuardService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Grants or revokes the `super-admin` role (replaces the former `is_instance_admin` flag).
- * Refuses to remove the last super-admin so the instance cannot lock itself out.
+ * Only a super-admin may call this; refuses to remove the last active super-admin.
  */
 final class SetInstanceAdminAction
 {
     public function __construct(
         private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly SuperAdminGuardService $superAdminGuard,
     ) {}
 
     /**
-     * @throws ValidationException when revoking the last super-admin
+     * @throws AuthorizationException when the actor may not manage super-admins
+     * @throws ValidationException when revoking the last active super-admin
      */
-    public function execute(User $user, bool $isInstanceAdmin): void
+    public function execute(User $user, bool $isInstanceAdmin, ?User $actor = null): void
     {
+        $isTrustedConsole = $actor === null && app()->runningInConsole();
+
+        if (! $isTrustedConsole && ! $this->superAdminGuard->canManageSuperAdmins($actor)) {
+            throw new AuthorizationException;
+        }
+
         $holdsSuperAdmin = $this->permissionResolver->isSuperAdmin($user);
 
-        if (! $isInstanceAdmin && $holdsSuperAdmin && $this->isLastSuperAdmin($user)) {
+        if (! $isInstanceAdmin && $holdsSuperAdmin && $this->superAdminGuard->isLastActiveSuperAdmin($user)) {
             throw ValidationException::withMessages([
                 'user' => __('At least one super-admin must remain.'),
             ]);
@@ -41,12 +51,5 @@ final class SetInstanceAdminAction
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->permissionResolver->forget($user);
-    }
-
-    private function isLastSuperAdmin(User $user): bool
-    {
-        $superAdmins = User::role(RoleEnum::SuperAdmin->value)->get();
-
-        return $superAdmins->count() === 1 && $superAdmins->first()?->is($user);
     }
 }

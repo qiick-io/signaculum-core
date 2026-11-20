@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ApiErrorCodeEnum;
+use App\Http\Middleware\BlockAdminWritesWhileImpersonatingMiddleware;
 use App\Http\Middleware\CaptureOrganizationBrandingMiddleware;
 use App\Http\Middleware\EnsureOrganizationMfaIsSatisfiedMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
@@ -58,6 +59,7 @@ return Application::configure(basePath: dirname(__DIR__))
             CaptureOrganizationBrandingMiddleware::class,
             // Before EnsureUserIsActive so an expired target restores the actor first.
             ExpireImpersonationMiddleware::class,
+            BlockAdminWritesWhileImpersonatingMiddleware::class,
             EnsureUserIsActiveMiddleware::class,
             SetLocaleMiddleware::class,
             HandleAppearance::class,

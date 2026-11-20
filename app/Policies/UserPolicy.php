@@ -8,15 +8,18 @@ use App\Enums\PermissionEnum;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use App\Services\Authorization\EffectivePermissionResolverService;
+use App\Services\Authorization\SuperAdminGuardService;
 
 /**
- * Authorizes IdP user administration. Record-level rules still bind super-admins
- * (cannot impersonate another super-admin; last-super-admin guards live in actions).
+ * Authorizes IdP user administration. Super-admins are protected from delegated
+ * admins; impersonation may only target accounts whose effective permissions are
+ * a subset of the actor's and who hold no instance Spatie role.
  */
 class UserPolicy
 {
     public function __construct(
         private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly SuperAdminGuardService $superAdminGuard,
     ) {}
 
     public function viewAny(User $actor): bool
@@ -36,12 +39,17 @@ class UserPolicy
 
     public function update(User $actor, User $target): bool
     {
-        return $this->permissionResolver->hasPermission($actor, PermissionEnum::CanEditUsers->value);
+        if (! $this->permissionResolver->hasPermission($actor, PermissionEnum::CanEditUsers->value)) {
+            return false;
+        }
+
+        return ! $this->superAdminGuard->isProtectedFrom($actor, $target);
     }
 
     /**
-     * Impersonation: needs the permission; cannot target a super-admin or oneself;
-     * the target must be active.
+     * Impersonation: permission required; cannot target oneself, an inactive user,
+     * anyone with an instance role, or anyone whose effective permissions are not
+     * a subset of the actor's.
      */
     public function impersonate(User $actor, User $target): bool
     {
@@ -49,14 +57,27 @@ class UserPolicy
             return false;
         }
 
-        if ($actor->is($target)) {
+        if ($actor->is($target) || ! $target->is_active) {
             return false;
         }
 
-        if (in_array(RoleEnum::SuperAdmin->value, $this->permissionResolver->roleNamesFor($target), true)) {
-            return false;
+        $targetRoleNames = $this->permissionResolver->roleNamesFor($target);
+
+        foreach (RoleEnum::values() as $instanceRole) {
+            if (in_array($instanceRole, $targetRoleNames, true)) {
+                return false;
+            }
         }
 
-        return (bool) $target->is_active;
+        $actorPermissions = $this->permissionResolver->permissionsFor($actor);
+        $targetPermissions = $this->permissionResolver->permissionsFor($target);
+
+        foreach ($targetPermissions as $permission) {
+            if (! in_array($permission, $actorPermissions, true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

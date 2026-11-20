@@ -14,10 +14,12 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserGroup;
 use App\Services\Authorization\EffectivePermissionResolverService;
+use App\Services\Authorization\SuperAdminGuardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -134,13 +136,25 @@ class UserGroupController extends Controller
             'description' => $validated['description'] ?? null,
         ])->save();
 
+        $guard = app(SuperAdminGuardService::class);
+        $hadSuperAdminRole = $guard->hasSuperAdminGroup([$group->id]);
+
         // Only sync when the key is present (empty array = intentional clear).
         if (array_key_exists('user_ids', $validated)) {
             $group->users()->sync(array_values(array_map('intval', $validated['user_ids'] ?? [])));
         }
 
         if (array_key_exists('role_ids', $validated)) {
-            $group->roles()->sync(array_values(array_map('intval', $validated['role_ids'] ?? [])));
+            $nextRoleIds = array_values(array_map('intval', $validated['role_ids'] ?? []));
+
+            if ($hadSuperAdminRole && ! $guard->hasSuperAdminRole($nextRoleIds)
+                && $guard->wouldRemoveLastActiveSuperAdminViaGroups([$group->id])) {
+                throw ValidationException::withMessages([
+                    'role_ids' => __('Cannot strip the last super-admin path from a group.'),
+                ]);
+            }
+
+            $group->roles()->sync($nextRoleIds);
         }
 
         app(EffectivePermissionResolverService::class)->forget();
@@ -153,6 +167,13 @@ class UserGroupController extends Controller
     public function destroy(UserGroup $group): RedirectResponse
     {
         Gate::authorize('delete', $group);
+
+        if (app(SuperAdminGuardService::class)->wouldRemoveLastActiveSuperAdminViaGroups([$group->id])) {
+            throw ValidationException::withMessages([
+                'group' => __('Cannot delete the group that is the last super-admin path.'),
+            ]);
+        }
+
         $group->delete();
         app(EffectivePermissionResolverService::class)->forget();
 

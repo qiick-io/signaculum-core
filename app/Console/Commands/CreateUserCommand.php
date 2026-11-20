@@ -8,6 +8,7 @@ use App\Actions\CreateUserAction;
 use App\Enums\RoleEnum;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\InitialSuperAdminPasswordService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -34,8 +35,10 @@ use function Laravel\Prompts\text;
 #[Description('Create a Signaculum user (password prompted unless passed)')]
 final class CreateUserCommand extends Command
 {
-    public function handle(CreateUserAction $createUser): int
-    {
+    public function handle(
+        CreateUserAction $createUser,
+        InitialSuperAdminPasswordService $initialSuperAdminPassword,
+    ): int {
         $this->callSilently('signaculum:sync-permissions');
 
         $defaultRole = User::query()->exists() ? RoleEnum::Reader->value : RoleEnum::SuperAdmin->value;
@@ -63,11 +66,22 @@ final class CreateUserCommand extends Command
             $role = is_string($role) && $role !== '' ? $role : select('Role', $roles, default: $defaultRole);
         }
 
+        $passwordString = is_string($passwordValue) ? $passwordValue : null;
+        $passwordReasons = $initialSuperAdminPassword->rejectionReasons($passwordString);
+
+        if ($passwordReasons !== []) {
+            foreach ($passwordReasons as $reason) {
+                $this->components->error($reason);
+            }
+
+            return self::FAILURE;
+        }
+
         $input = [
             'first_name' => $firstName,
             'last_name' => $lastName,
             'email' => Str::lower((string) $email),
-            'password' => $passwordValue,
+            'password' => $passwordString,
             'role' => $role ?: $defaultRole,
         ];
 

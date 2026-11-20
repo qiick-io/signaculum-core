@@ -136,6 +136,7 @@ return [
      *
      * To enable, set to true, and then create listeners to watch these events.
      */
+    // No listeners registered; leave false until an audit hook needs Spatie events.
     'events_enabled' => false,
 
     /*

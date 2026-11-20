@@ -132,6 +132,24 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     }
 
     /**
+     * Whether a value matches the fleet username rules (length + charset) after normalization.
+     */
+    public static function isValidUsername(?string $value): bool
+    {
+        $normalized = self::normalizeUsername($value);
+
+        if ($normalized === null) {
+            return false;
+        }
+
+        $length = mb_strlen($normalized);
+
+        return $length >= 3
+            && $length <= 32
+            && preg_match('/^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/', $normalized) === 1;
+    }
+
+    /**
      * Canonicalize usernames on every write, including CLI and seeder writes that bypass the
      * request validators. The unique index then compares lowercase values on every database.
      */

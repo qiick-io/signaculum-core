@@ -254,8 +254,10 @@ final class LdapUserSyncService
             'password' => null,
         ];
 
-        if ($directoryUsername !== null && $directoryUsername !== '') {
-            $attributes['username'] = $directoryUsername;
+        $resolvedUsername = $this->resolvedUsernameForSync($directoryUsername, $user->getKey());
+
+        if ($resolvedUsername !== null) {
+            $attributes['username'] = $resolvedUsername;
         }
 
         $user->forceFill($attributes)->save();
@@ -303,8 +305,10 @@ final class LdapUserSyncService
             'ldap_dn' => $distinguishedName,
         ];
 
-        if ($directoryUsername !== null && $directoryUsername !== '') {
-            $attributes['username'] = $directoryUsername;
+        $resolvedUsername = $this->resolvedUsernameForSync($directoryUsername, null);
+
+        if ($resolvedUsername !== null) {
+            $attributes['username'] = $resolvedUsername;
         }
 
         $user = (new User)->forceFill($attributes);
@@ -315,6 +319,42 @@ final class LdapUserSyncService
             'email' => $user->email,
             'name' => $user->name,
         ]);
+    }
+
+    /**
+     * Normalize and validate a directory username; skip (and log) on invalid shape or uniqueness conflict.
+     */
+    private function resolvedUsernameForSync(?string $directoryUsername, ?int $ignoreUserId): ?string
+    {
+        if ($directoryUsername === null || $directoryUsername === '') {
+            return null;
+        }
+
+        $normalized = User::normalizeUsername($directoryUsername);
+
+        if ($normalized === null || ! User::isValidUsername($normalized)) {
+            Log::warning('LDAP sync skipped username: invalid shape', [
+                'username' => $directoryUsername,
+            ]);
+
+            return null;
+        }
+
+        $conflictQuery = User::query()->where('username', $normalized);
+
+        if ($ignoreUserId !== null) {
+            $conflictQuery->whereKeyNot($ignoreUserId);
+        }
+
+        if ($conflictQuery->exists()) {
+            Log::warning('LDAP sync skipped username: already taken', [
+                'username' => $normalized,
+            ]);
+
+            return null;
+        }
+
+        return $normalized;
     }
 
     /**

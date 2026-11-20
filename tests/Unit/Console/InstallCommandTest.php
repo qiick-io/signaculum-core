@@ -160,7 +160,7 @@ test('install migrates sqlite, creates keys and the first administrator', functi
     }
 });
 
-test('install prints a generated administrator password when none is provided', function () {
+test('install fails closed under --no-interaction when no password is provided', function () {
     [$envPath, $envBackup] = beginInstallFixtures();
     setInstallAdminEnvironment(
         email: 'generated@example.com',
@@ -175,15 +175,8 @@ test('install prints a generated administrator password when none is provided', 
             '--no-npm' => true,
             '--no-interaction' => true,
         ])
-            ->expectsOutputToContain('Administrator password (shown once):')
-            ->assertSuccessful();
-
-        config([
-            'database.connections.sqlite.database' => database_path('database.sqlite'),
-        ]);
-        DB::purge('sqlite');
-
-        expect(DB::connection('sqlite')->table('users')->where('email', 'generated@example.com')->exists())->toBeTrue();
+            ->expectsOutputToContain('INITIAL_SUPER_ADMIN_PASSWORD is required')
+            ->assertFailed();
     } finally {
         clearInstallAdminEnvironment();
         restoreInstallEnv($envPath, $envBackup);

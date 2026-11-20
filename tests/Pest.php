@@ -299,6 +299,19 @@ function permissionAdmin(): User
 }
 
 /**
+ * A user with the reader role (show-only permissions).
+ */
+function permissionReader(): User
+{
+    syncPermissions();
+
+    $user = User::factory()->create();
+    $user->assignRole(RoleEnum::Reader->value);
+
+    return $user;
+}
+
+/**
  * An outbound webhook endpoint with a stable URL and signing secret for settings tests.
  *
  * @param  array<string, mixed>  $attributes

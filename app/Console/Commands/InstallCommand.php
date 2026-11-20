@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Enums\RoleEnum;
 use App\Models\SigningKey;
 use App\Models\User;
+use App\Services\InitialSuperAdminPasswordService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -14,7 +15,6 @@ use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Str;
 use Laravel\Passport\Passport;
 
 use function Laravel\Prompts\confirm;
@@ -305,15 +305,27 @@ final class InstallCommand extends Command
             'INITIAL_SUPER_ADMIN_PASSWORD',
             $this->environmentValue('SIGNACULUM_ADMIN_PASSWORD', ''),
         );
-        $shouldPrintPassword = false;
 
         if ($passwordFromEnvironment !== '') {
             $password = $passwordFromEnvironment;
         } elseif ($this->isNonInteractive()) {
-            $password = Str::password(24);
-            $shouldPrintPassword = true;
+            // Fail closed: never invent a password under --no-interaction (decision 2026-11-19).
+            $this->components->error('INITIAL_SUPER_ADMIN_PASSWORD is required for a non-interactive install.');
+
+            return self::FAILURE;
         } else {
             $password = password('Administrator password', required: true);
+        }
+
+        $passwordReasons = app(InitialSuperAdminPasswordService::class)
+            ->rejectionReasons($password);
+
+        if ($passwordReasons !== []) {
+            foreach ($passwordReasons as $reason) {
+                $this->components->error($reason);
+            }
+
+            return self::FAILURE;
         }
 
         $exitCode = $this->call('signaculum:create-user', [
@@ -330,10 +342,6 @@ final class InstallCommand extends Command
         }
 
         $this->components->info("Created the first administrator [{$email}].");
-
-        if ($shouldPrintPassword) {
-            $this->components->warn('Administrator password (shown once): '.$password);
-        }
 
         return self::SUCCESS;
     }

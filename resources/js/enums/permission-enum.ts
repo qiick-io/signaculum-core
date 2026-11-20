@@ -23,3 +23,4 @@ export enum PermissionEnum {
     CanManageApiKeys = 'can-manage-api-keys',
     CanShowActivityLogs = 'can-show-activity-logs',
 }
+
