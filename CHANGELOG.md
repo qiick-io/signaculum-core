@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrade notes
 
+- **Recreate the database for this beta.** Pre-stable schema changes are folded into the `create_` migrations (decision 2026-11-20); there is no forward upgrade path from an earlier beta database. Run `php artisan migrate:fresh --seed` (or reinstall). After the first stable `v1.0.0`, migrations stay forward-only.
 - **Access token `expires_in` is now 3600 (1 hour), not ~31536000 (1 year).** Relying parties that assumed Passport's previous one-year default must refresh more often. Override with `OIDC_ACCESS_TOKEN_TTL` / `OIDC_REFRESH_TOKEN_TTL` (ISO 8601 durations, defaults `PT1H` / `P30D`). Refresh tokens rotate on use; replaying a used refresh token returns `invalid_grant`.
+
+### Changed
+
+- Pre-stable `add_` / `alter_` / `drop_` migrations from the fleet schema week (timezone, activity `organisation_id`, scoped settings, principals / `owner_principal_id`, username, nullable LDAP password, and the `is_instance_admin` → Spatie role path) are folded into the `create_` migrations (#211). Fresh installs get the final shape in one pass; existing beta databases must be recreated.
 
 ### Added
 

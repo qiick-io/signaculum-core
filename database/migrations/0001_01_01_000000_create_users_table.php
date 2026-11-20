@@ -1,9 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Users table: base identity columns. Later migrations (still folded toward one create_
+ * before the first stable release) add OIDC subject, names, locale, 2FA, LDAP, etc.
+ * Username and timezone ship here so beta.1 does not need this week's add_ migrations.
+ *
+ * @see knowledge/decisions/2026-11-20-migrations-freeze-at-first-stable-release
+ */
 return new class extends Migration
 {
     /**
@@ -15,8 +24,11 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('username')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            // Nullable: LDAP-sourced accounts authenticate by bind, not a local hash (#187).
+            $table->string('password')->nullable();
+            $table->string('timezone')->default('UTC');
             $table->rememberToken();
             $table->timestamps();
         });
