@@ -113,14 +113,12 @@ test('install skips creating an administrator when a user already exists', funct
 
 test('install migrates sqlite, creates keys and the first administrator', function () {
     [$envPath, $envBackup] = beginInstallFixtures();
-    putenv('SIGNACULUM_ADMIN_EMAIL=admin@example.com');
-    putenv('SIGNACULUM_ADMIN_PASSWORD=password');
-    putenv('SIGNACULUM_ADMIN_FIRST_NAME=Ada');
-    putenv('SIGNACULUM_ADMIN_LAST_NAME=Lovelace');
-    $_ENV['SIGNACULUM_ADMIN_EMAIL'] = 'admin@example.com';
-    $_ENV['SIGNACULUM_ADMIN_PASSWORD'] = 'password';
-    $_ENV['SIGNACULUM_ADMIN_FIRST_NAME'] = 'Ada';
-    $_ENV['SIGNACULUM_ADMIN_LAST_NAME'] = 'Lovelace';
+    setInstallAdminEnvironment(
+        email: 'admin@example.com',
+        password: 'password',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+    );
 
     try {
         $this->artisan(InstallCommand::class, [
@@ -157,26 +155,19 @@ test('install migrates sqlite, creates keys and the first administrator', functi
             ->and(File::get($envPath))->toContain('APP_NAME=Signaculum')
             ->and(File::get($envPath))->toContain('DB_CONNECTION=sqlite');
     } finally {
-        putenv('SIGNACULUM_ADMIN_EMAIL');
-        putenv('SIGNACULUM_ADMIN_PASSWORD');
-        putenv('SIGNACULUM_ADMIN_FIRST_NAME');
-        putenv('SIGNACULUM_ADMIN_LAST_NAME');
-        unset(
-            $_ENV['SIGNACULUM_ADMIN_EMAIL'],
-            $_ENV['SIGNACULUM_ADMIN_PASSWORD'],
-            $_ENV['SIGNACULUM_ADMIN_FIRST_NAME'],
-            $_ENV['SIGNACULUM_ADMIN_LAST_NAME'],
-        );
+        clearInstallAdminEnvironment();
         restoreInstallEnv($envPath, $envBackup);
     }
 });
 
 test('install prints a generated administrator password when none is provided', function () {
     [$envPath, $envBackup] = beginInstallFixtures();
-    putenv('SIGNACULUM_ADMIN_EMAIL=generated@example.com');
-    $_ENV['SIGNACULUM_ADMIN_EMAIL'] = 'generated@example.com';
-    putenv('SIGNACULUM_ADMIN_PASSWORD');
-    unset($_ENV['SIGNACULUM_ADMIN_PASSWORD']);
+    setInstallAdminEnvironment(
+        email: 'generated@example.com',
+        password: null,
+        firstName: 'Generated',
+        lastName: 'Admin',
+    );
 
     try {
         $this->artisan(InstallCommand::class, [
@@ -194,8 +185,7 @@ test('install prints a generated administrator password when none is provided', 
 
         expect(DB::connection('sqlite')->table('users')->where('email', 'generated@example.com')->exists())->toBeTrue();
     } finally {
-        putenv('SIGNACULUM_ADMIN_EMAIL');
-        unset($_ENV['SIGNACULUM_ADMIN_EMAIL']);
+        clearInstallAdminEnvironment();
         restoreInstallEnv($envPath, $envBackup);
     }
 });
@@ -238,6 +228,67 @@ function restoreInstallEnv(string $envPath, ?string $backup): void
     }
 
     File::put($envPath, $backup);
+}
+
+/**
+ * Drive `signaculum:install` credentials via INITIAL_SUPER_ADMIN_* (and the legacy
+ * SIGNACULUM_ADMIN_* aliases). Clears Dotenv-loaded defaults from the process env
+ * so a local `.env` with `password` cannot mask the test fixtures.
+ */
+function setInstallAdminEnvironment(
+    string $email,
+    ?string $password,
+    string $firstName,
+    string $lastName,
+): void {
+    $pairs = [
+        'INITIAL_SUPER_ADMIN_EMAIL' => $email,
+        'INITIAL_SUPER_ADMIN_FIRST_NAME' => $firstName,
+        'INITIAL_SUPER_ADMIN_LAST_NAME' => $lastName,
+        'SIGNACULUM_ADMIN_EMAIL' => $email,
+        'SIGNACULUM_ADMIN_FIRST_NAME' => $firstName,
+        'SIGNACULUM_ADMIN_LAST_NAME' => $lastName,
+    ];
+
+    foreach ($pairs as $key => $value) {
+        putenv("{$key}={$value}");
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+    }
+
+    if ($password === null) {
+        putenv('INITIAL_SUPER_ADMIN_PASSWORD');
+        putenv('SIGNACULUM_ADMIN_PASSWORD');
+        unset($_ENV['INITIAL_SUPER_ADMIN_PASSWORD'], $_ENV['SIGNACULUM_ADMIN_PASSWORD']);
+        unset($_SERVER['INITIAL_SUPER_ADMIN_PASSWORD'], $_SERVER['SIGNACULUM_ADMIN_PASSWORD']);
+
+        return;
+    }
+
+    putenv("INITIAL_SUPER_ADMIN_PASSWORD={$password}");
+    putenv("SIGNACULUM_ADMIN_PASSWORD={$password}");
+    $_ENV['INITIAL_SUPER_ADMIN_PASSWORD'] = $password;
+    $_ENV['SIGNACULUM_ADMIN_PASSWORD'] = $password;
+    $_SERVER['INITIAL_SUPER_ADMIN_PASSWORD'] = $password;
+    $_SERVER['SIGNACULUM_ADMIN_PASSWORD'] = $password;
+}
+
+function clearInstallAdminEnvironment(): void
+{
+    foreach ([
+        'INITIAL_SUPER_ADMIN_EMAIL',
+        'INITIAL_SUPER_ADMIN_PASSWORD',
+        'INITIAL_SUPER_ADMIN_FIRST_NAME',
+        'INITIAL_SUPER_ADMIN_LAST_NAME',
+        'SIGNACULUM_ADMIN_EMAIL',
+        'SIGNACULUM_ADMIN_PASSWORD',
+        'SIGNACULUM_ADMIN_FIRST_NAME',
+        'SIGNACULUM_ADMIN_LAST_NAME',
+        'SIGNACULUM_ADMIN_NAME',
+    ] as $key) {
+        putenv($key);
+        unset($_ENV[$key], $_SERVER[$key]);
+    }
 }
 
 test('install env helpers escape values and apply mysql credentials', function () {
