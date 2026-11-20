@@ -55,3 +55,9 @@ jobs:
       - name: Hard-coded UI strings (ratchet)
         run: npm run lint:i18n
 
+      - name: Standards ratchet (restricted imports, id-length, max-lines)
+        run: npm run lint:standards
+
+      - name: Legacy web platform patterns (ratchet)
+        run: npm run lint:legacy
+

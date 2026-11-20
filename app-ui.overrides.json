@@ -1,4 +1,8 @@
 {
+    "resources/js/components/admin/data-table-toolbar.tsx": "Renames abbreviated change-handler parameter (`e` → `event`) to match the qiick full-word naming rule (#115). Propose upstream in app-ui; drop this entry when the registry ships the rename.",
     "resources/js/components/admin/truncated-text.tsx": "Renames abbreviated locals (`el` → `element`) to match the qiick full-word naming rule (#115). Propose upstream in app-ui; drop this entry when the registry ships the rename.",
-    "resources/js/components/admin/data-table-toolbar.tsx": "Renames abbreviated change-handler parameter (`e` → `event`) to match the qiick full-word naming rule (#115). Propose upstream in app-ui; drop this entry when the registry ships the rename."
+    "resources/js/components/app-sidebar-header.tsx": "Not yet re-synced to app-ui v0.11.0 app-shell header (leading slot / SidebarToggle). Adopt in a follow-up UI sync PR.",
+    "resources/js/components/layout/page-layout.tsx": "Not yet re-synced to app-ui v0.11.0 page-layout; adopt in a follow-up UI sync PR.",
+    "resources/js/components/ui/navigation-menu.tsx": "Not yet re-synced to app-ui v0.11.0 navigation-menu (radix import and class tokens). Adopt in a follow-up UI sync PR.",
+    "resources/js/lib/pagination-window.ts": "page-layout helper not yet adopted; Signaculum still uses the previous pagination shape. Add with the page-layout sync."
 }

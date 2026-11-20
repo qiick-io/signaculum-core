@@ -4,5 +4,21 @@
     "eslint/id-length": {
         "resources/js/lib/brand-contrast.ts": 2,
         "resources/js/lib/contrasting-foreground.ts": 3
+    },
+    "eslint/max-lines": {
+        "resources/js/components/admin/application-form-drawer.tsx": 1,
+        "resources/js/pages/admin/users/index.tsx": 1,
+        "resources/js/pages/settings/instance/security.tsx": 1
+    },
+    "eslint/max-lines-per-function": {
+        "resources/js/components/admin/application-form-drawer.tsx": 1,
+        "resources/js/pages/admin/activity-logs/index.tsx": 1,
+        "resources/js/pages/admin/applications/index.tsx": 1,
+        "resources/js/pages/admin/users/index.tsx": 1,
+        "resources/js/pages/organizations/settings.tsx": 1,
+        "resources/js/pages/settings/appearance.tsx": 2,
+        "resources/js/pages/settings/instance/email-templates.tsx": 1,
+        "resources/js/pages/settings/instance/security.tsx": 2,
+        "resources/js/pages/settings/instance/webhooks.tsx": 1
     }
 }
