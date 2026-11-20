@@ -53,6 +53,28 @@ export type AdminUserRef = {
     email: string;
 };
 
+/** One row of `App\Http\Resources\UserGroupResource`. */
+export type AdminGroupRow = {
+    id: number;
+    name: string;
+    description: string | null;
+    users_count: number;
+    roles_count: number;
+    users: AdminUserRef[];
+    user_ids: number[];
+    roles: { id: number; name: string }[];
+    role_ids: number[];
+    deleted_at: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+};
+
+/** Assignable role option for the groups drawer. */
+export type AdminRoleOption = {
+    id: number;
+    name: string;
+};
+
 /** One row of `App\Http\Resources\ApplicationResource`. */
 export type AdminApplicationRow = {
     id: string;

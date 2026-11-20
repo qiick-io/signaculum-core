@@ -11,6 +11,7 @@ use App\Http\Requests\Concerns\ValidatesListPerPageTrait;
 use App\Http\Requests\Concerns\ValidatesSearchQueryTrait;
 use App\Http\Resources\UserGroupResource;
 use App\Models\Role;
+use App\Models\User;
 use App\Models\UserGroup;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use Illuminate\Http\JsonResponse;
@@ -91,18 +92,32 @@ class UserGroupController extends Controller
                 'direction' => $direction,
             ],
             'roles' => Role::query()->where('is_assignable', true)->orderBy('name')->get(['id', 'name']),
+            'users' => User::query()
+                ->where('is_active', true)
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name', 'email'])
+                ->map(static fn (User $user): array => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 
     public function store(StoreUserGroupRequest $request): RedirectResponse
     {
+        $validated = $request->validated();
+
         $group = UserGroup::query()->create([
-            'name' => $request->string('name')->toString(),
-            'description' => $request->filled('description') ? $request->string('description')->toString() : null,
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
         ]);
 
-        $group->users()->sync($request->input('user_ids', []));
-        $group->roles()->sync($request->input('role_ids', []));
+        $group->users()->sync(array_values(array_map('intval', $validated['user_ids'] ?? [])));
+        $group->roles()->sync(array_values(array_map('intval', $validated['role_ids'] ?? [])));
         app(EffectivePermissionResolverService::class)->forget();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group created.')]);
@@ -112,13 +127,22 @@ class UserGroupController extends Controller
 
     public function update(UpdateUserGroupRequest $request, UserGroup $group): RedirectResponse
     {
+        $validated = $request->validated();
+
         $group->fill([
-            'name' => $request->string('name')->toString(),
-            'description' => $request->filled('description') ? $request->string('description')->toString() : null,
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
         ])->save();
 
-        $group->users()->sync($request->input('user_ids', []));
-        $group->roles()->sync($request->input('role_ids', []));
+        // Only sync when the key is present (empty array = intentional clear).
+        if (array_key_exists('user_ids', $validated)) {
+            $group->users()->sync(array_values(array_map('intval', $validated['user_ids'] ?? [])));
+        }
+
+        if (array_key_exists('role_ids', $validated)) {
+            $group->roles()->sync(array_values(array_map('intval', $validated['role_ids'] ?? [])));
+        }
+
         app(EffectivePermissionResolverService::class)->forget();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group updated.')]);

@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import {
     AppWindow,
     BookOpen,
@@ -26,6 +26,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { PermissionEnum } from '@/enums/permission-enum';
+import { useCan } from '@/hooks/use-can';
 import { dashboard } from '@/routes';
 import { index as adminActivityLogsIndex } from '@/routes/admin/activity-logs';
 import { index as adminApiKeysIndex } from '@/routes/admin/api-keys';
@@ -38,17 +40,11 @@ import type { NavItem } from '@/types';
 
 /**
  * Primary application sidebar (app-ui `shell.md`): logo, the Platform group, an
- * Admin group for instance admins, then the footer links and the user menu.
+ * Admin group gated by effective permissions, then the footer links and the user menu.
  */
 export function AppSidebar() {
     const { t } = useTranslation();
-    const {
-        canManageUsers,
-        canManageApplications,
-        canShowActivityLogs,
-        canManageGroups,
-        canManageSettings,
-    } = usePage().props.auth;
+    const { can } = useCan();
 
     const platformNavItems: MainNavItem[] = [
         {
@@ -71,7 +67,7 @@ export function AppSidebar() {
     ];
 
     const adminNavItems: MainNavItem[] = [
-        ...(canManageUsers
+        ...(can(PermissionEnum.CanShowUsers)
             ? [
                   {
                       title: t('nav.users'),
@@ -81,7 +77,7 @@ export function AppSidebar() {
                   } satisfies MainNavItem,
               ]
             : []),
-        ...(canManageGroups
+        ...(can(PermissionEnum.CanShowGroups)
             ? [
                   {
                       title: t('nav.groups'),
@@ -91,7 +87,7 @@ export function AppSidebar() {
                   } satisfies MainNavItem,
               ]
             : []),
-        ...(canManageApplications
+        ...(can(PermissionEnum.CanShowApplications)
             ? [
                   {
                       title: t('nav.applications'),
@@ -101,7 +97,7 @@ export function AppSidebar() {
                   } satisfies MainNavItem,
               ]
             : []),
-        ...(canShowActivityLogs
+        ...(can(PermissionEnum.CanShowActivityLogs)
             ? [
                   {
                       title: t('nav.activityLog'),
@@ -111,7 +107,7 @@ export function AppSidebar() {
                   } satisfies MainNavItem,
               ]
             : []),
-        ...(canManageSettings
+        ...(can(PermissionEnum.CanShowApiKeys)
             ? [
                   {
                       title: t('nav.apiKeys'),

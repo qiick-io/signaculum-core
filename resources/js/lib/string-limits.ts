@@ -4,6 +4,7 @@
 export const STRING_LIMITS = {
     SEARCH: 255,
     NAME: 255,
+    DESCRIPTION: 2000,
     EMAIL: 255,
     URL: 2048,
 } as const;

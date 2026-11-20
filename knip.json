@@ -24,7 +24,8 @@
         "resources/js/lib/toast.ts",
         "resources/js/lib/utils.ts",
         "resources/js/types/appearance.ts",
-        "resources/js/types/auth.ts"
+        "resources/js/types/auth.ts",
+        "resources/js/enums/permission-enum.ts"
     ],
     "ignoreDependencies": [
         "@inertiajs/core",

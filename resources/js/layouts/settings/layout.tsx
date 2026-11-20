@@ -11,6 +11,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { PermissionEnum } from '@/enums/permission-enum';
+import { useCan } from '@/hooks/use-can';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
@@ -44,7 +46,8 @@ export default function SettingsLayout({
 }: SettingsLayoutProps) {
     const { t } = useTranslation();
     const { isCurrentUrl } = useCurrentUrl();
-    const { auth, instanceSettings } = usePage().props;
+    const { can } = useCan();
+    const { instanceSettings } = usePage().props;
 
     const accountNavItems: NavItem[] = [
         {
@@ -69,7 +72,7 @@ export default function SettingsLayout({
         },
     ];
 
-    const instanceNavItems: NavItem[] = auth.canManageSettings
+    const instanceNavItems: NavItem[] = can(PermissionEnum.CanManageSettings)
         ? [
               {
                   title: t('settings.layout.general'),

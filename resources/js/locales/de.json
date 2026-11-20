@@ -645,6 +645,55 @@
             "active": "Aktiv",
             "inactive": "Widerrufen oder abgelaufen",
             "revoke": "Widerrufen"
+        },
+        "groups": {
+            "head": "Gruppen",
+            "title": "Gruppen",
+            "newGroup": "Neue Gruppe",
+            "searchPlaceholder": "Gruppen suchen…",
+            "sortBy": "Sortieren nach",
+            "columns": {
+                "name": "Name",
+                "description": "Beschreibung",
+                "members": "Mitglieder",
+                "roles": "Rollen",
+                "actions": "Aktionen",
+                "created": "Erstellt",
+                "updated": "Aktualisiert"
+            },
+            "actions": {
+                "edit": "Bearbeiten",
+                "delete": "Löschen",
+                "restore": "Wiederherstellen",
+                "forceDelete": "Endgültig löschen"
+            },
+            "status": {
+                "active": "Aktiv",
+                "trashed": "Papierkorb"
+            },
+            "form": {
+                "editTitle": "Gruppe bearbeiten",
+                "description": "Gruppen vergeben Rollen an ihre Mitglieder. Effektive Berechtigungen sind die Vereinigung direkter und Gruppenrollen.",
+                "descriptionLabel": "Beschreibung",
+                "rolesHint": "Nur zuweisbare Rollen. Super-Admin bleibt Super-Admins vorbehalten.",
+                "users": "Mitglieder",
+                "noRoles": "Keine zuweisbaren Rollen.",
+                "noUsers": "Keine aktiven Benutzer.",
+                "create": "Gruppe erstellen"
+            },
+            "empty": {
+                "title": "Noch keine Gruppen",
+                "description": "Erstellen Sie eine Gruppe, um mehreren Benutzern dieselben Rollen zu geben.",
+                "filteredTitle": "Keine passenden Gruppen",
+                "filteredDescription": "Andere Suche versuchen oder Filter zurücksetzen.",
+                "cta": "Neue Gruppe"
+            },
+            "confirm": {
+                "deleteTitle": "{{name}} löschen?",
+                "deleteDescription": "Die Gruppe landet im Papierkorb. Mitglieder behalten Rollen, die sie direkt haben.",
+                "forceDeleteTitle": "{{name}} endgültig löschen?",
+                "forceDeleteDescription": "Kann nicht rückgängig gemacht werden. Mitgliedschaften und Rollenverknüpfungen werden entfernt."
+            }
         }
     },
     "activityLog": {

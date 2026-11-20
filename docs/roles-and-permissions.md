@@ -9,11 +9,11 @@ Signaculum follows app-ui `docs/roles-and-permissions.md` with one declared dive
 
 ## Built-in roles
 
-| Role | Behaviour |
-| --- | --- |
+| Role          | Behaviour                                                                   |
+| ------------- | --------------------------------------------------------------------------- |
 | `super-admin` | Everything, through `Gate::before` via `EffectivePermissionResolverService` |
-| `admin` | Every `PermissionEnum` permission |
-| `reader` | Every `can-show-*` permission |
+| `admin`       | Every `PermissionEnum` permission                                           |
+| `reader`      | Every `can-show-*` permission                                               |
 
 ## Commands
 
