@@ -499,6 +499,52 @@ test('the last instance admin is kept active when they leave the directory', fun
             && $context['user_subject'] === $admin->subject);
 });
 
+test('ldap sync skips invalid and conflicting usernames', function () {
+    enableLdapSettings();
+    $logger = Log::spy();
+
+    User::factory()->create([
+        'email' => 'taken-user@example.com',
+        'username' => 'takenname',
+    ]);
+
+    $invalidGuid = (string) Str::uuid();
+    $conflictGuid = (string) Str::uuid();
+
+    DirectoryUser::create([
+        'cn' => 'Invalid Name',
+        'givenname' => 'Invalid',
+        'sn' => 'Name',
+        'mail' => 'invalid-username@example.com',
+        'uid' => 'ab',
+        'objectguid' => $invalidGuid,
+    ]);
+
+    DirectoryUser::create([
+        'cn' => 'Conflict Name',
+        'givenname' => 'Conflict',
+        'sn' => 'Name',
+        'mail' => 'conflict-username@example.com',
+        'uid' => 'takenname',
+        'objectguid' => $conflictGuid,
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($result->created)->toBe(2);
+
+    $invalidUser = User::query()->where('email', 'invalid-username@example.com')->first();
+    $conflictUser = User::query()->where('email', 'conflict-username@example.com')->first();
+
+    expect($invalidUser?->username)->toBeNull()
+        ->and($conflictUser?->username)->toBeNull();
+
+    $logger->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => $message === 'LDAP sync skipped username: invalid shape');
+    $logger->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => $message === 'LDAP sync skipped username: already taken');
+});
+
 test('ldap sync continues when ACCOUNTDISABLE cannot deactivate the last super-admin', function () {
     enableLdapSettings();
     $logger = Log::spy();

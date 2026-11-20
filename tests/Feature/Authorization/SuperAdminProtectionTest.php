@@ -219,6 +219,60 @@ it('refuses deactivating and deleting a user who is super-admin only through a g
     expect($groupOnly->fresh())->not->toBeNull();
 });
 
+it('refuses deleting the only super-admin group and stripping its role', function (): void {
+    $member = User::factory()->create(['email' => 'delete-group-sa@example.com']);
+    $group = UserGroup::factory()->create(['name' => 'Only owners']);
+    $superAdminRole = Role::findByName(RoleEnum::SuperAdmin->value);
+    $adminRole = Role::findByName(RoleEnum::Admin->value);
+
+    $group->roles()->attach($superAdminRole->id);
+    $group->users()->attach($member->id);
+    app(EffectivePermissionResolverService::class)->forget();
+
+    $this->actingAs($member)
+        ->delete(route('admin.groups.destroy', $group))
+        ->assertSessionHasErrors('group');
+
+    expect($group->fresh()->trashed())->toBeFalse();
+
+    $this->actingAs($member)
+        ->put(route('admin.groups.update', $group), [
+            'name' => 'Only owners',
+            'description' => null,
+            'user_ids' => [$member->id],
+            'role_ids' => [$adminRole->id],
+        ])
+        ->assertSessionHasErrors('role_ids');
+
+    expect($group->fresh()->roles()->pluck('roles.id')->all())->toContain($superAdminRole->id);
+});
+
+it('bulk restores soft-deleted groups and force-deletes when safe', function (): void {
+    $actor = User::factory()->instanceAdmin()->create();
+    $safe = UserGroup::factory()->create(['name' => 'Safe trash']);
+    $safe->delete();
+
+    $this->actingAs($actor)
+        ->post(route('admin.groups.bulk'), [
+            'action' => 'restore',
+            'ids' => [$safe->id],
+        ])
+        ->assertRedirect(route('admin.groups.index', ['trashed' => 1]));
+
+    expect($safe->fresh()->trashed())->toBeFalse();
+
+    $safe->delete();
+
+    $this->actingAs($actor)
+        ->post(route('admin.groups.bulk'), [
+            'action' => 'force_delete',
+            'ids' => [$safe->id],
+        ])
+        ->assertRedirect(route('admin.groups.index', ['trashed' => 1]));
+
+    expect(UserGroup::withTrashed()->find($safe->id))->toBeNull();
+});
+
 it('refuses emptying the only super-admin group members and writes nothing', function (): void {
     $member = User::factory()->create(['email' => 'sole-group-member@example.com']);
     $group = UserGroup::factory()->create(['name' => 'Owners', 'description' => 'keep me']);
