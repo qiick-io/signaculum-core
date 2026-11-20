@@ -38,6 +38,8 @@ class CreateNewUser implements CreatesNewUsers
             ]);
         }
 
+        $input = $this->withCanonicalUsername($input);
+
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
@@ -47,6 +49,7 @@ class CreateNewUser implements CreatesNewUsers
             'first_name' => $input['first_name'],
             'last_name' => $input['last_name'] ?? null,
             'email' => $input['email'],
+            'username' => $input['username'] ?? null,
             'password' => $input['password'],
         ]);
 

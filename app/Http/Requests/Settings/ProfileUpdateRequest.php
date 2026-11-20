@@ -18,6 +18,14 @@ class ProfileUpdateRequest extends FormRequest
     use ProfileValidationRules;
 
     /**
+     * Canonicalize username before the unique rule runs (SQLite unique is case-sensitive).
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge($this->withCanonicalUsername($this->all()));
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>

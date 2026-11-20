@@ -15,20 +15,10 @@ use Illuminate\Validation\Rules\Unique;
 trait ValidatesUsernameTrait
 {
     /**
-     * Canonicalize the submitted username before validation; non-strings are left to the rules.
-     */
-    protected function prepareForValidation(): void
-    {
-        $username = $this->input('username');
-
-        if (is_string($username)) {
-            $this->merge(['username' => User::normalizeUsername($username)]);
-        }
-    }
-
-    /**
      * The fleet username rules: lowercase letters, digits and . _ - between alphanumeric ends.
      * The current user is ignored on updates, so saving their own username stays valid.
+     * Callers that receive a FormRequest should canonicalize via {@see canonicalizeUsernameInput()}
+     * before these rules run (unique is case-sensitive on SQLite).
      *
      * @return array<int, Unique|string>
      */
@@ -44,5 +34,22 @@ trait ValidatesUsernameTrait
                 ? Rule::unique(User::class, 'username')
                 : Rule::unique(User::class, 'username')->ignore($userId),
         ];
+    }
+
+    /**
+     * Lowercase and trim a username string for the unique rule; leave non-strings to the rules.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    protected function withCanonicalUsername(array $input): array
+    {
+        $username = $input['username'] ?? null;
+
+        if (is_string($username)) {
+            $input['username'] = User::normalizeUsername($username);
+        }
+
+        return $input;
     }
 }

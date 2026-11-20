@@ -30,6 +30,14 @@ final class UpdateUserRequest extends FormRequest
     }
 
     /**
+     * Canonicalize username before the unique rule runs (SQLite unique is case-sensitive).
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge($this->withCanonicalUsername($this->all()));
+    }
+
+    /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array

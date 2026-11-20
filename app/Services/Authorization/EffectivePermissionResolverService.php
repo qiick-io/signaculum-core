@@ -102,20 +102,19 @@ class EffectivePermissionResolverService
             ->unique('id')
             ->values();
 
-        $roleNames = $mergedRoles
-            ->pluck('name')
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
+        $roleNames = [];
 
-        $roleIds = $mergedRoles
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
+        foreach ($mergedRoles->pluck('name')->unique()->sort() as $roleName) {
+            if (is_string($roleName)) {
+                $roleNames[] = $roleName;
+            }
+        }
+
+        $roleIds = [];
+
+        foreach ($mergedRoles->pluck('id')->unique()->sort() as $roleId) {
+            $roleIds[] = (int) $roleId;
+        }
 
         if (in_array(RoleEnum::SuperAdmin->value, $roleNames, true)) {
             $permissions = PermissionEnum::values();
@@ -135,12 +134,13 @@ class EffectivePermissionResolverService
                 })
                 ->pluck('name');
 
-            $permissions = $directPermissionNames
-                ->merge($groupPermissionNames)
-                ->unique()
-                ->sort()
-                ->values()
-                ->all();
+            $permissions = [];
+
+            foreach ($directPermissionNames->merge($groupPermissionNames)->unique()->sort() as $permissionName) {
+                if (is_string($permissionName)) {
+                    $permissions[] = $permissionName;
+                }
+            }
         }
 
         return $this->cache[$user->id] = [
