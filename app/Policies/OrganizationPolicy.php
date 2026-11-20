@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Enums\OrganizationRoleEnum;
+use App\Enums\PermissionEnum;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
+use App\Services\Authorization\EffectivePermissionResolverService;
 
 /**
  * Organisation access: any member may view; owners/admins may manage members and settings.
  */
 final class OrganizationPolicy
 {
+    public function __construct(
+        private readonly EffectivePermissionResolverService $permissionResolver,
+    ) {}
+
     public function viewAny(User $user): bool
     {
         return true;
@@ -21,7 +27,7 @@ final class OrganizationPolicy
 
     public function view(User $user, Organization $organization): bool
     {
-        return $this->membershipFor($user, $organization) !== null || (bool) $user->is_instance_admin;
+        return $this->membershipFor($user, $organization) !== null || $this->permissionResolver->hasPermission($user, PermissionEnum::CanManageOrganizations->value);
     }
 
     public function create(User $user): bool
@@ -36,7 +42,7 @@ final class OrganizationPolicy
 
     public function delete(User $user, Organization $organization): bool
     {
-        return $this->isOwner($user, $organization) || (bool) $user->is_instance_admin;
+        return $this->isOwner($user, $organization) || $this->permissionResolver->hasPermission($user, PermissionEnum::CanManageOrganizations->value);
     }
 
     public function manageMembers(User $user, Organization $organization): bool
@@ -46,7 +52,7 @@ final class OrganizationPolicy
 
     private function canManage(User $user, Organization $organization): bool
     {
-        if ((bool) $user->is_instance_admin) {
+        if ($this->permissionResolver->hasPermission($user, PermissionEnum::CanManageOrganizations->value)) {
             return true;
         }
 
@@ -62,7 +68,7 @@ final class OrganizationPolicy
 
     private function isOwner(User $user, Organization $organization): bool
     {
-        if ((bool) $user->is_instance_admin) {
+        if ($this->permissionResolver->hasPermission($user, PermissionEnum::CanManageOrganizations->value)) {
             return true;
         }
 

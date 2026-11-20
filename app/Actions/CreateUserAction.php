@@ -20,12 +20,13 @@ final class CreateUserAction
         private readonly WebhookDispatcherService $webhookDispatcher,
     ) {}
 
-    public function execute(string $firstName, ?string $lastName, string $email, string $password): User
+    public function execute(string $firstName, ?string $lastName, string $email, string $password, ?string $username = null): User
     {
         $user = (new User)->forceFill([
             'first_name' => $firstName,
             'last_name' => $lastName,
             'email' => $email,
+            'username' => $username,
             'password' => $password,
             'is_active' => true,
             'email_verified_at' => now(),

@@ -100,7 +100,8 @@
         "applications": "Applicazioni",
         "activityLog": "Registro attività",
         "organizations": "Organizzazioni",
-        "apiKeys": "Chiavi API"
+        "apiKeys": "Chiavi API",
+        "groups": "Gruppi"
     },
     "realtime": {
         "connected": "Realtime connesso",
@@ -644,6 +645,55 @@
             "active": "Attiva",
             "inactive": "Revocata o scaduta",
             "revoke": "Revoca"
+        },
+        "groups": {
+            "head": "Gruppi",
+            "title": "Gruppi",
+            "newGroup": "Nuovo gruppo",
+            "searchPlaceholder": "Cerca gruppi…",
+            "sortBy": "Ordina per",
+            "columns": {
+                "name": "Nome",
+                "description": "Descrizione",
+                "members": "Membri",
+                "roles": "Ruoli",
+                "actions": "Azioni",
+                "created": "Creato",
+                "updated": "Aggiornato"
+            },
+            "actions": {
+                "edit": "Modifica",
+                "delete": "Elimina",
+                "restore": "Ripristina",
+                "forceDelete": "Elimina definitivamente"
+            },
+            "status": {
+                "active": "Attivi",
+                "trashed": "Cestino"
+            },
+            "form": {
+                "editTitle": "Modifica gruppo",
+                "description": "I gruppi assegnano ruoli ai membri. I permessi effettivi sono l’unione di ruoli diretti e di gruppo.",
+                "descriptionLabel": "Descrizione",
+                "rolesHint": "Solo ruoli assegnabili. Super-admin resta riservato ai super-admin.",
+                "users": "Membri",
+                "noRoles": "Nessun ruolo assegnabile.",
+                "noUsers": "Nessun utente attivo.",
+                "create": "Crea gruppo"
+            },
+            "empty": {
+                "title": "Nessun gruppo ancora",
+                "description": "Crea un gruppo per assegnare gli stessi ruoli a più utenti.",
+                "filteredTitle": "Nessun gruppo corrispondente",
+                "filteredDescription": "Prova un’altra ricerca o azzera i filtri.",
+                "cta": "Nuovo gruppo"
+            },
+            "confirm": {
+                "deleteTitle": "Eliminare {{name}}?",
+                "deleteDescription": "Il gruppo va nel cestino. I membri mantengono i ruoli che hanno ancora in modo diretto.",
+                "forceDeleteTitle": "Eliminare definitivamente {{name}}?",
+                "forceDeleteDescription": "Operazione irreversibile. Vengono rimossi membership e collegamenti ai ruoli."
+            }
         }
     },
     "activityLog": {

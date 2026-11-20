@@ -9,6 +9,7 @@ use App\Data\LdapSettingsData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Enums\LdapEncryptionEnum;
 use App\Enums\OrganizationRoleEnum;
+use App\Enums\RoleEnum;
 use App\Enums\WebhookEventEnum;
 use App\Models\ApiKey;
 use App\Models\Organization;
@@ -245,7 +246,8 @@ function mintSignedHint(User $user, string $audience, array $claimOverrides = []
  */
 function adminApiKey(array $scopes = [ApiKeyScopeEnum::UsersWrite->value], ?ApiKeyData $apiKeyData = null): array
 {
-    $admin = User::factory()->create(['is_instance_admin' => true]);
+    syncPermissions();
+    $admin = User::factory()->instanceAdmin()->create();
     $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, $apiKeyData ?? new ApiKeyData('Test key', $scopes));
 
     return [
@@ -266,11 +268,47 @@ function adminApiKey(array $scopes = [ApiKeyScopeEnum::UsersWrite->value], ?ApiK
 */
 
 /**
- * A user who may manage the instance settings.
+ * Idempotent permission + built-in role sync for a fresh RefreshDatabase schema.
+ */
+function syncPermissions(): void
+{
+    test()->artisan('signaculum:sync-permissions')->assertSuccessful();
+}
+
+/**
+ * A user who may manage the instance (super-admin role).
  */
 function instanceAdmin(): User
 {
-    return User::factory()->create(['is_instance_admin' => true]);
+    syncPermissions();
+
+    return User::factory()->instanceAdmin()->create();
+}
+
+/**
+ * A user with the admin role (every permission, no Gate::before bypass beyond grants).
+ */
+function permissionAdmin(): User
+{
+    syncPermissions();
+
+    $user = User::factory()->create();
+    $user->assignRole(RoleEnum::Admin->value);
+
+    return $user;
+}
+
+/**
+ * A user with the reader role (show-only permissions).
+ */
+function permissionReader(): User
+{
+    syncPermissions();
+
+    $user = User::factory()->create();
+    $user->assignRole(RoleEnum::Reader->value);
+
+    return $user;
 }
 
 /**

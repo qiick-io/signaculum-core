@@ -6,6 +6,7 @@ export type User = {
     /** First and last name. */
     name: string;
     email: string;
+    username?: string | null;
     avatar?: string;
     email_verified_at: string | null;
     locale?: string;
@@ -25,14 +26,22 @@ export type ImpersonationState = {
 /** Shared auth context: the signed-in user, if any. */
 export type Auth = {
     user: User | null;
-    /** Instance admin: shows the Instance settings group (the server checks too). */
+    /** Effective permission names (user roles ∪ group roles). */
+    permissions: string[];
+    /** Effective Spatie role names. */
+    roleNames: string[];
+    /** True when the user holds super-admin (direct or via a group). */
+    isSuperAdmin: boolean;
+    /** Derived: shows the Instance settings group (prefer useCan). */
     canManageSettings: boolean;
-    /** Instance admin: shows the Admin → Users nav (the server checks too). */
+    /** Derived: shows the Admin → Users nav (prefer useCan). */
     canManageUsers: boolean;
-    /** Instance admin: shows the Admin → Applications nav (the server checks too). */
+    /** Derived: shows the Admin → Applications nav (prefer useCan). */
     canManageApplications: boolean;
-    /** Instance admin: shows the Admin → Activity log nav (the server checks too). */
+    /** Derived: shows the Admin → Activity log nav (prefer useCan). */
     canShowActivityLogs: boolean;
+    /** Derived: shows the Admin → Groups nav (prefer useCan). */
+    canManageGroups: boolean;
     /** Present while an instance admin is viewing as another user. */
     impersonation: ImpersonationState | null;
 };

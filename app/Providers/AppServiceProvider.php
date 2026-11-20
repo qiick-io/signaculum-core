@@ -24,6 +24,7 @@ use App\Oidc\OidcDeviceCodeRepository;
 use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
 use App\Services\ActivityOrganisationResolverService;
+use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\EmailTemplateService;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
@@ -58,6 +59,10 @@ use Laravel\Passport\Passport;
 use Laravel\Passport\Scope;
 use League\OAuth2\Server\AuthorizationServer;
 use Spatie\Activitylog\Facades\Activity;
+use Spatie\Permission\Events\PermissionAttachedEvent;
+use Spatie\Permission\Events\PermissionDetachedEvent;
+use Spatie\Permission\Events\RoleAttachedEvent;
+use Spatie\Permission\Events\RoleDetachedEvent;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -77,6 +82,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AuthCodeRepository::class, OidcAuthCodeRepository::class);
         $this->app->bind(DeviceCodeRepository::class, OidcDeviceCodeRepository::class);
         $this->app->singleton(SettingsRepositoryService::class);
+        $this->app->singleton(EffectivePermissionResolverService::class);
     }
 
     /**
@@ -85,6 +91,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureAuthorization();
         $this->configureTrustedProxies();
         $this->configureTransactionalEmailTemplates();
         $this->configureRateLimiting();
@@ -99,6 +106,42 @@ class AppServiceProvider extends ServiceProvider
         $this->attachPushedAuthorizationRequestMiddleware();
         $this->attachMaximumAuthenticationAgeMiddleware();
         $this->configureAuthorizationEndpointPost();
+    }
+
+    /**
+     * Super-admin bypass for permission-name abilities. Model policies decide for themselves
+     * (they keep invariants that bind super-admins too), matching externa-core.
+     */
+    protected function configureAuthorization(): void
+    {
+        Gate::before(function (?User $user, string $ability, array $arguments): ?bool {
+            if ($user === null) {
+                return null;
+            }
+
+            if ($arguments !== [] && Gate::getPolicyFor($arguments[0]) !== null) {
+                return null;
+            }
+
+            if (app(EffectivePermissionResolverService::class)->isSuperAdmin($user)) {
+                return true;
+            }
+
+            return null;
+        });
+
+        $forgetEffectivePermissions = function (object $event): void {
+            $model = $event->model ?? null;
+
+            if ($model instanceof User) {
+                app(EffectivePermissionResolverService::class)->forget($model);
+            }
+        };
+
+        Event::listen(RoleAttachedEvent::class, $forgetEffectivePermissions);
+        Event::listen(RoleDetachedEvent::class, $forgetEffectivePermissions);
+        Event::listen(PermissionAttachedEvent::class, $forgetEffectivePermissions);
+        Event::listen(PermissionDetachedEvent::class, $forgetEffectivePermissions);
     }
 
     /**

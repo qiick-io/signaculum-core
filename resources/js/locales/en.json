@@ -100,7 +100,8 @@
         "applications": "Applications",
         "activityLog": "Activity Log",
         "organizations": "Organisations",
-        "apiKeys": "API keys"
+        "apiKeys": "API keys",
+        "groups": "Groups"
     },
     "realtime": {
         "connected": "Realtime connected",
@@ -644,6 +645,55 @@
             "active": "Active",
             "inactive": "Revoked or expired",
             "revoke": "Revoke"
+        },
+        "groups": {
+            "head": "Groups",
+            "title": "Groups",
+            "newGroup": "New group",
+            "searchPlaceholder": "Search groups…",
+            "sortBy": "Sort by",
+            "columns": {
+                "name": "Name",
+                "description": "Description",
+                "members": "Members",
+                "roles": "Roles",
+                "actions": "Actions",
+                "created": "Created",
+                "updated": "Updated"
+            },
+            "actions": {
+                "edit": "Edit",
+                "delete": "Delete",
+                "restore": "Restore",
+                "forceDelete": "Delete permanently"
+            },
+            "status": {
+                "active": "Active",
+                "trashed": "Trash"
+            },
+            "form": {
+                "editTitle": "Edit group",
+                "description": "Groups grant roles to their members. Effective permissions are the union of direct and group roles.",
+                "descriptionLabel": "Description",
+                "rolesHint": "Assignable roles only. Super-admin stays reserved for super-admins.",
+                "users": "Members",
+                "noRoles": "No assignable roles yet.",
+                "noUsers": "No active users yet.",
+                "create": "Create group"
+            },
+            "empty": {
+                "title": "No groups yet",
+                "description": "Create a group to grant the same roles to several users at once.",
+                "filteredTitle": "No matching groups",
+                "filteredDescription": "Try a different search or clear the filters.",
+                "cta": "New group"
+            },
+            "confirm": {
+                "deleteTitle": "Delete {{name}}?",
+                "deleteDescription": "The group moves to trash. Members keep any roles they still have directly.",
+                "forceDeleteTitle": "Permanently delete {{name}}?",
+                "forceDeleteDescription": "This cannot be undone. Membership and role links are removed."
+            }
         }
     },
     "activityLog": {

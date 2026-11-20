@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\ApiErrorCodeEnum;
+use App\Http\Middleware\BlockAdminWritesWhileImpersonatingMiddleware;
 use App\Http\Middleware\CaptureOrganizationBrandingMiddleware;
 use App\Http\Middleware\EnsureOrganizationMfaIsSatisfiedMiddleware;
 use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
+use App\Http\Middleware\EnsureUserHasPermissionMiddleware;
 use App\Http\Middleware\EnsureUserIsActiveMiddleware;
 use App\Http\Middleware\ExpireImpersonationMiddleware;
 use App\Http\Middleware\HandleAppearance;
@@ -38,6 +40,10 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'permission' => EnsureUserHasPermissionMiddleware::class,
+        ]);
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'locale', 'accessibility_high_contrast', 'accessibility_reduce_motion']);
 
         // RPs POST to end-session without a Signaculum CSRF cookie (OIDC RP-Initiated Logout §2).
@@ -53,6 +59,7 @@ return Application::configure(basePath: dirname(__DIR__))
             CaptureOrganizationBrandingMiddleware::class,
             // Before EnsureUserIsActive so an expired target restores the actor first.
             ExpireImpersonationMiddleware::class,
+            BlockAdminWritesWhileImpersonatingMiddleware::class,
             EnsureUserIsActiveMiddleware::class,
             SetLocaleMiddleware::class,
             HandleAppearance::class,

@@ -19,7 +19,7 @@ use Spatie\Activitylog\Models\Activity;
  */
 function apiKeyIssuingAdmin(): User
 {
-    return User::factory()->create(['is_instance_admin' => true]);
+    return User::factory()->instanceAdmin()->create();
 }
 
 it('shows the plain-text key once and stores only its hash', function (): void {

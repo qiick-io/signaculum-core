@@ -16,7 +16,7 @@ use Inertia\Testing\AssertableInertia as Assert;
  */
 function passwordPolicyAdmin(): User
 {
-    return User::factory()->create(['is_instance_admin' => true]);
+    return User::factory()->instanceAdmin()->create();
 }
 
 function granularSecurityPayload(array $overrides = []): array

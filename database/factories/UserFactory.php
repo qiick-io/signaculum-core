@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Factories;
 
+use App\Enums\RoleEnum;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -28,12 +31,12 @@ class UserFactory extends Factory
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
+            'username' => null,
             'ldap_guid' => null,
             'ldap_dn' => null,
             // Keep nullable / default flags in the attribute bag for Model::shouldBeStrict().
             'locale' => null,
             'timezone' => 'UTC',
-            'is_instance_admin' => false,
             'is_active' => true,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
@@ -67,13 +70,13 @@ class UserFactory extends Factory
     }
 
     /**
-     * Instance admin: may open Admin and Instance settings.
+     * Super-admin: may open Admin and Instance settings. Requires `signaculum:sync-permissions`.
      */
     public function instanceAdmin(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'is_instance_admin' => true,
-        ]);
+        return $this->afterCreating(function (User $user): void {
+            $user->assignRole(RoleEnum::SuperAdmin->value);
+        });
     }
 
     /**

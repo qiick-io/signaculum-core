@@ -9,11 +9,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
+use App\Services\Authorization\SuperAdminGuardService;
 use App\Services\WebhookDispatcherService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -76,6 +78,12 @@ class ProfileController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+
+        if (app(SuperAdminGuardService::class)->isLastActiveSuperAdmin($user)) {
+            throw ValidationException::withMessages([
+                'password' => __('Cannot delete the last super-admin account.'),
+            ]);
+        }
 
         $payload = [
             'id' => $user->subject,

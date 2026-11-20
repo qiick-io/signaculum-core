@@ -28,7 +28,7 @@ beforeEach(function (): void {
 });
 
 it('warns the owner of a key that expires in seven days, once', function (): void {
-    $owner = User::factory()->create(['is_instance_admin' => true]);
+    $owner = User::factory()->instanceAdmin()->create();
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHours(12));
 
     $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
@@ -42,8 +42,8 @@ it('warns the owner of a key that expires in seven days, once', function (): voi
 });
 
 it('also warns the issuer when someone else owns the key', function (): void {
-    $owner = User::factory()->create(['is_instance_admin' => true]);
-    $issuer = User::factory()->create(['is_instance_admin' => true]);
+    $owner = User::factory()->instanceAdmin()->create();
+    $issuer = User::factory()->instanceAdmin()->create();
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour())->apiKey->forceFill(['created_by' => $issuer->getKey()])->save();
 
     $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
@@ -53,7 +53,7 @@ it('also warns the issuer when someone else owns the key', function (): void {
 });
 
 it('skips keys outside the window, revoked keys and keys that never expire', function (): void {
-    $owner = User::factory()->create(['is_instance_admin' => true]);
+    $owner = User::factory()->instanceAdmin()->create();
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(3));
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(9));
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour())->apiKey->forceFill(['revoked_at' => now()])->save();
@@ -65,7 +65,7 @@ it('skips keys outside the window, revoked keys and keys that never expire', fun
 });
 
 it('names the key by its public prefix and never includes the secret', function (): void {
-    $owner = User::factory()->create(['is_instance_admin' => true, 'locale' => 'en']);
+    $owner = User::factory()->instanceAdmin()->create(['locale' => 'en']);
     $issuedApiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour());
 
     $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
@@ -82,7 +82,7 @@ it('names the key by its public prefix and never includes the secret', function 
 });
 
 it('writes the warning in the recipient\'s language', function (string $locale): void {
-    $owner = User::factory()->create(['is_instance_admin' => true, 'locale' => $locale]);
+    $owner = User::factory()->instanceAdmin()->create(['locale' => $locale]);
     $issuedApiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour());
 
     $mail = (new ApiKeyExpiringNotification($issuedApiKey->apiKey))->toMail($owner);

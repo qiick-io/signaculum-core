@@ -10,6 +10,8 @@ use App\Http\Controllers\Admin\ApplicationSecretController;
 use App\Http\Controllers\Admin\InstanceAdminController;
 use App\Http\Controllers\Admin\UserActivationController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\UserGroupController;
+use App\Http\Controllers\Admin\UserGroupTrashController;
 use App\Http\Controllers\Admin\UserImpersonationController;
 use App\Http\Controllers\Admin\UserLockoutController;
 use App\Http\Controllers\Admin\UserTwoFactorController;
@@ -35,6 +37,14 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::delete('applications/{application}', [ApplicationController::class, 'destroy'])->name('applications.destroy');
 
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+
+    Route::get('groups', [UserGroupController::class, 'index'])->name('groups.index');
+    Route::post('groups', [UserGroupController::class, 'store'])->name('groups.store');
+    Route::put('groups/{group}', [UserGroupController::class, 'update'])->name('groups.update');
+    Route::delete('groups/{group}', [UserGroupController::class, 'destroy'])->name('groups.destroy');
+    Route::post('groups/{group}/restore', [UserGroupTrashController::class, 'restore'])->name('groups.restore')->withTrashed();
+    Route::delete('groups/{group}/force', [UserGroupTrashController::class, 'forceDestroy'])->name('groups.force-destroy')->withTrashed();
+    Route::post('groups/bulk', [UserGroupTrashController::class, 'bulk'])->name('groups.bulk');
 
     Route::get('api-keys', [ApiKeyController::class, 'index'])->name('api-keys.index');
     Route::post('api-keys', [ApiKeyController::class, 'store'])->name('api-keys.store');

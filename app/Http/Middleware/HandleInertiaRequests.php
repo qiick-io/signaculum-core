@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Enums\PermissionEnum;
 use App\Models\Activity;
 use App\Models\Client;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\ImpersonationService;
 use App\Services\OrganizationBrandingService;
 use App\Services\SettingsRepositoryService;
@@ -58,15 +60,24 @@ class HandleInertiaRequests extends Middleware
             'instanceSettings' => ['reportBugUrl' => $settings->reportBugUrl()],
             // Instance theme, with organisation logo/colour overrides when an org context is known.
             'projectAppearance' => fn (): array => app(OrganizationBrandingService::class)->effectiveAppearance($request),
-            'auth' => [
-                'user' => $request->user(),
-                // Only hides UI: the server still checks every request (policies).
-                'canManageSettings' => (bool) $request->user()?->can('update', Setting::class),
-                'canManageUsers' => (bool) $request->user()?->can('viewAny', User::class),
-                'canManageApplications' => (bool) $request->user()?->can('viewAny', Client::class),
-                'canShowActivityLogs' => (bool) $request->user()?->can('viewAny', Activity::class),
-                'impersonation' => app(ImpersonationService::class)->sharedState($request),
-            ],
+            'auth' => (function () use ($request): array {
+                $user = $request->user();
+                $permissionResolver = app(EffectivePermissionResolverService::class);
+
+                return [
+                    'user' => $user,
+                    'permissions' => $user ? $permissionResolver->permissionsFor($user) : [],
+                    'roleNames' => $user ? $permissionResolver->roleNamesFor($user) : [],
+                    'isSuperAdmin' => $user ? $permissionResolver->isSuperAdmin($user) : false,
+                    // Derived booleans keep existing nav props working; prefer useCan() in new UI.
+                    'canManageSettings' => (bool) $user?->can('update', Setting::class),
+                    'canManageUsers' => (bool) $user?->can('viewAny', User::class),
+                    'canManageApplications' => (bool) $user?->can('viewAny', Client::class),
+                    'canShowActivityLogs' => (bool) $user?->can('viewAny', Activity::class),
+                    'canManageGroups' => $user ? $permissionResolver->hasPermission($user, PermissionEnum::CanShowGroups->value) : false,
+                    'impersonation' => app(ImpersonationService::class)->sharedState($request),
+                ];
+            })(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

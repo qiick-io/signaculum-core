@@ -140,7 +140,7 @@ it('never lets a users write key grant instance admin or reactivate an account',
 
     $created = User::query()->where('email', 'escalate@example.test')->firstOrFail();
 
-    expect($created->is_instance_admin)->toBeFalse();
+    expect($created->isSuperAdmin())->toBeFalse();
 
     $deactivated = User::factory()->create(['is_active' => false, 'email' => 'dormant@example.test']);
 
@@ -158,7 +158,7 @@ it('never lets a users write key grant instance admin or reactivate an account',
     $stillDormant = $deactivated->fresh();
 
     expect($stillDormant?->is_active)->toBeFalse()
-        ->and($stillDormant?->is_instance_admin)->toBeFalse();
+        ->and($stillDormant?->isSuperAdmin())->toBeFalse();
 });
 
 it('answers 404 for a user id that does not exist', function (): void {
@@ -221,7 +221,7 @@ it('refuses to deactivate the last instance admin', function (): void {
     ['plain' => $plain, 'admin' => $admin] = adminApiKey([ApiKeyScopeEnum::UsersWrite->value]);
 
     // The key's own owner is the only instance admin on this instance.
-    expect(User::query()->where('is_instance_admin', true)->count())->toBe(1);
+    expect(User::role('super-admin')->count())->toBe(1);
 
     $this->withToken($plain)
         ->postJson('/api/v1/users/'.$admin->getKey().'/deactivate')
@@ -294,7 +294,7 @@ it('searches sorts and clamps the users list', function (): void {
         ->assertJsonPath('meta.per_page', 2)
         ->assertJsonCount(2, 'data');
 
-    expect($admin->is_instance_admin)->toBeTrue();
+    expect($admin->isSuperAdmin())->toBeTrue();
 });
 
 it('never exposes a password hash or a two factor secret in a user payload', function (): void {

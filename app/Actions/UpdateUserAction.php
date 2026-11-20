@@ -34,6 +34,8 @@ final class UpdateUserAction
         string $email,
         ?string $password,
         ?string $timezone = null,
+        ?string $username = null,
+        bool $hasUsername = false,
     ): User {
         if ($user->isLdapSourced() && $password !== null) {
             throw ValidationException::withMessages([
@@ -46,6 +48,10 @@ final class UpdateUserAction
             'last_name' => $lastName,
             'email' => $email,
         ]);
+
+        if ($hasUsername) {
+            $user->username = $username;
+        }
 
         if ($timezone !== null) {
             $user->timezone = $timezone;

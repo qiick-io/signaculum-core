@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import {
     AppWindow,
     BookOpen,
@@ -9,6 +9,7 @@ import {
     ScrollText,
     Settings,
     Users,
+    UsersRound,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLogo from '@/components/app-logo';
@@ -25,27 +26,25 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { PermissionEnum } from '@/enums/permission-enum';
+import { useCan } from '@/hooks/use-can';
 import { dashboard } from '@/routes';
 import { index as adminActivityLogsIndex } from '@/routes/admin/activity-logs';
 import { index as adminApiKeysIndex } from '@/routes/admin/api-keys';
 import { index as adminApplicationsIndex } from '@/routes/admin/applications';
 import { index as adminUsersIndex } from '@/routes/admin/users';
+import { index as adminGroupsIndex } from '@/routes/admin/groups';
 import { index as organizationsIndex } from '@/routes/organizations';
 import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
 
 /**
  * Primary application sidebar (app-ui `shell.md`): logo, the Platform group, an
- * Admin group for instance admins, then the footer links and the user menu.
+ * Admin group gated by effective permissions, then the footer links and the user menu.
  */
 export function AppSidebar() {
     const { t } = useTranslation();
-    const {
-        canManageUsers,
-        canManageApplications,
-        canShowActivityLogs,
-        canManageSettings,
-    } = usePage().props.auth;
+    const { can } = useCan();
 
     const platformNavItems: MainNavItem[] = [
         {
@@ -68,7 +67,7 @@ export function AppSidebar() {
     ];
 
     const adminNavItems: MainNavItem[] = [
-        ...(canManageUsers
+        ...(can(PermissionEnum.CanShowUsers)
             ? [
                   {
                       title: t('nav.users'),
@@ -78,7 +77,17 @@ export function AppSidebar() {
                   } satisfies MainNavItem,
               ]
             : []),
-        ...(canManageApplications
+        ...(can(PermissionEnum.CanShowGroups)
+            ? [
+                  {
+                      title: t('nav.groups'),
+                      href: adminGroupsIndex(),
+                      icon: UsersRound,
+                      activePrefix: '/admin/groups',
+                  } satisfies MainNavItem,
+              ]
+            : []),
+        ...(can(PermissionEnum.CanShowApplications)
             ? [
                   {
                       title: t('nav.applications'),
@@ -88,7 +97,7 @@ export function AppSidebar() {
                   } satisfies MainNavItem,
               ]
             : []),
-        ...(canShowActivityLogs
+        ...(can(PermissionEnum.CanShowActivityLogs)
             ? [
                   {
                       title: t('nav.activityLog'),
@@ -98,7 +107,7 @@ export function AppSidebar() {
                   } satisfies MainNavItem,
               ]
             : []),
-        ...(canManageSettings
+        ...(can(PermissionEnum.CanShowApiKeys)
             ? [
                   {
                       title: t('nav.apiKeys'),

@@ -7,6 +7,7 @@ use App\Data\ApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Http\Middleware\VerifyCsrfTokenMiddleware;
 use App\Models\User;
+use App\Services\Authorization\EffectivePermissionResolverService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
@@ -88,15 +89,20 @@ it('refuses a key whose stored scopes no longer parse', function (string $stored
     'a map' => '{"users": "read"}',
 ]);
 
-it('refuses a key whose owner was deactivated or is no longer an instance admin', function (array $ownerChange): void {
+it('refuses a key whose owner was deactivated', function (): void {
     ['plain' => $plain, 'admin' => $admin] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
-    $admin->forceFill($ownerChange)->save();
+    $admin->forceFill(['is_active' => false])->save();
 
     assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key owner may not use the API.');
-})->with([
-    'deactivated' => [['is_active' => false]],
-    'demoted' => [['is_instance_admin' => false]],
-]);
+});
+
+it('refuses a key whose owner no longer has api-key permission', function (): void {
+    ['plain' => $plain, 'admin' => $admin] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    $admin->syncRoles([]);
+    app(EffectivePermissionResolverService::class)->forget($admin);
+
+    assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key owner may not use the API.');
+});
 
 it('refuses a request from outside the ip allowlist', function (): void {
     ['plain' => $plain] = adminApiKey(apiKeyData: new ApiKeyData('Office only', [ApiKeyScopeEnum::UsersRead->value], ipAllowlist: ['10.0.0.0/8']));

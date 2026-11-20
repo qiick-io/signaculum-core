@@ -9,6 +9,7 @@ use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\UserGroup;
 use App\Models\Webhook;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -83,7 +84,8 @@ final class ActivityLogResource extends JsonResource
             User::class,
             Client::class,
             ApiKey::class,
-            Organization::class => trim((string) $subject->name),
+            Organization::class,
+            UserGroup::class => trim((string) $subject->name),
             // url is the admin-facing identity; secret must never appear in the label.
             Webhook::class => trim((string) $subject->url),
             default => throw new LogicException(

@@ -259,7 +259,7 @@ Signaculum is the optional, open-source (MIT), self-hosted **OpenID Connect iden
 - `app/Oidc`: league/Passport extension points — `OidcAuthCodeGrant` (PKCE S256 and nonce), `OidcAuthCodeRepository` (stores `nonce` / `auth_time` with the code), `IdTokenResponse` (adds `id_token`). Wired in `AppServiceProvider::configureOpenIdConnect()`. Documented in `tests/Arch/naming-architecture.php`.
 - `app/Services`: discovery, JWKS / signing keys, claims shared by id_token and userinfo, pending authorization.
 - `routes/oidc.php`: discovery, JWKS, userinfo. Passport registers `/oauth/authorize` and `/oauth/token`.
-- Instance administration (settings UI): `users.is_instance_admin`, `signaculum:make-admin`, and `SettingPolicy` gate the instance settings surfaces (general, localization, authentication, appearance). Ordinary end users use the account area only.
+- Instance administration (settings UI): Spatie roles (`super-admin` / `admin`) via `PermissionEnum`, `signaculum:sync-permissions`, `signaculum:make-admin`, and policies gated on effective permissions. Ordinary end users use the account area only. Organisation roles stay JSON on memberships (`teams => false`).
 
 ## Quality gate
 

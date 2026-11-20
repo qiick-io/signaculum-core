@@ -52,6 +52,7 @@ final class UserController extends Controller
             $request->filled('last_name') ? $request->string('last_name')->toString() : null,
             $request->string('email')->toString(),
             $request->string('password')->toString(),
+            $request->filled('username') ? $request->string('username')->toString() : null,
         );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User created.')]);
@@ -70,6 +71,8 @@ final class UserController extends Controller
             $request->filled('last_name') ? $request->string('last_name')->toString() : null,
             $request->string('email')->toString(),
             $request->filled('password') ? $request->string('password')->toString() : null,
+            username: $request->input('username'),
+            hasUsername: $request->exists('username'),
         );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User updated.')]);

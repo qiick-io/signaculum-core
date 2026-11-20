@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Concerns\ValidatesUsernameTrait;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -16,9 +17,19 @@ use Illuminate\Validation\Rules\Password;
  */
 final class StoreUserRequest extends FormRequest
 {
+    use ValidatesUsernameTrait;
+
     public function authorize(): bool
     {
         return Gate::allows('create', User::class);
+    }
+
+    /**
+     * Canonicalize username before the unique rule runs (SQLite unique is case-sensitive).
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge($this->withCanonicalUsername($this->all()));
     }
 
     /**
@@ -30,6 +41,7 @@ final class StoreUserRequest extends FormRequest
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)],
+            'username' => $this->usernameRules(),
             'password' => ['required', 'string', Password::default()],
         ];
     }

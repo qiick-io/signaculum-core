@@ -21,7 +21,7 @@ final class InstanceAdminController extends Controller
         User $user,
         SetInstanceAdminAction $setInstanceAdminAction,
     ): RedirectResponse {
-        $setInstanceAdminAction->execute($user, $request->shouldBeInstanceAdmin());
+        $setInstanceAdminAction->execute($user, $request->shouldBeInstanceAdmin(), $request->user());
 
         Inertia::flash('toast', [
             'type' => 'success',

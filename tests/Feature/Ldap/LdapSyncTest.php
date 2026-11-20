@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\TestLdapConnectionAction;
 use App\Enums\ActivityEventEnum;
 use App\Enums\LdapEncryptionEnum;
+use App\Enums\RoleEnum;
 use App\Jobs\SyncLdapUsersJob;
 use App\Ldap\DirectoryUser;
 use App\Models\User;
@@ -480,12 +481,13 @@ test('the last instance admin is kept active when they leave the directory', fun
     enableLdapSettings();
     $logger = Log::spy();
 
+    syncPermissions();
     $admin = User::factory()->create([
         'email' => 'admin@example.com',
         'ldap_guid' => Str::lower((string) Str::uuid()),
         'is_active' => true,
-        'is_instance_admin' => true,
     ]);
+    $admin->assignRole(RoleEnum::SuperAdmin->value);
 
     $result = app(LdapUserSyncService::class)->sync();
 
@@ -494,6 +496,94 @@ test('the last instance admin is kept active when they leave the directory', fun
 
     $logger->shouldHaveReceived('warning')
         ->withArgs(fn (string $message, array $context): bool => $message === 'LDAP sync could not deactivate user'
+            && $context['user_subject'] === $admin->subject);
+});
+
+test('ldap sync skips invalid and conflicting usernames', function () {
+    enableLdapSettings();
+    $logger = Log::spy();
+
+    User::factory()->create([
+        'email' => 'taken-user@example.com',
+        'username' => 'takenname',
+    ]);
+
+    $invalidGuid = (string) Str::uuid();
+    $conflictGuid = (string) Str::uuid();
+
+    DirectoryUser::create([
+        'cn' => 'Invalid Name',
+        'givenname' => 'Invalid',
+        'sn' => 'Name',
+        'mail' => 'invalid-username@example.com',
+        'uid' => 'ab',
+        'objectguid' => $invalidGuid,
+    ]);
+
+    DirectoryUser::create([
+        'cn' => 'Conflict Name',
+        'givenname' => 'Conflict',
+        'sn' => 'Name',
+        'mail' => 'conflict-username@example.com',
+        'uid' => 'takenname',
+        'objectguid' => $conflictGuid,
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($result->created)->toBe(2);
+
+    $invalidUser = User::query()->where('email', 'invalid-username@example.com')->first();
+    $conflictUser = User::query()->where('email', 'conflict-username@example.com')->first();
+
+    expect($invalidUser?->username)->toBeNull()
+        ->and($conflictUser?->username)->toBeNull();
+
+    $logger->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => $message === 'LDAP sync skipped username: invalid shape');
+    $logger->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => $message === 'LDAP sync skipped username: already taken');
+});
+
+test('ldap sync continues when ACCOUNTDISABLE cannot deactivate the last super-admin', function () {
+    enableLdapSettings();
+    $logger = Log::spy();
+    syncPermissions();
+
+    $guid = (string) Str::uuid();
+    $admin = User::factory()->create([
+        'email' => 'ldap-last-sa@example.com',
+        'ldap_guid' => Str::lower($guid),
+        'is_active' => true,
+    ]);
+    $admin->assignRole(RoleEnum::SuperAdmin->value);
+
+    DirectoryUser::create([
+        'cn' => 'Last SA',
+        'givenname' => 'Last',
+        'sn' => 'SA',
+        'mail' => 'ldap-last-sa@example.com',
+        'objectguid' => $guid,
+        'userAccountControl' => '2',
+    ]);
+
+    $otherGuid = (string) Str::uuid();
+    DirectoryUser::create([
+        'cn' => 'Other Person',
+        'givenname' => 'Other',
+        'sn' => 'Person',
+        'mail' => 'other-ldap@example.com',
+        'objectguid' => $otherGuid,
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($admin->refresh()->is_active)->toBeTrue()
+        ->and($result->created)->toBe(1)
+        ->and(User::query()->where('email', 'other-ldap@example.com')->exists())->toBeTrue();
+
+    $logger->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => $message === 'LDAP sync could not deactivate disabled directory user'
             && $context['user_subject'] === $admin->subject);
 });
 

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\RoleEnum;
 use App\Models\SigningKey;
 use App\Models\User;
+use App\Services\InitialSuperAdminPasswordService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -13,7 +15,6 @@ use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Str;
 use Laravel\Passport\Passport;
 
 use function Laravel\Prompts\confirm;
@@ -88,11 +89,14 @@ final class InstallCommand extends Command
         $this->components->info('Wrote .env');
 
         if ($connection === 'sqlite') {
-            $sqlitePath = database_path('database.sqlite');
+            $sqlitePath = $this->sqliteDatabasePath();
 
             if (! File::exists($sqlitePath)) {
                 File::put($sqlitePath, '');
             }
+
+            $env = File::get($envPath);
+            File::put($envPath, $this->setEnv($env, 'DB_DATABASE', $sqlitePath));
         }
 
         $this->ensureApplicationKey($envPath, $preservedAppKey);
@@ -125,6 +129,12 @@ final class InstallCommand extends Command
         }
 
         $this->useInstallConnection($connection);
+        $permissions = $this->call('signaculum:sync-permissions');
+
+        if ($permissions !== self::SUCCESS) {
+            return $permissions;
+        }
+
         $administrator = $this->createFirstAdministrator();
 
         if ($administrator !== self::SUCCESS) {
@@ -259,7 +269,8 @@ final class InstallCommand extends Command
 
     /**
      * Point the already-booted process at the database this install just selected.
-     * Tests boot on `:memory:`; the installer writes `database/database.sqlite`.
+     * Tests boot on `:memory:`; the installer writes a SQLite file (override with
+     * SIGNACULUM_INSTALL_SQLITE so parallel suites do not share one path).
      */
     private function useInstallConnection(string $connection): void
     {
@@ -267,7 +278,7 @@ final class InstallCommand extends Command
 
         if ($connection === 'sqlite') {
             config([
-                'database.connections.sqlite.database' => database_path('database.sqlite'),
+                'database.connections.sqlite.database' => $this->sqliteDatabasePath(),
             ]);
         }
 
@@ -275,7 +286,7 @@ final class InstallCommand extends Command
     }
 
     /**
-     * Creates the first sign-in account as an instance admin (`is_instance_admin`).
+     * Creates the first sign-in account as a super-admin via `signaculum:create-user`.
      */
     private function createFirstAdministrator(): int
     {
@@ -286,42 +297,58 @@ final class InstallCommand extends Command
         }
 
         $email = $this->isNonInteractive()
-            ? $this->environmentValue('SIGNACULUM_ADMIN_EMAIL', 'admin@example.com')
-            : text('Administrator email', default: 'admin@example.com', required: true);
+            ? $this->environmentValue('INITIAL_SUPER_ADMIN_EMAIL', $this->environmentValue('SIGNACULUM_ADMIN_EMAIL', 'superadmin@example.com'))
+            : text('Administrator email', default: (string) config('super_admin.email', 'superadmin@example.com'), required: true);
         $firstName = $this->isNonInteractive()
-            ? $this->environmentValue('SIGNACULUM_ADMIN_FIRST_NAME', $this->environmentValue('SIGNACULUM_ADMIN_NAME', 'Administrator'))
-            : text('Administrator first name', default: 'Administrator', required: true);
+            ? $this->environmentValue('INITIAL_SUPER_ADMIN_FIRST_NAME', $this->environmentValue('SIGNACULUM_ADMIN_FIRST_NAME', $this->environmentValue('SIGNACULUM_ADMIN_NAME', 'Super')))
+            : text('Administrator first name', default: (string) config('super_admin.first_name', 'Super'), required: true);
         $lastName = $this->isNonInteractive()
-            ? $this->environmentValue('SIGNACULUM_ADMIN_LAST_NAME', '')
-            : text('Administrator last name', default: '');
-        $passwordFromEnvironment = $this->environmentValue('SIGNACULUM_ADMIN_PASSWORD', '');
-        $shouldPrintPassword = false;
+            ? $this->environmentValue('INITIAL_SUPER_ADMIN_LAST_NAME', $this->environmentValue('SIGNACULUM_ADMIN_LAST_NAME', 'Admin'))
+            : text('Administrator last name', default: (string) config('super_admin.last_name', 'Admin'));
+        $passwordFromEnvironment = $this->environmentValue(
+            'INITIAL_SUPER_ADMIN_PASSWORD',
+            $this->environmentValue('SIGNACULUM_ADMIN_PASSWORD', ''),
+        );
 
         if ($passwordFromEnvironment !== '') {
             $password = $passwordFromEnvironment;
         } elseif ($this->isNonInteractive()) {
-            $password = Str::password(24);
-            $shouldPrintPassword = true;
+            // Fail closed: never invent a password under --no-interaction (decision 2026-11-19).
+            $this->components->error('INITIAL_SUPER_ADMIN_PASSWORD is required for a non-interactive install.');
+
+            return self::FAILURE;
         } else {
             $password = password('Administrator password', required: true);
         }
 
-        $administrator = (new User)->forceFill([
-            'first_name' => $firstName,
-            'last_name' => $lastName !== '' ? $lastName : null,
-            'email' => $email,
-            'password' => $password,
-            'is_active' => true,
-            'is_instance_admin' => true,
-            'email_verified_at' => now(),
+        $passwordReasons = app(InitialSuperAdminPasswordService::class)
+            ->rejectionReasons(
+                $password,
+                $this->environmentValue('SIGNACULUM_INSTALL_APP_ENV', $this->appEnvironmentFromDotEnv()),
+            );
+
+        if ($passwordReasons !== []) {
+            foreach ($passwordReasons as $reason) {
+                $this->components->error($reason);
+            }
+
+            return self::FAILURE;
+        }
+
+        $exitCode = $this->call('signaculum:create-user', [
+            '--first-name' => $firstName,
+            '--last-name' => $lastName !== '' ? $lastName : null,
+            '--email' => $email,
+            '--password' => $password,
+            '--role' => RoleEnum::SuperAdmin->value,
+            '--no-interaction' => true,
         ]);
-        $administrator->save();
+
+        if ($exitCode !== self::SUCCESS) {
+            return $exitCode;
+        }
 
         $this->components->info("Created the first administrator [{$email}].");
-
-        if ($shouldPrintPassword) {
-            $this->components->warn('Administrator password (shown once): '.$password);
-        }
 
         return self::SUCCESS;
     }
@@ -422,6 +449,38 @@ final class InstallCommand extends Command
         }
 
         return preg_match('/^APP_ENV\s*=\s*production\s*$/mi', File::get(base_path('.env'))) === 1;
+    }
+
+    /**
+     * SQLite file used by a non-interactive install (tests may set SIGNACULUM_INSTALL_SQLITE).
+     */
+    private function sqliteDatabasePath(): string
+    {
+        $override = getenv('SIGNACULUM_INSTALL_SQLITE');
+
+        if (is_string($override) && trim($override) !== '') {
+            return trim($override);
+        }
+
+        return database_path('database.sqlite');
+    }
+
+    /**
+     * APP_ENV from the install's .env (not the PHPUnit process env).
+     */
+    private function appEnvironmentFromDotEnv(): string
+    {
+        $envPath = base_path('.env');
+
+        if (! File::exists($envPath)) {
+            return (string) app()->environment();
+        }
+
+        if (preg_match('/^APP_ENV\s*=\s*(.+)$/mi', File::get($envPath), $matches) === 1) {
+            return $this->unwrapEnvValue(trim($matches[1]));
+        }
+
+        return (string) app()->environment();
     }
 
     private function isNonInteractive(): bool

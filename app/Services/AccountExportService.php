@@ -90,7 +90,7 @@ final class AccountExportService
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
                 'locale' => $user->locale,
-                'is_instance_admin' => (bool) $user->is_instance_admin,
+                'is_instance_admin' => $user->isSuperAdmin(),
                 'created_at' => $user->created_at?->toIso8601String(),
             ],
             'organisations' => $organisations,

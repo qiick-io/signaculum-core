@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Enums\PermissionEnum;
 use App\Models\User;
+use App\Services\Authorization\EffectivePermissionResolverService;
 
 /**
- * Instance settings are edited by instance admins only. Organisation roles
- * (owner/admin/member/billing) never grant access to them.
+ * Authorizes instance settings (general, localization, security, appearance, LDAP, webhooks, email templates).
  */
-final class SettingPolicy
+class SettingPolicy
 {
+    public function __construct(
+        private readonly EffectivePermissionResolverService $permissionResolver,
+    ) {}
+
     public function update(User $user): bool
     {
-        return (bool) $user->is_instance_admin;
+        return $this->permissionResolver->hasPermission($user, PermissionEnum::CanManageSettings->value);
     }
 }

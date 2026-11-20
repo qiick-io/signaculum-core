@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Enums\PermissionEnum;
 use App\Models\User;
+use App\Services\Authorization\EffectivePermissionResolverService;
 
 /**
- * The activity log is read by instance admins only (same rule as {@see SettingPolicy}).
+ * Authorizes the instance activity log.
  */
-final class ActivityPolicy
+class ActivityPolicy
 {
+    public function __construct(
+        private readonly EffectivePermissionResolverService $permissionResolver,
+    ) {}
+
     public function viewAny(User $user): bool
     {
-        return (bool) $user->is_instance_admin;
+        return $this->permissionResolver->hasPermission($user, PermissionEnum::CanShowActivityLogs->value);
     }
 }
