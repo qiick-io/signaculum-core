@@ -48,3 +48,6 @@ yarn-error.log
 /opencode.jsonc
 build/
 /build
+
+# graphify knowledge graph (local)
+graphify-out/

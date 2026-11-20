@@ -31,12 +31,13 @@ return new class extends Migration
             $table->json('scopes');
             $table->json('ip_allowlist')->nullable();
             $table->unsignedInteger('rate_limit_per_minute')->nullable();
-            $table->timestamp('expires_at')->nullable();
+            // Future-dated columns are dateTime (never MySQL TIMESTAMP — 2038).
+            $table->dateTime('expires_at')->nullable();
             $table->timestamp('last_used_at')->nullable();
             $table->string('last_used_ip', 45)->nullable();
             $table->timestamp('revoked_at')->nullable()->index();
             $table->string('previous_key_hash', 64)->nullable();
-            $table->timestamp('previous_key_valid_until')->nullable();
+            $table->dateTime('previous_key_valid_until')->nullable();
             $table->timestamps();
         });
     }

@@ -311,7 +311,7 @@ it('falls back to Ciclamino for a stored slug that is no longer offered', functi
     Setting::query()->updateOrCreate(
         [
             'scope' => SettingsRepositoryService::SCOPE_INSTANCE,
-            'scope_id' => null,
+            'scope_id' => '',
             'group' => SettingsRepositoryService::GROUP_APP,
             'key' => 'theme_preset',
         ],
