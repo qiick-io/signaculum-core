@@ -499,6 +499,48 @@ test('the last instance admin is kept active when they leave the directory', fun
             && $context['user_subject'] === $admin->subject);
 });
 
+test('ldap sync continues when ACCOUNTDISABLE cannot deactivate the last super-admin', function () {
+    enableLdapSettings();
+    $logger = Log::spy();
+    syncPermissions();
+
+    $guid = (string) Str::uuid();
+    $admin = User::factory()->create([
+        'email' => 'ldap-last-sa@example.com',
+        'ldap_guid' => Str::lower($guid),
+        'is_active' => true,
+    ]);
+    $admin->assignRole(RoleEnum::SuperAdmin->value);
+
+    DirectoryUser::create([
+        'cn' => 'Last SA',
+        'givenname' => 'Last',
+        'sn' => 'SA',
+        'mail' => 'ldap-last-sa@example.com',
+        'objectguid' => $guid,
+        'userAccountControl' => '2',
+    ]);
+
+    $otherGuid = (string) Str::uuid();
+    DirectoryUser::create([
+        'cn' => 'Other Person',
+        'givenname' => 'Other',
+        'sn' => 'Person',
+        'mail' => 'other-ldap@example.com',
+        'objectguid' => $otherGuid,
+    ]);
+
+    $result = app(LdapUserSyncService::class)->sync();
+
+    expect($admin->refresh()->is_active)->toBeTrue()
+        ->and($result->created)->toBe(1)
+        ->and(User::query()->where('email', 'other-ldap@example.com')->exists())->toBeTrue();
+
+    $logger->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => $message === 'LDAP sync could not deactivate disabled directory user'
+            && $context['user_subject'] === $admin->subject);
+});
+
 /**
  * Record the LDAP filter the sync sends, with a connection that returns no entries.
  */

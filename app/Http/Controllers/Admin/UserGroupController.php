@@ -130,32 +130,39 @@ class UserGroupController extends Controller
     public function update(UpdateUserGroupRequest $request, UserGroup $group): RedirectResponse
     {
         $validated = $request->validated();
-
-        $group->fill([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
-        ])->save();
-
         $guard = app(SuperAdminGuardService::class);
-        $hadSuperAdminRole = $guard->hasSuperAdminGroup([$group->id]);
 
-        // Only sync when the key is present (empty array = intentional clear).
-        if (array_key_exists('user_ids', $validated)) {
-            $group->users()->sync(array_values(array_map('intval', $validated['user_ids'] ?? [])));
+        $nextUserIds = array_key_exists('user_ids', $validated)
+            ? array_values(array_map('intval', $validated['user_ids'] ?? []))
+            : null;
+        $nextRoleIds = array_key_exists('role_ids', $validated)
+            ? array_values(array_map('intval', $validated['role_ids'] ?? []))
+            : null;
+
+        if ($guard->wouldLeaveNoActiveSuperAdminAfterGroupUpdate($group, $nextUserIds, $nextRoleIds)) {
+            $errorKey = $nextRoleIds !== null && ! $guard->hasSuperAdminRole($nextRoleIds)
+                ? 'role_ids'
+                : 'user_ids';
+
+            throw ValidationException::withMessages([
+                $errorKey => __('Cannot remove the last super-admin path from a group.'),
+            ]);
         }
 
-        if (array_key_exists('role_ids', $validated)) {
-            $nextRoleIds = array_values(array_map('intval', $validated['role_ids'] ?? []));
+        $group->getConnection()->transaction(function () use ($group, $validated, $nextUserIds, $nextRoleIds): void {
+            $group->fill([
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
+            ])->save();
 
-            if ($hadSuperAdminRole && ! $guard->hasSuperAdminRole($nextRoleIds)
-                && $guard->wouldRemoveLastActiveSuperAdminViaGroups([$group->id])) {
-                throw ValidationException::withMessages([
-                    'role_ids' => __('Cannot strip the last super-admin path from a group.'),
-                ]);
+            if ($nextUserIds !== null) {
+                $group->users()->sync($nextUserIds);
             }
 
-            $group->roles()->sync($nextRoleIds);
-        }
+            if ($nextRoleIds !== null) {
+                $group->roles()->sync($nextRoleIds);
+            }
+        });
 
         app(EffectivePermissionResolverService::class)->forget();
 

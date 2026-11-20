@@ -72,6 +72,47 @@ class SuperAdminGuardService
     }
 
     /**
+     * Whether applying the next membership and roles on `$group` would leave zero active super-admins.
+     *
+     * @param  list<int>|null  $nextUserIds  null keeps the current members
+     * @param  list<int>|null  $nextRoleIds  null keeps the current roles
+     */
+    public function wouldLeaveNoActiveSuperAdminAfterGroupUpdate(
+        UserGroup $group,
+        ?array $nextUserIds,
+        ?array $nextRoleIds,
+    ): bool {
+        if ($this->countActiveSuperAdmins() === 0) {
+            return false;
+        }
+
+        $resolvedUserIds = $nextUserIds ?? $group->users()->pluck('users.id')->map(fn ($id): int => (int) $id)->all();
+        $resolvedRoleIds = $nextRoleIds ?? $group->roles()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all();
+        $groupKeepsSuperAdmin = $this->hasSuperAdminRole($resolvedRoleIds);
+        $isSuperAdminRole = fn (Builder $roleQuery) => $roleQuery->where('name', RoleEnum::SuperAdmin->value);
+
+        $remaining = User::query()
+            ->where('is_active', true)
+            ->where(function (Builder $userQuery) use ($group, $resolvedUserIds, $groupKeepsSuperAdmin, $isSuperAdminRole): void {
+                $userQuery
+                    ->whereHas('roles', $isSuperAdminRole)
+                    ->orWhereHas(
+                        'groups',
+                        fn (Builder $groupQuery) => $groupQuery
+                            ->whereKeyNot($group->id)
+                            ->whereHas('roles', $isSuperAdminRole),
+                    );
+
+                if ($groupKeepsSuperAdmin && $resolvedUserIds !== []) {
+                    $userQuery->orWhereIn('id', $resolvedUserIds);
+                }
+            })
+            ->count();
+
+        return $remaining === 0;
+    }
+
+    /**
      * Whether removing these groups (or stripping their roles) would leave zero active super-admins.
      *
      * @param  array<int, mixed>  $groupIds

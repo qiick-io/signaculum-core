@@ -89,11 +89,14 @@ final class InstallCommand extends Command
         $this->components->info('Wrote .env');
 
         if ($connection === 'sqlite') {
-            $sqlitePath = database_path('database.sqlite');
+            $sqlitePath = $this->sqliteDatabasePath();
 
             if (! File::exists($sqlitePath)) {
                 File::put($sqlitePath, '');
             }
+
+            $env = File::get($envPath);
+            File::put($envPath, $this->setEnv($env, 'DB_DATABASE', $sqlitePath));
         }
 
         $this->ensureApplicationKey($envPath, $preservedAppKey);
@@ -266,7 +269,8 @@ final class InstallCommand extends Command
 
     /**
      * Point the already-booted process at the database this install just selected.
-     * Tests boot on `:memory:`; the installer writes `database/database.sqlite`.
+     * Tests boot on `:memory:`; the installer writes a SQLite file (override with
+     * SIGNACULUM_INSTALL_SQLITE so parallel suites do not share one path).
      */
     private function useInstallConnection(string $connection): void
     {
@@ -274,7 +278,7 @@ final class InstallCommand extends Command
 
         if ($connection === 'sqlite') {
             config([
-                'database.connections.sqlite.database' => database_path('database.sqlite'),
+                'database.connections.sqlite.database' => $this->sqliteDatabasePath(),
             ]);
         }
 
@@ -318,7 +322,10 @@ final class InstallCommand extends Command
         }
 
         $passwordReasons = app(InitialSuperAdminPasswordService::class)
-            ->rejectionReasons($password);
+            ->rejectionReasons(
+                $password,
+                $this->environmentValue('SIGNACULUM_INSTALL_APP_ENV', $this->appEnvironmentFromDotEnv()),
+            );
 
         if ($passwordReasons !== []) {
             foreach ($passwordReasons as $reason) {
@@ -442,6 +449,38 @@ final class InstallCommand extends Command
         }
 
         return preg_match('/^APP_ENV\s*=\s*production\s*$/mi', File::get(base_path('.env'))) === 1;
+    }
+
+    /**
+     * SQLite file used by a non-interactive install (tests may set SIGNACULUM_INSTALL_SQLITE).
+     */
+    private function sqliteDatabasePath(): string
+    {
+        $override = getenv('SIGNACULUM_INSTALL_SQLITE');
+
+        if (is_string($override) && trim($override) !== '') {
+            return trim($override);
+        }
+
+        return database_path('database.sqlite');
+    }
+
+    /**
+     * APP_ENV from the install's .env (not the PHPUnit process env).
+     */
+    private function appEnvironmentFromDotEnv(): string
+    {
+        $envPath = base_path('.env');
+
+        if (! File::exists($envPath)) {
+            return (string) app()->environment();
+        }
+
+        if (preg_match('/^APP_ENV\s*=\s*(.+)$/mi', File::get($envPath), $matches) === 1) {
+            return $this->unwrapEnvValue(trim($matches[1]));
+        }
+
+        return (string) app()->environment();
     }
 
     private function isNonInteractive(): bool

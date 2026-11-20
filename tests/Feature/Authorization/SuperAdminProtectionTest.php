@@ -11,6 +11,7 @@ use App\Models\ApiKey;
 use App\Models\User;
 use App\Models\UserGroup;
 use App\Services\Authorization\EffectivePermissionResolverService;
+use App\Services\Authorization\SuperAdminGuardService;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -126,14 +127,17 @@ it('refuses impersonating a target whose permissions are not a subset of the act
         ->assertForbidden();
 });
 
-it('blocks admin writes while impersonating', function (): void {
+it('blocks admin writes while impersonating a target who can edit users but holds no built-in role', function (): void {
     $admin = permissionAdmin();
     $target = User::factory()->create();
-    $other = User::factory()->create(['email' => 'other@example.com']);
+    $target->givePermissionTo(PermissionEnum::CanEditUsers->value);
+    $other = User::factory()->create(['email' => 'other@example.com', 'first_name' => 'Untouched']);
 
     $this->actingAs($admin)
         ->post(route('admin.users.impersonation.store', $target))
         ->assertRedirect(route('dashboard'));
+
+    $this->assertAuthenticatedAs($target);
 
     $this->put(route('admin.users.update', $other), [
         'first_name' => 'Changed',
@@ -142,7 +146,106 @@ it('blocks admin writes while impersonating', function (): void {
         'password' => '',
     ])->assertForbidden();
 
-    expect($other->fresh()->first_name)->not->toBe('Changed');
+    expect($other->fresh()->first_name)->toBe('Untouched');
+});
+
+it('refuses impersonating an admin-role target', function (): void {
+    $actor = permissionAdmin();
+    $target = permissionAdmin();
+
+    $this->actingAs($actor)
+        ->post(route('admin.users.impersonation.store', $target))
+        ->assertForbidden();
+});
+
+it('refuses deactivating the last active super-admin when the only other is deactivated', function (): void {
+    $active = User::factory()->instanceAdmin()->create(['email' => 'active-sa@example.com']);
+    $inactive = User::factory()->instanceAdmin()->create([
+        'email' => 'inactive-sa@example.com',
+        'is_active' => false,
+    ]);
+
+    $this->actingAs($active)
+        ->put(route('admin.users.activation.update', $active), ['is_active' => false])
+        ->assertSessionHasErrors('user');
+
+    expect($active->fresh()->is_active)->toBeTrue()
+        ->and($inactive->fresh()->is_active)->toBeFalse();
+});
+
+it('refuses deleting the last active super-admin when the only other is deactivated', function (): void {
+    $active = User::factory()->instanceAdmin()->create([
+        'email' => 'delete-sa@example.com',
+        'password' => 'password',
+    ]);
+    User::factory()->instanceAdmin()->create([
+        'email' => 'other-inactive-sa@example.com',
+        'is_active' => false,
+    ]);
+
+    $this->actingAs($active)
+        ->from(route('profile.edit'))
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertSessionHasErrors('password');
+
+    expect($active->fresh())->not->toBeNull()
+        ->and($active->fresh()->is_active)->toBeTrue();
+});
+
+it('refuses deactivating and deleting a user who is super-admin only through a group', function (): void {
+    $groupOnly = User::factory()->create([
+        'email' => 'group-sa@example.com',
+        'password' => 'password',
+    ]);
+    $group = UserGroup::factory()->create(['name' => 'Sole owners']);
+    $group->roles()->attach(Role::findByName(RoleEnum::SuperAdmin->value)->id);
+    $group->users()->attach($groupOnly->id);
+    app(EffectivePermissionResolverService::class)->forget();
+
+    expect(app(EffectivePermissionResolverService::class)->isSuperAdmin($groupOnly))->toBeTrue()
+        ->and(app(SuperAdminGuardService::class)->countActiveSuperAdmins())->toBe(1);
+
+    $this->actingAs($groupOnly)
+        ->put(route('admin.users.activation.update', $groupOnly), ['is_active' => false])
+        ->assertSessionHasErrors('user');
+
+    expect($groupOnly->fresh()->is_active)->toBeTrue();
+
+    $this->actingAs($groupOnly)
+        ->from(route('profile.edit'))
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertSessionHasErrors('password');
+
+    expect($groupOnly->fresh())->not->toBeNull();
+});
+
+it('refuses emptying the only super-admin group members and writes nothing', function (): void {
+    $member = User::factory()->create(['email' => 'sole-group-member@example.com']);
+    $group = UserGroup::factory()->create(['name' => 'Owners', 'description' => 'keep me']);
+    $superAdminRole = Role::findByName(RoleEnum::SuperAdmin->value);
+
+    $group->roles()->attach($superAdminRole->id);
+    $group->users()->attach($member->id);
+    app(EffectivePermissionResolverService::class)->forget();
+
+    expect(app(EffectivePermissionResolverService::class)->isSuperAdmin($member))->toBeTrue()
+        ->and(app(SuperAdminGuardService::class)->countActiveSuperAdmins())->toBe(1);
+
+    // Member is super-admin via the group, so Gate::before lets them update it; emptying must still refuse.
+    $this->actingAs($member)
+        ->put(route('admin.groups.update', $group), [
+            'name' => 'Owners renamed',
+            'description' => 'changed',
+            'user_ids' => [],
+        ])
+        ->assertSessionHasErrors('user_ids');
+
+    $group->refresh();
+
+    expect($group->name)->toBe('Owners')
+        ->and($group->description)->toBe('keep me')
+        ->and($group->users()->pluck('users.id')->all())->toBe([$member->id])
+        ->and(app(EffectivePermissionResolverService::class)->isSuperAdmin($member->fresh()))->toBeTrue();
 });
 
 /**

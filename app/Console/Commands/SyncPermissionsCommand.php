@@ -120,10 +120,10 @@ final class SyncPermissionsCommand extends Command
         }
 
         $lines[] = '}';
-        $lines[] = '';
 
         $path = resource_path('js/enums/permission-enum.ts');
         File::ensureDirectoryExists(dirname($path));
+        // One trailing newline only: an extra blank line fights `vp check` every sync.
         File::put($path, implode(PHP_EOL, $lines).PHP_EOL);
 
         $this->info("Generated {$path}");

@@ -83,7 +83,7 @@ test('install refuses an existing .env without --force in non-interactive mode',
 });
 
 test('install skips creating an administrator when a user already exists', function () {
-    [$envPath, $envBackup] = beginInstallFixtures();
+    [$envPath, $envBackup, $sqlitePath] = beginInstallFixtures();
 
     try {
         $this->artisan(InstallCommand::class, [
@@ -93,7 +93,7 @@ test('install skips creating an administrator when a user already exists', funct
         ])->assertSuccessful();
 
         config([
-            'database.connections.sqlite.database' => database_path('database.sqlite'),
+            'database.connections.sqlite.database' => $sqlitePath,
         ]);
         DB::purge('sqlite');
 
@@ -107,12 +107,12 @@ test('install skips creating an administrator when a user already exists', funct
 
         expect(DB::connection('sqlite')->table('users')->count())->toBe(1);
     } finally {
-        restoreInstallEnv($envPath, $envBackup);
+        restoreInstallEnv($envPath, $envBackup, $sqlitePath);
     }
 });
 
 test('install migrates sqlite, creates keys and the first administrator', function () {
-    [$envPath, $envBackup] = beginInstallFixtures();
+    [$envPath, $envBackup, $sqlitePath] = beginInstallFixtures();
     setInstallAdminEnvironment(
         email: 'admin@example.com',
         password: 'password',
@@ -130,7 +130,7 @@ test('install migrates sqlite, creates keys and the first administrator', functi
             ->assertSuccessful();
 
         config([
-            'database.connections.sqlite.database' => database_path('database.sqlite'),
+            'database.connections.sqlite.database' => $sqlitePath,
         ]);
         DB::purge('sqlite');
 
@@ -156,12 +156,12 @@ test('install migrates sqlite, creates keys and the first administrator', functi
             ->and(File::get($envPath))->toContain('DB_CONNECTION=sqlite');
     } finally {
         clearInstallAdminEnvironment();
-        restoreInstallEnv($envPath, $envBackup);
+        restoreInstallEnv($envPath, $envBackup, $sqlitePath);
     }
 });
 
 test('install fails closed under --no-interaction when no password is provided', function () {
-    [$envPath, $envBackup] = beginInstallFixtures();
+    [$envPath, $envBackup, $sqlitePath] = beginInstallFixtures();
     setInstallAdminEnvironment(
         email: 'generated@example.com',
         password: null,
@@ -179,7 +179,35 @@ test('install fails closed under --no-interaction when no password is provided',
             ->assertFailed();
     } finally {
         clearInstallAdminEnvironment();
-        restoreInstallEnv($envPath, $envBackup);
+        restoreInstallEnv($envPath, $envBackup, $sqlitePath);
+    }
+});
+
+test('install refuses the known default password when APP_ENV is staging', function () {
+    [$envPath, $envBackup, $sqlitePath] = beginInstallFixtures();
+    setInstallAdminEnvironment(
+        email: 'staging-admin@example.com',
+        password: 'password',
+        firstName: 'Staging',
+        lastName: 'Admin',
+    );
+    putenv('SIGNACULUM_INSTALL_APP_ENV=staging');
+    $_ENV['SIGNACULUM_INSTALL_APP_ENV'] = 'staging';
+    $_SERVER['SIGNACULUM_INSTALL_APP_ENV'] = 'staging';
+
+    try {
+        $this->artisan(InstallCommand::class, [
+            '--force' => true,
+            '--no-npm' => true,
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain('must not be the known default')
+            ->assertFailed();
+    } finally {
+        putenv('SIGNACULUM_INSTALL_APP_ENV');
+        unset($_ENV['SIGNACULUM_INSTALL_APP_ENV'], $_SERVER['SIGNACULUM_INSTALL_APP_ENV']);
+        clearInstallAdminEnvironment();
+        restoreInstallEnv($envPath, $envBackup, $sqlitePath);
     }
 });
 
@@ -201,19 +229,30 @@ test('install refuses a production APP_ENV in an existing .env without --force',
 });
 
 /**
- * @return array{0: string, 1: string|null}
+ * @return array{0: string, 1: string|null, 2: string}
  */
 function beginInstallFixtures(): array
 {
     $envPath = base_path('.env');
     $backup = File::exists($envPath) ? File::get($envPath) : null;
-    File::put(database_path('database.sqlite'), '');
+    $sqlitePath = database_path('install-test-'.uniqid('', true).'.sqlite');
+    File::put($sqlitePath, '');
+    putenv("SIGNACULUM_INSTALL_SQLITE={$sqlitePath}");
+    $_ENV['SIGNACULUM_INSTALL_SQLITE'] = $sqlitePath;
+    $_SERVER['SIGNACULUM_INSTALL_SQLITE'] = $sqlitePath;
 
-    return [$envPath, $backup];
+    return [$envPath, $backup, $sqlitePath];
 }
 
-function restoreInstallEnv(string $envPath, ?string $backup): void
+function restoreInstallEnv(string $envPath, ?string $backup, ?string $sqlitePath = null): void
 {
+    putenv('SIGNACULUM_INSTALL_SQLITE');
+    unset($_ENV['SIGNACULUM_INSTALL_SQLITE'], $_SERVER['SIGNACULUM_INSTALL_SQLITE']);
+
+    if ($sqlitePath !== null) {
+        File::delete($sqlitePath);
+    }
+
     if ($backup === null) {
         File::delete($envPath);
 
@@ -278,6 +317,7 @@ function clearInstallAdminEnvironment(): void
         'SIGNACULUM_ADMIN_FIRST_NAME',
         'SIGNACULUM_ADMIN_LAST_NAME',
         'SIGNACULUM_ADMIN_NAME',
+        'SIGNACULUM_INSTALL_APP_ENV',
     ] as $key) {
         putenv($key);
         unset($_ENV[$key], $_SERVER[$key]);
