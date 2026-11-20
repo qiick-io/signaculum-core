@@ -21,25 +21,25 @@ concurrency:
 jobs:
   pr-title:
     if: github.event_name == 'pull_request'
-    uses: qiick-io/app-ui/.github/workflows/pr-title.yml@v0.6.1
+    uses: qiick-io/app-ui/.github/workflows/pr-title.yml@v0.11.0
 
   app-ui-drift:
-    uses: qiick-io/app-ui/.github/workflows/drift-check.yml@v0.6.1
+    uses: qiick-io/app-ui/.github/workflows/drift-check.yml@v0.11.0
     with:
       standards: true
 
   php-quality:
-    uses: qiick-io/app-ui/.github/workflows/php-quality.yml@v0.6.1
+    uses: qiick-io/app-ui/.github/workflows/php-quality.yml@v0.11.0
 
   ui-quality:
-    uses: qiick-io/app-ui/.github/workflows/ui-quality.yml@v0.6.1
+    uses: qiick-io/app-ui/.github/workflows/ui-quality.yml@v0.11.0
 
   migrations-frozen:
-    uses: qiick-io/app-ui/.github/workflows/migrations-frozen.yml@v0.6.1
+    uses: qiick-io/app-ui/.github/workflows/migrations-frozen.yml@v0.11.0
 
   # Check name for required checks: distribution-smoke / smoke
   distribution-smoke:
-    uses: qiick-io/app-ui/.github/workflows/app-distribution-smoke.yml@v0.6.1
+    uses: qiick-io/app-ui/.github/workflows/app-distribution-smoke.yml@v0.11.0
     with:
       package: qiick/signaculum-core
       command: signaculum

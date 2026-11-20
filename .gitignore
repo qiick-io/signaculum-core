@@ -48,3 +48,6 @@ yarn-error.log
 /opencode.jsonc
 build/
 /build
+
+# Local knowledge graph (never commit)
+/graphify-out/

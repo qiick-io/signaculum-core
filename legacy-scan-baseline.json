@@ -1,0 +1,8 @@
+{
+    "scanner": "modern-web-guidance@1.0.1",
+    "findings": {
+        "ime-safe-enter-submit": {
+            "resources/js/components/confirm-destructive-dialog.tsx": 1
+        }
+    }
+}
