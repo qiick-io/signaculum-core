@@ -23,6 +23,10 @@ return new class extends Migration
             $table->string('key_prefix', 32)->unique();
             $table->string('key_hash', 64);
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('owner_principal_id')
+                ->nullable()
+                ->constrained('principals')
+                ->nullOnDelete();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->json('scopes');
             $table->json('ip_allowlist')->nullable();

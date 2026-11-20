@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -117,6 +118,37 @@ return new class extends Migration
 
             $table->primary([$pivotPermission, $pivotRole], 'role_has_permissions_permission_id_role_id_primary');
         });
+
+        // Built-in roles (permissions are filled by signaculum:sync-permissions on install/upgrade).
+        $now = now();
+        $guard = config('auth.defaults.guard', 'web');
+
+        DB::table($tableNames['roles'])->insert([
+            [
+                'name' => 'super-admin',
+                'guard_name' => $guard,
+                'is_system' => true,
+                'is_assignable' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'name' => 'admin',
+                'guard_name' => $guard,
+                'is_system' => false,
+                'is_assignable' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'name' => 'reader',
+                'guard_name' => $guard,
+                'is_system' => false,
+                'is_assignable' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ]);
 
         app('cache')
             ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)

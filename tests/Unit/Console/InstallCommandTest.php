@@ -84,6 +84,12 @@ test('install refuses an existing .env without --force in non-interactive mode',
 
 test('install skips creating an administrator when a user already exists', function () {
     [$envPath, $envBackup, $sqlitePath] = beginInstallFixtures();
+    setInstallAdminEnvironment(
+        email: 'admin@example.com',
+        password: 'password',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+    );
 
     try {
         $this->artisan(InstallCommand::class, [
@@ -107,6 +113,7 @@ test('install skips creating an administrator when a user already exists', funct
 
         expect(DB::connection('sqlite')->table('users')->count())->toBe(1);
     } finally {
+        clearInstallAdminEnvironment();
         restoreInstallEnv($envPath, $envBackup, $sqlitePath);
     }
 });
