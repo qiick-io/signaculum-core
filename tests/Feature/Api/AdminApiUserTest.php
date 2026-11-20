@@ -281,8 +281,14 @@ it('searches sorts and clamps the users list', function (): void {
     $byName = $this->withToken($plain)->getJson('/api/v1/users?sort=name&direction=asc')->assertOk();
     $byEmailDescending = $this->withToken($plain)->getJson('/api/v1/users?sort=email&direction=desc')->assertOk();
 
-    expect($byName->json('data.0.first_name'))->toBe('Ada')
-        ->and($byEmailDescending->json('data.0.email'))->toBe('zoe@example.test');
+    // Compare the two fixture users only: the API-key owner is also in the list and
+    // its factory first_name would make `data.0` flake across engines and seeds.
+    $firstNamesAscending = collect($byName->json('data'))->pluck('first_name');
+    $emailsDescending = collect($byEmailDescending->json('data'))->pluck('email');
+
+    expect($firstNamesAscending->search('Ada'))->toBeLessThan($firstNamesAscending->search('Zoe'))
+        ->and($emailsDescending->search('zoe@example.test'))
+        ->toBeLessThan($emailsDescending->search('ada@example.test'));
 
     // An unsortable column is ignored rather than passed to the database.
     $this->withToken($plain)->getJson('/api/v1/users?sort=password&direction=asc')->assertOk();
