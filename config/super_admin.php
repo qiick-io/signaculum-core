@@ -6,11 +6,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Development super-admin (CreateSuperAdminSeeder)
+    | Initial super-admin (CreateSuperAdminSeeder)
     |--------------------------------------------------------------------------
     |
-    | Used only by `db:seed` in `local` and `testing`, and only when a password
-    | is set (#225). Servers create the first admin at /setup instead.
+    | `db:seed` creates the first super-admin from these values when the email
+    | is free. In `local` / `testing` any set password is accepted (including the
+    | example `password`). Everywhere else `INITIAL_SUPER_ADMIN_PASSWORD` must be
+    | set, must not be the known default `password`, and must pass the password
+    | policy — otherwise the seeder skips. Servers can also create the first
+    | admin at /setup.
     |
     */
 

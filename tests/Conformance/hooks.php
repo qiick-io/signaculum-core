@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Fortify;
 use Spatie\Permission\Models\Role;
@@ -159,39 +160,92 @@ return [
         if (app(InitialSuperAdminPasswordService::class)->rejectionReasons('password', 'production') === []) {
             throw new RuntimeException('The known default password is accepted outside local/testing.');
         }
+
+        // Red-first: the seeder itself must refuse APP_ENV=production + password "password".
+        $weakEmail = 'conformance-weak-'.bin2hex(random_bytes(4)).'@example.test';
+        $previousEnvironment = app()->environment();
+
+        config([
+            'super_admin.email' => $weakEmail,
+            'super_admin.password' => 'password',
+            'app.env' => 'production',
+        ]);
+        app()->detectEnvironment(static fn (): string => 'production');
+
+        try {
+            Artisan::call('db:seed', ['--class' => CreateSuperAdminSeeder::class, '--force' => true]);
+        } finally {
+            app()->detectEnvironment(static fn (): string => $previousEnvironment);
+            config(['app.env' => $previousEnvironment]);
+        }
+
+        if (User::query()->where('email', $weakEmail)->exists()) {
+            throw new RuntimeException('The seeder created an admin with the known default password outside local/testing.');
+        }
     },
 
     'assertErrorContract' => static function (): void {
         config(['app.debug' => false]);
 
-        $request = Request::create('/api/v1/users', 'GET');
-        $request->headers->set('Accept', 'application/json');
-        $response = app(HttpKernel::class)->handle($request);
-        $payload = json_decode((string) $response->getContent(), true);
-
-        if (! is_array($payload) || ! isset($payload['error']) || ! is_string($payload['error'])) {
-            throw new RuntimeException('Machine errors must expose an error field.');
-        }
-
-        if (array_key_exists('code', $payload)) {
-            throw new RuntimeException('Machine errors must not expose a code field.');
-        }
-
-        foreach (['trace', 'exception', 'file', 'line'] as $debugKey) {
-            if (array_key_exists($debugKey, $payload)) {
-                throw new RuntimeException("APP_DEBUG=false must not expose {$debugKey}.");
-            }
-        }
-
-        $known = array_map(
-            static fn (ApiErrorCodeEnum $case): string => $case->value,
-            ApiErrorCodeEnum::cases(),
-        );
+        $known = ApiErrorCodeEnum::values();
         $known[] = 'invalid_token';
         $known[] = 'insufficient_scope';
 
-        if (! in_array($payload['error'], $known, true)) {
-            throw new RuntimeException('error must be a documented machine code; got '.$payload['error']);
+        $assertMachineError = static function (Request $request, string $label) use ($known): void {
+            $response = app(HttpKernel::class)->handle($request);
+            $payload = json_decode((string) $response->getContent(), true);
+
+            if (! is_array($payload) || ! isset($payload['error']) || ! is_string($payload['error'])) {
+                throw new RuntimeException("Machine errors ({$label}) must expose an error field.");
+            }
+
+            if (array_key_exists('code', $payload)) {
+                throw new RuntimeException("Machine errors ({$label}) must not expose a code field.");
+            }
+
+            foreach (['trace', 'exception', 'file', 'line'] as $debugKey) {
+                if (array_key_exists($debugKey, $payload)) {
+                    throw new RuntimeException("APP_DEBUG=false must not expose {$debugKey} ({$label}).");
+                }
+            }
+
+            if (! in_array($payload['error'], $known, true)) {
+                throw new RuntimeException("error ({$label}) must be a documented machine code; got {$payload['error']}");
+            }
+        };
+
+        $unauthenticated = Request::create('/api/v1/users', 'GET');
+        $unauthenticated->headers->set('Accept', 'application/json');
+        $assertMachineError($unauthenticated, '401 Accept json');
+
+        $noAccept = Request::create('/api/v1/users', 'GET');
+        $assertMachineError($noAccept, '401 without Accept');
+
+        Route::middleware('api')->get('/api/v1/__conformance-500', static function (): never {
+            throw new RuntimeException('conformance forced 500');
+        });
+
+        $serverError = Request::create('/api/v1/__conformance-500', 'GET');
+        $serverError->headers->set('Accept', 'application/json');
+        $response = app(HttpKernel::class)->handle($serverError);
+        $payload = json_decode((string) $response->getContent(), true);
+
+        if ($response->getStatusCode() < 500) {
+            throw new RuntimeException('Expected a 500 path for the error-contract probe; got '.$response->getStatusCode());
+        }
+
+        if (! is_array($payload) || ($payload['error'] ?? null) !== ApiErrorCodeEnum::ServerError->value) {
+            throw new RuntimeException('500 responses must expose error=server_error.');
+        }
+
+        if (array_key_exists('code', $payload) || array_key_exists('trace', $payload)) {
+            throw new RuntimeException('500 responses must not expose code or trace when APP_DEBUG=false.');
+        }
+
+        foreach (ApiErrorCodeEnum::cases() as $case) {
+            if (! in_array($case->value, $known, true)) {
+                throw new RuntimeException('ApiErrorCodeEnum case missing from the documented set: '.$case->name);
+            }
         }
     },
 
@@ -311,24 +365,27 @@ return [
     },
 
     'assertEncryptedCasts' => static function (): void {
-        $secret = 'JBSWY3DPEHPK3PXP';
-        $recoveryCodes = ['conformance-recovery-code'];
+        $user = User::factory()->create(['password' => 'password']);
 
-        $user = User::factory()->create();
-        $user->forceFill([
-            'two_factor_secret' => Fortify::currentEncrypter()->encrypt($secret),
-            'two_factor_recovery_codes' => Fortify::currentEncrypter()->encrypt(json_encode($recoveryCodes, JSON_THROW_ON_ERROR)),
-            'two_factor_confirmed_at' => now(),
-        ])->save();
+        // Real Fortify enable path (same action as POST /user/two-factor-authentication).
+        app(\Laravel\Fortify\Actions\EnableTwoFactorAuthentication::class)($user);
+
+        $user->refresh();
+
+        if ($user->two_factor_secret === null || $user->two_factor_secret === '') {
+            throw new RuntimeException('Fortify enable did not persist a two_factor_secret.');
+        }
 
         $storedUser = DB::table('users')->where('id', $user->getKey())->first();
 
         if ($storedUser === null || ! str_starts_with((string) $storedUser->two_factor_secret, 'eyJpdiI6')) {
-            throw new RuntimeException('The 2FA secret is not stored encrypted.');
+            throw new RuntimeException('The 2FA secret is not stored encrypted at rest (raw column).');
         }
 
-        if (Fortify::currentEncrypter()->decrypt((string) $user->fresh()->two_factor_secret) !== $secret) {
-            throw new RuntimeException('The encrypted 2FA secret does not round-trip.');
+        $plainSecret = Fortify::currentEncrypter()->decrypt((string) $storedUser->two_factor_secret);
+
+        if (! is_string($plainSecret) || $plainSecret === '') {
+            throw new RuntimeException('The raw encrypted 2FA secret does not decrypt to a non-empty string.');
         }
 
         $webhook = existingWebhook(['secret' => 'whsec_conformance_secret']);
