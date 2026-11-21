@@ -76,7 +76,7 @@ test('admin api update persists and rejects timezone like the profile form', fun
     $user = User::factory()->create();
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$user->getKey(), [
+        ->patchJson('/api/v1/users/'.$user->subject, [
             'first_name' => $user->first_name,
             'last_name' => $user->last_name,
             'email' => $user->email,
@@ -88,7 +88,7 @@ test('admin api update persists and rejects timezone like the profile form', fun
     expect($user->refresh()->timezone)->toBe('America/New_York');
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$user->getKey(), [
+        ->patchJson('/api/v1/users/'.$user->subject, [
             'first_name' => $user->first_name,
             'email' => $user->email,
             'timezone' => 'Not/A_Zone',

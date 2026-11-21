@@ -11,29 +11,18 @@ it('documents every /api/v1 route in the openapi file', function (): void {
     );
 
     expect($document)->toBeArray()
-        ->and($document['openapi'] ?? null)->toBe('3.1.0');
+        ->and($document['openapi'] ?? null)->toBe('3.1.0')
+        ->and($document['servers'][0]['url'] ?? null)->toBe('/');
 
     $documentedPaths = array_keys($document['paths'] ?? []);
 
     $apiRoutes = collect(Route::getRoutes()->getRoutes())
         ->filter(static fn ($route): bool => str_starts_with($route->uri(), 'api/v1/'))
-        ->map(static function ($route): string {
-            $suffix = substr($route->uri(), strlen('api/v1'));
-            $path = str_starts_with($suffix, '/') ? $suffix : '/'.$suffix;
-
-            if ($path === '/') {
-                return '/';
-            }
-
-            $trimmed = rtrim($path, '/');
-
-            return $trimmed === '' ? '/' : $trimmed;
-        })
+        ->map(static fn ($route): string => '/'.$route->uri())
         ->unique()
         ->values();
 
     foreach ($apiRoutes as $path) {
-        // openapi.json itself is listed; parameterized routes keep {param} names from routes/api.php
         $normalized = preg_replace('/\{[^}]+\}/', '{param}', $path) ?? $path;
         $matches = false;
 

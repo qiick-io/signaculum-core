@@ -36,7 +36,7 @@ it('shows a user when authorized with view', function (): void {
     });
 
     $this->withToken($plain)
-        ->getJson('/api/v1/users/'.$user->getKey())
+        ->getJson('/api/v1/users/'.$user->subject)
         ->assertOk()
         ->assertJsonPath('data.email', 'shown@example.com');
 

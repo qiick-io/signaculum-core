@@ -92,7 +92,8 @@ final class LdapUserSyncService
                 ? $directoryUser->isDirectoryAccountDisabled()
                 : $this->isAccountControlDisabled($directoryUser);
 
-            $linkedUser = User::query()->where('ldap_guid', $guid)->first();
+            // Include soft-deleted rows: a recreated local user would violate unique ldap_guid.
+            $linkedUser = User::withTrashed()->where('ldap_guid', $guid)->first();
 
             if ($linkedUser !== null) {
                 if ($this->updateLinkedUser(
@@ -112,7 +113,8 @@ final class LdapUserSyncService
                 continue;
             }
 
-            $emailOwner = User::query()->where('email', $email)->first();
+            // Soft-deleted emails stay taken until erasure (#220 / C17).
+            $emailOwner = User::withTrashed()->where('email', $email)->first();
 
             if ($emailOwner !== null) {
                 if ($emailOwner->ldap_guid !== null) {
@@ -235,7 +237,7 @@ final class LdapUserSyncService
         ?string $distinguishedName,
         bool $isDirectoryAccountDisabled,
     ): bool {
-        $emailOwner = User::query()
+        $emailOwner = User::withTrashed()
             ->where('email', $email)
             ->whereKeyNot($user->getKey())
             ->first();
@@ -258,6 +260,10 @@ final class LdapUserSyncService
 
         if ($resolvedUsername !== null) {
             $attributes['username'] = $resolvedUsername;
+        }
+
+        if ($user->trashed()) {
+            $user->restore();
         }
 
         $user->forceFill($attributes)->save();

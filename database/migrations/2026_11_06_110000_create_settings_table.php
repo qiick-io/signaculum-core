@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * Application settings edited from the UI (SettingsRepositoryService).
  *
  * Fleet scoped shape: (scope, scope_id, group, key) unique. Instance rows use
- * scope=`instance`, scope_id=null, group=`app`. Column lengths stay short enough
+ * scope=`instance`, scope_id=`''`, group=`app`. Column lengths stay short enough
  * for a utf8mb4 unique index on MySQL (4 × 4 bytes × lengths ≤ 3072).
  *
  * @see knowledge/decisions/2026-11-19-fleet-core-schema
@@ -23,7 +23,8 @@ return new class extends Migration
         Schema::create('settings', function (Blueprint $table): void {
             $table->id();
             $table->string('scope', 32);
-            $table->string('scope_id', 36)->nullable();
+            // Empty string is the instance sentinel (never NULL — uniqueness has no NULL hole).
+            $table->string('scope_id', 36)->default('');
             $table->string('group', 64);
             $table->string('key', 191);
             $table->json('value')->nullable();

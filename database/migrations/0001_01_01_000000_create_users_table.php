@@ -29,7 +29,10 @@ return new class extends Migration
             // Nullable: LDAP-sourced accounts authenticate by bind, not a local hash (#187).
             $table->string('password')->nullable();
             $table->string('timezone')->default('UTC');
+            $table->timestamp('last_login_at')->nullable();
+            $table->string('last_login_ip', 45)->nullable();
             $table->rememberToken();
+            $table->softDeletes();
             $table->timestamps();
         });
 

@@ -22,7 +22,7 @@ it('creates no user when the seeder is run explicitly in production', function (
     app()->detectEnvironment(fn (): string => 'production');
 
     $this->artisan('db:seed', ['--class' => CreateSuperAdminSeeder::class, '--force' => true])
-        ->expectsOutputToContain('Skipped the development super-admin')
+        ->expectsOutputToContain('Skipped the initial super-admin')
         ->assertSuccessful();
 
     expect(User::query()->exists())->toBeFalse();

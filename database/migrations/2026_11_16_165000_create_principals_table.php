@@ -21,7 +21,8 @@ return new class extends Migration
         Schema::create('principals', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->string('type', 32);
-            $table->foreignId('user_id')->nullable()->unique()->constrained('users')->cascadeOnDelete();
+            // Keep the principal for audit; erasure sets deactivated_at (core-hardening).
+            $table->foreignId('user_id')->nullable()->unique()->constrained('users')->nullOnDelete();
             $table->foreignUuid('organisation_id')->nullable()->constrained('organizations')->nullOnDelete();
             $table->string('name');
             $table->timestamp('deactivated_at')->nullable();
