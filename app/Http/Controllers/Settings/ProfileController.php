@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\DeleteUserAction;
 use App\Enums\WebhookEventEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
@@ -73,8 +74,10 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's profile.
+     *
+     * Deactivates (tokens / sessions / principal), revokes API keys, then soft-deletes.
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(ProfileDeleteRequest $request, DeleteUserAction $deleteUserAction): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -93,7 +96,7 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $user->delete();
+        $deleteUserAction->execute($user);
 
         app(WebhookDispatcherService::class)->dispatch(WebhookEventEnum::UserDeleted, $payload);
 
