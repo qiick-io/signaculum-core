@@ -7,7 +7,7 @@
     },
     "servers": [
         {
-            "url": "/api/v1"
+            "url": "/"
         }
     ],
     "components": {
@@ -36,18 +36,7 @@
                 }
             }
         },
-        "/openapi.json": {
-            "get": {
-                "summary": "OpenAPI document",
-                "security": [],
-                "responses": {
-                    "200": {
-                        "description": "OpenAPI 3.1 JSON"
-                    }
-                }
-            }
-        },
-        "/users": {
+        "/api/v1/users": {
             "get": {
                 "summary": "List users",
                 "responses": {
@@ -65,7 +54,7 @@
                 }
             }
         },
-        "/users/{user}": {
+        "/api/v1/users/{user}": {
             "get": {
                 "summary": "Show user",
                 "parameters": [
@@ -105,7 +94,7 @@
                 }
             }
         },
-        "/users/{user}/deactivate": {
+        "/api/v1/users/{user}/deactivate": {
             "post": {
                 "summary": "Deactivate user",
                 "parameters": [
@@ -126,7 +115,7 @@
                 }
             }
         },
-        "/users/{user}/reset-two-factor": {
+        "/api/v1/users/{user}/reset-two-factor": {
             "post": {
                 "summary": "Reset user two-factor",
                 "parameters": [
@@ -147,7 +136,7 @@
                 }
             }
         },
-        "/organizations": {
+        "/api/v1/organizations": {
             "get": {
                 "summary": "List organisations",
                 "responses": {
@@ -165,7 +154,7 @@
                 }
             }
         },
-        "/organizations/{organization}": {
+        "/api/v1/organizations/{organization}": {
             "get": {
                 "summary": "Show organisation",
                 "parameters": [
@@ -185,7 +174,7 @@
                 }
             }
         },
-        "/organizations/{organization}/memberships": {
+        "/api/v1/organizations/{organization}/memberships": {
             "get": {
                 "summary": "List memberships",
                 "parameters": [
@@ -223,7 +212,7 @@
                 }
             }
         },
-        "/organizations/{organization}/memberships/{userId}": {
+        "/api/v1/organizations/{organization}/memberships/{userId}": {
             "patch": {
                 "summary": "Update membership roles",
                 "parameters": [
@@ -279,7 +268,7 @@
                 }
             }
         },
-        "/applications": {
+        "/api/v1/applications": {
             "get": {
                 "summary": "List applications",
                 "responses": {
@@ -297,7 +286,7 @@
                 }
             }
         },
-        "/applications/{application}": {
+        "/api/v1/applications/{application}": {
             "get": {
                 "summary": "Show application",
                 "parameters": [
@@ -317,7 +306,7 @@
                 }
             }
         },
-        "/applications/{application}/rotate-secret": {
+        "/api/v1/applications/{application}/rotate-secret": {
             "post": {
                 "summary": "Rotate application secret",
                 "parameters": [
