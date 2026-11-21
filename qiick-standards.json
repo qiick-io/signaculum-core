@@ -22,53 +22,17 @@
         "openApiPath": "resources/openapi/admin-v1.json"
     },
     "divergences": {
-        "C1": {
-            "reason": "users.subject is the public UUID (no public_id column); soft deletes and last_login_* are tracked in #217 before the first stable release",
-            "decision": "knowledge/decisions/2026-11-19-fleet-core-schema",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/217"
-        },
         "C3": {
             "reason": "Signaculum is the IdP: identities are local users; users.subject is the public UUID and there is no user_identities / oidc_sub table",
             "decision": "knowledge/decisions/2026-11-19-fleet-core-schema",
             "review_by": "2027-05-01",
             "issue": "https://github.com/qiick-io/signaculum-core/issues/219"
         },
-        "C13": {
-            "reason": "Activity api_key_id UUID assertion hook deferred to the remaining-hooks follow-up",
-            "decision": "knowledge/decisions/2026-11-20-core-hardening",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/224"
-        },
         "C17": {
-            "reason": "Erasure job with unique tombstones is not built yet",
+            "reason": "Erasure job with unique tombstones is not built yet; due before the first stable release",
             "decision": "knowledge/decisions/2026-11-20-core-hardening",
-            "review_by": "2027-05-01",
+            "review_by": "2026-12-20",
             "issue": "https://github.com/qiick-io/signaculum-core/issues/220"
-        },
-        "C19": {
-            "reason": "Initial-admin seeder behaviour hook deferred to the remaining-hooks follow-up",
-            "decision": "knowledge/decisions/2026-11-19-roles-groups-initial-admin-and-username",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/224"
-        },
-        "C20": {
-            "reason": "Stable API error-code enum contract hook deferred; machine errors already use error not code where implemented",
-            "decision": "knowledge/decisions/2026-11-20-core-hardening",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/224"
-        },
-        "C21": {
-            "reason": "Accept-Language / Content-Language moves into qiick/laravel-http-basics",
-            "decision": "knowledge/decisions/2026-11-20-fleet-contracts",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/221"
-        },
-        "C22": {
-            "reason": "Pagination-shape hook deferred to the remaining-hooks follow-up",
-            "decision": "knowledge/decisions/2026-11-20-core-hardening",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/224"
         },
         "C23": {
             "reason": "Throttle-header contract moves into qiick/laravel-http-basics",
@@ -88,12 +52,6 @@
             "review_by": "2027-05-01",
             "issue": "https://github.com/qiick-io/signaculum-core/issues/221"
         },
-        "C26": {
-            "reason": "OpenAPI 3.1 drift check deferred; document exists at resources/openapi/admin-v1.json",
-            "decision": "knowledge/decisions/2026-11-20-fleet-contracts",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/224"
-        },
         "C27": {
             "reason": "Standard Webhooks envelope lands with qiick/laravel-outbound adoption",
             "decision": "knowledge/decisions/2026-11-19-shared-packages-for-api-keys-and-outbound-http",
@@ -106,20 +64,8 @@
             "review_by": "2027-05-01",
             "issue": "https://github.com/qiick-io/signaculum-core/issues/223"
         },
-        "C31": {
-            "reason": "API-resource bigint-hiding hook deferred to the remaining-hooks follow-up",
-            "decision": "knowledge/decisions/2026-11-20-core-hardening",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/224"
-        },
-        "C32": {
-            "reason": "Encrypted-casts rotation hook deferred to the remaining-hooks follow-up",
-            "decision": "knowledge/decisions/2026-11-20-core-hardening",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/224"
-        },
         "C34": {
-            "reason": "This week's add_ migrations were folded in #214; remaining historical add_/alter_ files fold before the first stable tag",
+            "reason": "Remaining historical add_/alter_ files fold before the first stable tag",
             "decision": "knowledge/decisions/2026-11-20-migrations-freeze-at-first-stable-release",
             "review_by": "2027-05-01",
             "issue": "https://github.com/qiick-io/signaculum-core/issues/218"

@@ -127,7 +127,7 @@ test('an admin API two-factor reset names the API key owner as the causer', func
     ['admin' => $admin, 'plain' => $plainApiKey] = adminApiKey();
 
     $this->withToken($plainApiKey)
-        ->postJson('/api/v1/users/'.$user->getKey().'/reset-two-factor')
+        ->postJson('/api/v1/users/'.$user->subject.'/reset-two-factor')
         ->assertOk();
 
     assertSecondFactorChangeRecorded($user, ActivityEventEnum::TwoFactorDisabled, causer: $admin);

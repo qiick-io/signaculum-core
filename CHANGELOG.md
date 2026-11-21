@@ -15,10 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Pre-stable `add_` / `alter_` / `drop_` migrations from the fleet schema week (timezone, activity `organisation_id`, scoped settings, principals / `owner_principal_id`, username, nullable LDAP password, and the `is_instance_admin` → Spatie role path) are folded into the `create_` migrations (#211). Fresh installs get the final shape in one pass; existing beta databases must be recreated.
+- Instance settings use `scope_id = ''` as the instance sentinel (never NULL). Future-dated `api_keys.expires_at` / `previous_key_valid_until` are `dateTime`. The Laravel `notifications` table ships in `create_`. Soft deletes and `last_login_*` land on `users` in `create_` (#213).
+- Admin REST `/api/v1/users/{user}` is addressed by the public `subject` UUID; `UserResource.id` is that UUID (never the bigint). Activity `properties.api_key_id` stores the key's public UUID (#213).
 
 ### Added
 
 - Spatie roles and permissions (`teams => false`), user groups, optional `users.username`, OIDC `preferred_username`, and the standard initial super-admin seeder / `signaculum:create-user` before beta (#206). Organisation roles stay JSON on memberships (declared divergence).
+- Phase 1 fleet conformance suite (app-ui v0.12.0) with PostgreSQL/MySQL CI (#213).
 - RFC 8628 device authorization grant for applications that opt in, with an `id_token` from the approving session, user-code entry rate limited per IP and per account, a final first decision per device code, single-use exchange, and the organisation MFA gate on approval (#64).
 - RFC 9126 Pushed Authorization Requests at `POST /oauth/par` (`pushed_authorization_request_endpoint`), with discovery `require_pushed_authorization_requests: false`; `/oauth/authorize` accepts the issued single-use `request_uri`; an application can be set to require PAR (RFC 9126 §6), and its plain authorization requests are then refused with `invalid_request` (#62).
 - LDAP / Active Directory read-only user sync: instance settings storage (TLS required by default, encrypted bind password), `SyncLdapUsersJob`, `signaculum:ldap-sync`, connection test action, and `docs/ldap.md` (#77). Settings UI is #78.

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -41,7 +40,8 @@ return new class extends Migration
         Schema::create($tableNames['roles'], static function (Blueprint $table) use ($teams, $columnNames) {
             $table->id(); // role id
             if ($teams || config('permission.testing')) { // permission.testing is a fix for sqlite testing
-                $table->unsignedBigInteger($columnNames['team_foreign_key'])->nullable();
+                // Dormant while teams => false; UUID when teams turn on (core-hardening / C5).
+                $table->uuid($columnNames['team_foreign_key'])->nullable();
                 $table->index($columnNames['team_foreign_key'], 'roles_team_foreign_key_index');
             }
             $table->string('name');
@@ -68,7 +68,7 @@ return new class extends Migration
                 ->on($tableNames['permissions'])
                 ->cascadeOnDelete();
             if ($teams) {
-                $table->unsignedBigInteger($columnNames['team_foreign_key']);
+                $table->uuid($columnNames['team_foreign_key']);
                 $table->index($columnNames['team_foreign_key'], 'model_has_permissions_team_foreign_key_index');
 
                 $table->primary([$columnNames['team_foreign_key'], $pivotPermission, $columnNames['model_morph_key'], 'model_type'],
@@ -91,7 +91,7 @@ return new class extends Migration
                 ->on($tableNames['roles'])
                 ->cascadeOnDelete();
             if ($teams) {
-                $table->unsignedBigInteger($columnNames['team_foreign_key']);
+                $table->uuid($columnNames['team_foreign_key']);
                 $table->index($columnNames['team_foreign_key'], 'model_has_roles_team_foreign_key_index');
 
                 $table->primary([$columnNames['team_foreign_key'], $pivotRole, $columnNames['model_morph_key'], 'model_type'],
@@ -119,37 +119,7 @@ return new class extends Migration
             $table->primary([$pivotPermission, $pivotRole], 'role_has_permissions_permission_id_role_id_primary');
         });
 
-        // Built-in roles (permissions are filled by signaculum:sync-permissions on install/upgrade).
-        $now = now();
-        $guard = config('auth.defaults.guard', 'web');
-
-        DB::table($tableNames['roles'])->insert([
-            [
-                'name' => 'super-admin',
-                'guard_name' => $guard,
-                'is_system' => true,
-                'is_assignable' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'name' => 'admin',
-                'guard_name' => $guard,
-                'is_system' => false,
-                'is_assignable' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'name' => 'reader',
-                'guard_name' => $guard,
-                'is_system' => false,
-                'is_assignable' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-        ]);
-
+        // Roles are created only via firstOrCreate in signaculum:sync-permissions (core-hardening).
         app('cache')
             ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)
             ->forget(config('permission.cache.key'));

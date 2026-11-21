@@ -21,14 +21,14 @@ Route::prefix('v1')->group(function (): void {
     ])->group(function (): void {
         Route::middleware([EnsureApiKeyScopeMiddleware::class.':users:read'])->group(function (): void {
             Route::get('users', [UserController::class, 'index']);
-            Route::get('users/{user}', [UserController::class, 'show']);
+            Route::get('users/{user:subject}', [UserController::class, 'show']);
         });
 
         Route::middleware([EnsureApiKeyScopeMiddleware::class.':users:write'])->group(function (): void {
             Route::post('users', [UserController::class, 'store']);
-            Route::patch('users/{user}', [UserController::class, 'update']);
-            Route::post('users/{user}/deactivate', [UserLifecycleController::class, 'deactivate']);
-            Route::post('users/{user}/reset-two-factor', [UserLifecycleController::class, 'resetTwoFactor']);
+            Route::patch('users/{user:subject}', [UserController::class, 'update']);
+            Route::post('users/{user:subject}/deactivate', [UserLifecycleController::class, 'deactivate']);
+            Route::post('users/{user:subject}/reset-two-factor', [UserLifecycleController::class, 'resetTwoFactor']);
         });
 
         Route::middleware([EnsureApiKeyScopeMiddleware::class.':organizations:read'])->group(function (): void {

@@ -11,11 +11,12 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
 
 /**
- * Creates a development super-admin from config/super_admin.php.
+ * Creates the initial super-admin from config/super_admin.php.
  *
- * Only in `local` and `testing`, and only with a password set in `.env`. Never
- * modifies an existing user (decision 2026-11-19). Servers create the first admin
- * through `signaculum:install` or `signaculum:create-user`.
+ * Outside `local` / `testing` the admin is created only when
+ * `INITIAL_SUPER_ADMIN_PASSWORD` is set, is not the known default `password`,
+ * and passes `Password::defaults()`. Never modifies an existing user
+ * (decision 2026-11-19).
  */
 class CreateSuperAdminSeeder extends Seeder
 {
@@ -24,18 +25,12 @@ class CreateSuperAdminSeeder extends Seeder
 
     public function run(InitialSuperAdminPasswordService $initialSuperAdminPassword): void
     {
-        if (! app()->environment(self::ENVIRONMENTS)) {
-            $this->command?->warn('Skipped the development super-admin outside local and testing: create the first admin with `php artisan signaculum:create-user`.');
-
-            return;
-        }
-
         $password = config('super_admin.password');
         $passwordValue = is_string($password) ? $password : null;
         $reasons = $initialSuperAdminPassword->rejectionReasons($passwordValue);
 
         if ($reasons !== []) {
-            $this->command?->warn('Skipped the development super-admin: '.implode('; ', $reasons));
+            $this->command?->warn('Skipped the initial super-admin: '.implode('; ', $reasons));
 
             return;
         }
@@ -45,7 +40,7 @@ class CreateSuperAdminSeeder extends Seeder
         $user = User::query()->firstOrNew(['email' => config('super_admin.email')]);
 
         if ($user->exists) {
-            $this->command?->warn('Skipped the development super-admin: a user with that email already exists.');
+            $this->command?->warn('Skipped the initial super-admin: a user with that email already exists.');
 
             return;
         }

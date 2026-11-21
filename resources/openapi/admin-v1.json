@@ -5,7 +5,11 @@
         "version": "1.0.0",
         "description": "Instance-admin REST API authenticated with Bearer API keys."
     },
-    "servers": [{ "url": "/api/v1" }],
+    "servers": [
+        {
+            "url": "/api/v1"
+        }
+    ],
     "components": {
         "securitySchemes": {
             "ApiKeyBearer": {
@@ -15,23 +19,50 @@
             }
         }
     },
-    "security": [{ "ApiKeyBearer": [] }],
+    "security": [
+        {
+            "ApiKeyBearer": []
+        }
+    ],
     "paths": {
+        "/api/v1/openapi.json": {
+            "get": {
+                "summary": "OpenAPI document",
+                "security": [],
+                "responses": {
+                    "200": {
+                        "description": "OpenAPI 3.1 JSON"
+                    }
+                }
+            }
+        },
         "/openapi.json": {
             "get": {
                 "summary": "OpenAPI document",
                 "security": [],
-                "responses": { "200": { "description": "OpenAPI 3.1 JSON" } }
+                "responses": {
+                    "200": {
+                        "description": "OpenAPI 3.1 JSON"
+                    }
+                }
             }
         },
         "/users": {
             "get": {
                 "summary": "List users",
-                "responses": { "200": { "description": "Paginated users" } }
+                "responses": {
+                    "200": {
+                        "description": "Paginated users"
+                    }
+                }
             },
             "post": {
                 "summary": "Create user",
-                "responses": { "201": { "description": "Created user" } }
+                "responses": {
+                    "201": {
+                        "description": "Created user"
+                    }
+                }
             }
         },
         "/users/{user}": {
@@ -42,10 +73,17 @@
                         "name": "user",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "integer" }
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
                     }
                 ],
-                "responses": { "200": { "description": "User" } }
+                "responses": {
+                    "200": {
+                        "description": "User"
+                    }
+                }
             },
             "patch": {
                 "summary": "Update user",
@@ -54,10 +92,17 @@
                         "name": "user",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "integer" }
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
                     }
                 ],
-                "responses": { "200": { "description": "Updated user" } }
+                "responses": {
+                    "200": {
+                        "description": "Updated user"
+                    }
+                }
             }
         },
         "/users/{user}/deactivate": {
@@ -68,10 +113,17 @@
                         "name": "user",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "integer" }
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
                     }
                 ],
-                "responses": { "200": { "description": "Deactivated user" } }
+                "responses": {
+                    "200": {
+                        "description": "Deactivated user"
+                    }
+                }
             }
         },
         "/users/{user}/reset-two-factor": {
@@ -82,23 +134,34 @@
                         "name": "user",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "integer" }
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
                     }
                 ],
-                "responses": { "200": { "description": "User without 2FA" } }
+                "responses": {
+                    "200": {
+                        "description": "User without 2FA"
+                    }
+                }
             }
         },
         "/organizations": {
             "get": {
                 "summary": "List organisations",
                 "responses": {
-                    "200": { "description": "Paginated organisations" }
+                    "200": {
+                        "description": "Paginated organisations"
+                    }
                 }
             },
             "post": {
                 "summary": "Create organisation",
                 "responses": {
-                    "201": { "description": "Created organisation" }
+                    "201": {
+                        "description": "Created organisation"
+                    }
                 }
             }
         },
@@ -110,10 +173,16 @@
                         "name": "organization",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "string" }
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
-                "responses": { "200": { "description": "Organisation" } }
+                "responses": {
+                    "200": {
+                        "description": "Organisation"
+                    }
+                }
             }
         },
         "/organizations/{organization}/memberships": {
@@ -124,10 +193,16 @@
                         "name": "organization",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "string" }
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
-                "responses": { "200": { "description": "Memberships" } }
+                "responses": {
+                    "200": {
+                        "description": "Memberships"
+                    }
+                }
             },
             "post": {
                 "summary": "Add membership",
@@ -136,10 +211,16 @@
                         "name": "organization",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "string" }
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
-                "responses": { "201": { "description": "Membership" } }
+                "responses": {
+                    "201": {
+                        "description": "Membership"
+                    }
+                }
             }
         },
         "/organizations/{organization}/memberships/{userId}": {
@@ -150,16 +231,25 @@
                         "name": "organization",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "string" }
+                        "schema": {
+                            "type": "string"
+                        }
                     },
                     {
                         "name": "userId",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "string" }
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
                     }
                 ],
-                "responses": { "200": { "description": "Membership" } }
+                "responses": {
+                    "200": {
+                        "description": "Membership"
+                    }
+                }
             },
             "delete": {
                 "summary": "Remove membership",
@@ -168,28 +258,43 @@
                         "name": "organization",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "string" }
+                        "schema": {
+                            "type": "string"
+                        }
                     },
                     {
                         "name": "userId",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "string" }
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
                     }
                 ],
-                "responses": { "204": { "description": "Removed" } }
+                "responses": {
+                    "204": {
+                        "description": "Removed"
+                    }
+                }
             }
         },
         "/applications": {
             "get": {
                 "summary": "List applications",
                 "responses": {
-                    "200": { "description": "Paginated applications" }
+                    "200": {
+                        "description": "Paginated applications"
+                    }
                 }
             },
             "post": {
                 "summary": "Create application",
-                "responses": { "201": { "description": "Created application" } }
+                "responses": {
+                    "201": {
+                        "description": "Created application"
+                    }
+                }
             }
         },
         "/applications/{application}": {
@@ -200,10 +305,16 @@
                         "name": "application",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "string" }
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
-                "responses": { "200": { "description": "Application" } }
+                "responses": {
+                    "200": {
+                        "description": "Application"
+                    }
+                }
             }
         },
         "/applications/{application}/rotate-secret": {
@@ -214,7 +325,9 @@
                         "name": "application",
                         "in": "path",
                         "required": true,
-                        "schema": { "type": "string" }
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {

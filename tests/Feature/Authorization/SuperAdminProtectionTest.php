@@ -81,7 +81,7 @@ it('refuses an admin patching a super-admin through the API', function (): void 
     ['plain' => $plain] = adminApiKeyFor($admin, [ApiKeyScopeEnum::UsersWrite->value]);
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$superAdmin->id, [
+        ->patchJson('/api/v1/users/'.$superAdmin->subject, [
             'first_name' => 'Nope',
             'last_name' => 'Nope',
             'email' => 'nope@example.com',

@@ -22,7 +22,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('key_prefix', 32)->unique();
             $table->string('key_hash', 64);
-            $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
+            // Never cascade-erase keys with the user; revoke or reassign first (core-hardening).
+            $table->foreignId('owner_id')->constrained('users')->restrictOnDelete();
             $table->foreignUuid('owner_principal_id')
                 ->nullable()
                 ->constrained('principals')
