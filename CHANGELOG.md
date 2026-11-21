@@ -11,12 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Recreate the database for this beta.** Pre-stable schema changes are folded into the `create_` migrations (decision 2026-11-20); there is no forward upgrade path from an earlier beta database. Run `php artisan migrate:fresh --seed` (or reinstall). After the first stable `v1.0.0`, migrations stay forward-only.
 - **Access token `expires_in` is now 3600 (1 hour), not ~31536000 (1 year).** Relying parties that assumed Passport's previous one-year default must refresh more often. Override with `OIDC_ACCESS_TOKEN_TTL` / `OIDC_REFRESH_TOKEN_TTL` (ISO 8601 durations, defaults `PT1H` / `P30D`). Refresh tokens rotate on use; replaying a used refresh token returns `invalid_grant`.
+- **Initial super-admin outside `local` / `testing`.** `CreateSuperAdminSeeder` creates the admin only when `INITIAL_SUPER_ADMIN_PASSWORD` is set, is not the known default `password`, and passes the password policy; otherwise it skips. Set a strong password in the environment (or use `/setup`) before relying on `db:seed` in staging/production.
+- **Migrate does not create roles.** A plain `php artisan migrate` (including `RUN_MIGRATIONS=true` in Docker) leaves Spatie roles empty until `signaculum:sync-permissions` runs. The Docker entrypoint now runs sync-permissions after migrate; Compose/manual installs that only migrate must run it themselves (or finish with `signaculum:install` / `signaculum:upgrade`).
+- **Soft-deleted emails stay taken** until the erasure job (#220 / C17). Do not expect to re-register the same address after self-deletion in this beta.
+- **Self-deletion revokes credentials.** Profile destroy deactivates the account (Passport tokens and sessions cleared, principal deactivated), revokes the user's API keys, then soft-deletes. A refresh token issued before deletion returns `invalid_grant`.
 
 ### Changed
 
 - Pre-stable `add_` / `alter_` / `drop_` migrations from the fleet schema week (timezone, activity `organisation_id`, scoped settings, principals / `owner_principal_id`, username, nullable LDAP password, and the `is_instance_admin` → Spatie role path) are folded into the `create_` migrations (#211). Fresh installs get the final shape in one pass; existing beta databases must be recreated.
 - Instance settings use `scope_id = ''` as the instance sentinel (never NULL). Future-dated `api_keys.expires_at` / `previous_key_valid_until` are `dateTime`. The Laravel `notifications` table ships in `create_`. Soft deletes and `last_login_*` land on `users` in `create_` (#213).
-- Admin REST `/api/v1/users/{user}` is addressed by the public `subject` UUID; `UserResource.id` is that UUID (never the bigint). Activity `properties.api_key_id` stores the key's public UUID (#213).
+- Admin REST `/api/v1/users/{user}` is addressed by the public `subject` UUID; `UserResource.id` is that UUID (never the bigint). The separate `uuid` field is removed from the user payload. Activity `properties.api_key_id` stores the key's public UUID (#213).
+- `api_keys.owner_id` uses `restrictOnDelete`; `principals.user_id` uses `nullOnDelete` (#213).
 
 ### Added
 
