@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
+    private const string OrganisationCheck = "(type = 'instance_service' AND organisation_id IS NULL) OR (type <> 'instance_service' AND organisation_id IS NOT NULL)";
+
     public function up(): void
     {
         Schema::create('principals', function (Blueprint $table): void {
@@ -24,7 +26,7 @@ return new class extends Migration
             $table->string('type', 32);
             // Keep the principal for audit; erasure sets deactivated_at (core-hardening).
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-            // Nullable only for instance_service (CHECK / SQLite recreate below); cascade with the org.
+            // Null only for instance_service (CHECK / SQLite recreate below); cascade with the org.
             $table->foreignUuid('organisation_id')->nullable()->constrained('organizations')->cascadeOnDelete();
             $table->string('name');
             $table->timestamp('deactivated_at')->nullable();
@@ -34,7 +36,7 @@ return new class extends Migration
             $table->index('user_id');
         });
 
-        $this->enforceOrganisationRequiredUnlessInstanceService();
+        $this->enforceOrganisationCheckAndInstanceServiceSingleton();
     }
 
     public function down(): void
@@ -43,17 +45,19 @@ return new class extends Migration
     }
 
     /**
-     * organisation_id may be NULL only for the instance Admin API service principal.
-     * SQLite cannot ADD CONSTRAINT CHECK after create, so the table is rebuilt with CHECK.
+     * Bidirectional organisation_id rule + at most one instance_service row.
+     * SQLite cannot ADD CONSTRAINT / partial unique after create, so it rebuilds the table.
      */
-    private function enforceOrganisationRequiredUnlessInstanceService(): void
+    private function enforceOrganisationCheckAndInstanceServiceSingleton(): void
     {
         $driver = Schema::getConnection()->getDriverName();
 
         if ($driver === 'sqlite') {
             Schema::drop('principals');
 
-            DB::statement(<<<'SQL'
+            $check = self::OrganisationCheck;
+
+            DB::statement(<<<SQL
                 CREATE TABLE principals (
                     id varchar(36) not null,
                     type varchar(32) not null,
@@ -67,17 +71,45 @@ return new class extends Migration
                     foreign key (user_id) references users (id) on delete set null,
                     foreign key (organisation_id) references organizations (id) on delete cascade,
                     unique (organisation_id, user_id),
-                    check (type = 'instance_service' or organisation_id is not null)
+                    check ({$check})
                 )
                 SQL);
 
             DB::statement('create index principals_user_id_index on principals (user_id)');
+            DB::statement(
+                "create unique index principals_instance_service_unique on principals (type) where type = 'instance_service'"
+            );
 
             return;
         }
 
         DB::statement(
-            "ALTER TABLE principals ADD CONSTRAINT principals_organisation_required_unless_instance_service CHECK (type = 'instance_service' OR organisation_id IS NOT NULL)"
+            'ALTER TABLE principals ADD CONSTRAINT principals_organisation_required_unless_instance_service CHECK ('.self::OrganisationCheck.')'
+        );
+
+        if ($driver === 'pgsql') {
+            DB::statement(
+                "CREATE UNIQUE INDEX principals_instance_service_unique ON principals (type) WHERE type = 'instance_service'"
+            );
+
+            return;
+        }
+
+        if ($driver === 'mysql') {
+            // Functional unique: only one row may evaluate to 1; other types are NULL (multi-NULL OK).
+            DB::statement(
+                'CREATE UNIQUE INDEX principals_instance_service_unique ON principals ((CASE WHEN type = \'instance_service\' THEN 1 END))'
+            );
+
+            return;
+        }
+
+        // MariaDB 10.11: no functional indexes; generated column + unique (NULL for non-service rows).
+        DB::statement(
+            'ALTER TABLE principals ADD COLUMN instance_service_singleton TINYINT GENERATED ALWAYS AS (CASE WHEN type = \'instance_service\' THEN 1 ELSE NULL END) STORED'
+        );
+        DB::statement(
+            'CREATE UNIQUE INDEX principals_instance_service_unique ON principals (instance_service_singleton)'
         );
     }
 };
