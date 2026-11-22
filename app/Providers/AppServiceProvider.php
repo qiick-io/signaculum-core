@@ -24,6 +24,7 @@ use App\Oidc\OidcDeviceCodeRepository;
 use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
 use App\Services\ActivityOrganisationResolverService;
+use App\Services\ApiKeyLifetimeService;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\EmailTemplateService;
 use App\Services\InstanceAdminDemotionService;
@@ -93,6 +94,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Fail closed: an API key lifetime configured past the 90-day ceiling refuses to boot.
+        app(ApiKeyLifetimeService::class)->maximumLifetimeDays();
+
         $this->configureDefaults();
         $this->configureAuthorization();
         $this->configureTrustedProxies();

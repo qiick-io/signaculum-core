@@ -22,8 +22,10 @@ use InvalidArgumentException;
  *
  * Rotation never changes what a key may do, and a revoked or expired key cannot be rotated back
  * to life. It sets a new expiry within the maximum lifetime counted from the rotation
- * ({@see ApiKeyLifetimeService}), so rotating never extends a key past that bound. Side effects: updates the row inside a transaction holding a row lock, and writes a
- * `rotated` entry in the `api-keys` activity log, caused by the actor.
+ * ({@see ApiKeyLifetimeService}), so rotating never extends a key past that bound.
+ *
+ * Side effects: updates the row inside a transaction holding a row lock, and writes a `rotated`
+ * entry in the `api-keys` activity log, caused by the actor.
  */
 final class RotateApiKeyAction
 {
@@ -41,7 +43,7 @@ final class RotateApiKeyAction
         Gate::forUser($actor)->authorize('update', $apiKey);
 
         $rotatedAt = CarbonImmutable::now();
-        $this->apiKeyLifetimeService->ensureAllowedExpiry($expiresAt, $rotatedAt);
+        $expiresAt = $this->apiKeyLifetimeService->allowedExpiry($expiresAt, $rotatedAt);
 
         return DB::transaction(function () use ($apiKey, $actor, $expiresAt, $rotatedAt): IssuedApiKeyData {
             // Re-read under a lock so a concurrent revoke or rotation is seen, not overwritten.

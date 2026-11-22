@@ -48,7 +48,7 @@ final class ApiKeyController extends Controller
                 'key_prefix' => $apiKey->key_prefix,
                 'scopes' => $apiKey->scopes,
                 'is_active' => $apiKey->isActive(),
-                'expires_at' => $apiKey->expires_at?->toIso8601String(),
+                'expires_at' => $apiKey->expires_at->toIso8601String(),
                 'last_used_at' => $apiKey->last_used_at?->toIso8601String(),
                 'last_used_ip' => $apiKey->last_used_ip,
                 'previous_key_valid_until' => $apiKey->previous_key_valid_until?->toIso8601String(),

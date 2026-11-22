@@ -53,12 +53,12 @@ final class CreateApiKeyAction
             throw new InvalidArgumentException('An API key needs at least one known scope.');
         }
 
-        $this->apiKeyLifetimeService->ensureAllowedExpiry($apiKeyData->expiresAt, CarbonImmutable::now());
+        $expiresAt = $this->apiKeyLifetimeService->allowedExpiry($apiKeyData->expiresAt, CarbonImmutable::now());
 
         $secret = $this->apiKeySecretService->issue();
         $instancePrincipal = $this->ensureInstanceServicePrincipalAction->execute();
 
-        $apiKey = DB::transaction(function () use ($issuer, $apiKeyData, $grantedScopes, $secret, $instancePrincipal): ApiKey {
+        $apiKey = DB::transaction(function () use ($issuer, $apiKeyData, $grantedScopes, $secret, $instancePrincipal, $expiresAt): ApiKey {
             $apiKey = ApiKey::query()->create([
                 'name' => $apiKeyData->name,
                 'key_prefix' => $secret->keyPrefix,
@@ -70,7 +70,7 @@ final class CreateApiKeyAction
                 'scopes' => $grantedScopes->scopes,
                 'ip_allowlist' => $apiKeyData->ipAllowlist,
                 'rate_limit_per_minute' => $apiKeyData->rateLimitPerMinute,
-                'expires_at' => $apiKeyData->expiresAt,
+                'expires_at' => $expiresAt,
             ]);
 
             activity('api-keys')

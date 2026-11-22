@@ -39,6 +39,7 @@ trait ValidatesApiKeyExpiryTrait
 
     protected function validatedExpiresAt(): CarbonImmutable
     {
-        return CarbonImmutable::parse($this->string('expires_at')->toString());
+        // The instant that was validated, in the application timezone (see ApiKeyLifetimeService::allowedExpiry()).
+        return CarbonImmutable::parse($this->string('expires_at')->toString())->setTimezone(config()->string('app.timezone'));
     }
 }

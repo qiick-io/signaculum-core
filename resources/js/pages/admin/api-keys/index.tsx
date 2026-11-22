@@ -39,7 +39,7 @@ type ApiKeyRow = {
     key_prefix: string;
     scopes: string[];
     is_active: boolean;
-    expires_at: string | null;
+    expires_at: string;
     last_used_at: string | null;
     revoked_at: string | null;
     created_at: string | null;
@@ -147,15 +147,13 @@ export default function AdminApiKeysIndex({
                                         <p className="text-sm text-muted-foreground">
                                             {apiKey.key_prefix}…
                                         </p>
-                                        {apiKey.expires_at ? (
-                                            <p className="text-sm text-muted-foreground">
-                                                {t('admin.apiKeys.expiresOn', {
-                                                    date: new Date(
-                                                        apiKey.expires_at,
-                                                    ).toLocaleDateString(),
-                                                })}
-                                            </p>
-                                        ) : null}
+                                        <p className="text-sm text-muted-foreground">
+                                            {t('admin.apiKeys.expiresOn', {
+                                                date: new Date(
+                                                    apiKey.expires_at,
+                                                ).toLocaleDateString(),
+                                            })}
+                                        </p>
                                         <div className="flex flex-wrap gap-1">
                                             {apiKey.scopes.map((scope) => (
                                                 <Badge

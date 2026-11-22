@@ -46,7 +46,7 @@ final class ApiKeyExpiringNotification extends Notification implements ShouldQue
             'prefix' => $this->apiKey->key_prefix,
             'app' => app(SettingsRepositoryService::class)->appName(),
             // ISO date: unambiguous in every locale.
-            'date' => (string) $this->apiKey->expires_at?->toDateString(),
+            'date' => $this->apiKey->expires_at->toDateString(),
         ];
 
         return (new MailMessage)

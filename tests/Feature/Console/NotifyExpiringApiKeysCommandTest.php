@@ -53,14 +53,11 @@ it('also warns the issuer when someone else owns the key', function (): void {
     Notification::assertSentTo($issuer, ApiKeyExpiringNotification::class);
 });
 
-it('skips keys outside the window, revoked keys and keys that never expire', function (): void {
+it('skips keys outside the window and revoked keys', function (): void {
     $owner = User::factory()->instanceAdmin()->create();
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(3));
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(9));
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour())->apiKey->forceFill(['revoked_at' => now()])->save();
-    // A key without an expiry can no longer be issued; a legacy row still must not break the run.
-    app(CreateApiKeyAction::class)->execute($owner, new ApiKeyData('Forever', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry()))
-        ->apiKey->forceFill(['expires_at' => null])->save();
 
     $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
 

@@ -32,8 +32,9 @@ return new class extends Migration
             $table->json('scopes');
             $table->json('ip_allowlist')->nullable();
             $table->unsignedInteger('rate_limit_per_minute')->nullable();
-            // Future-dated columns are dateTime (never MySQL TIMESTAMP — 2038).
-            $table->dateTime('expires_at')->nullable();
+            // Future-dated columns are dateTime (never MySQL TIMESTAMP — 2038). Every key expires,
+            // at most api.key_max_lifetime_days after creation or rotation (decision 2026-11-22).
+            $table->dateTime('expires_at');
             $table->timestamp('last_used_at')->nullable();
             $table->string('last_used_ip', 45)->nullable();
             $table->timestamp('revoked_at')->nullable()->index();

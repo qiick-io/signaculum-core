@@ -36,6 +36,9 @@ OpenAPI 3.1: `GET /api/v1/openapi.json` (hand-written; no generator package).
    at most `api.key_max_lifetime_days` (`API_KEY_MAX_LIFETIME_DAYS`, 90 by default) after the
    creation or rotation; the limit itself is allowed. A request without an expiry or past the
    limit is refused with `422` (the console form shows the error); the actions refuse it too.
+   The variable can only lower the 90-day ceiling: a value above 90 (or below 1) stops the
+   application at boot. An expiry sent with a timezone offset is converted to the application
+   timezone before it is checked and stored, and `api_keys.expires_at` is `NOT NULL`.
 10. **When the creator stops being an instance admin**, every other active instance admin gets
     one mail per Admin API key the creator made that still works: "the key `name` was created
     by `user`, who is no longer an instance admin", with a link to **Admin → API keys** to
@@ -49,9 +52,11 @@ OpenAPI 3.1: `GET /api/v1/openapi.json` (hand-written; no generator package).
     | Account deleted                                                                | **revoked** | key revoked because its creator was deleted |
 
     Deletion revokes on purpose: it is deliberate and irreversible, and a key whose `created_by`
-    no longer names a person would weaken the audit trail. Every path raises the domain event
-    `InstanceAdminDemotedEvent` once per demotion: a user demoted on one path and then touched
-    on another (deactivated, then deleted) is reported once.
+    no longer names a person would weaken the audit trail. Every demotion path raises the domain
+    event `InstanceAdminDemotedEvent` once per demotion: a user demoted on one path and then
+    deactivated is reported once. A deletion always raises `ApiKeyCreatorDeletedEvent` for the
+    keys it revoked and the admins are told about each of them, even when the creator had
+    already been demoted (and told about) earlier.
 
 ## Scopes
 

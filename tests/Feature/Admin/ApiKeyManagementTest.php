@@ -186,7 +186,7 @@ it('stores one scope per resource and the optional restrictions', function (): v
     expect($apiKey->scopes)->toBe([ApiKeyScopeEnum::UsersWrite->value, ApiKeyScopeEnum::OrganizationsRead->value])
         ->and($apiKey->ip_allowlist)->toBe(['10.0.0.0/8', '2001:db8::/32'])
         ->and($apiKey->rate_limit_per_minute)->toBe(30)
-        ->and($apiKey->expires_at?->isFuture())->toBeTrue();
+        ->and($apiKey->expires_at->isFuture())->toBeTrue();
 });
 
 it('revokes a key and keeps the row', function (): void {
