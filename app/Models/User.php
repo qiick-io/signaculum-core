@@ -210,7 +210,15 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     public function getActivitylogOptions(): LogOptions
     {
         return $this->applicationActivityLogOptions()
-            ->logExcept(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token']);
+            ->logExcept([
+                'password',
+                'two_factor_secret',
+                'two_factor_recovery_codes',
+                'remember_token',
+                // Login stamps only; never an "updated" activity row or audit noise.
+                'last_login_at',
+                'last_login_ip',
+            ]);
     }
 
     /**

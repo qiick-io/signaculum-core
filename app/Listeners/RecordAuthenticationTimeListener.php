@@ -33,9 +33,12 @@ final class RecordAuthenticationTimeListener
             return;
         }
 
-        $user->forceFill([
-            'last_login_at' => now(),
-            'last_login_ip' => Request::ip(),
-        ])->save();
+        // Quiet + no timestamps: login stamps must not bump updated_at or write activity.
+        User::withoutTimestamps(static function () use ($user): void {
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => Request::ip(),
+            ])->saveQuietly();
+        });
     }
 }

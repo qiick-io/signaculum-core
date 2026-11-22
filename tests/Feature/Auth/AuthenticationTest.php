@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -37,6 +38,33 @@ class AuthenticationTest extends TestCase
 
         $this->assertNotNull($user->last_login_at);
         $this->assertNotNull($user->last_login_ip);
+    }
+
+    public function test_login_stamps_do_not_write_activity_or_bump_updated_at(): void
+    {
+        $user = User::factory()->create();
+        $updatedAtBefore = $user->updated_at?->toJSON();
+        $activityCountBefore = Activity::query()
+            ->where('subject_type', User::class)
+            ->where('subject_id', (string) $user->getKey())
+            ->count();
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $user->refresh();
+
+        $this->assertNotNull($user->last_login_at);
+        $this->assertSame($updatedAtBefore, $user->updated_at?->toJSON());
+        $this->assertSame(
+            $activityCountBefore,
+            Activity::query()
+                ->where('subject_type', User::class)
+                ->where('subject_id', (string) $user->getKey())
+                ->count(),
+        );
     }
 
     public function test_users_with_two_factor_enabled_are_redirected_to_two_factor_challenge()

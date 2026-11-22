@@ -187,9 +187,16 @@ return [
     'assertErrorContract' => static function (): void {
         config(['app.debug' => false]);
 
-        $known = ApiErrorCodeEnum::values();
-        $known[] = 'invalid_token';
-        $known[] = 'insufficient_scope';
+        $documentation = (string) file_get_contents(base_path('docs/api-errors.md'));
+        preg_match_all('/^\|\s*`([a-z_]+)`\s*\|/m', $documentation, $documentationMatches);
+        $documented = array_values(array_unique($documentationMatches[1] ?? []));
+
+        if ($documented === []) {
+            throw new RuntimeException('docs/api-errors.md must list machine error codes in the codes table.');
+        }
+
+        // RFC 6750 / API-key codes keep their own bodies and are documented outside the enum.
+        $known = [...$documented, 'invalid_token', 'insufficient_scope', 'ip_not_allowed'];
 
         $assertMachineError = static function (Request $request, string $label) use ($known): void {
             $response = app(HttpKernel::class)->handle($request);
@@ -234,7 +241,7 @@ return [
             throw new RuntimeException('Expected a 500 path for the error-contract probe; got '.$response->getStatusCode());
         }
 
-        if (! is_array($payload) || ($payload['error'] ?? null) !== ApiErrorCodeEnum::ServerError->value) {
+        if (! is_array($payload) || ($payload['error'] ?? null) !== 'server_error') {
             throw new RuntimeException('500 responses must expose error=server_error.');
         }
 
@@ -243,8 +250,8 @@ return [
         }
 
         foreach (ApiErrorCodeEnum::cases() as $case) {
-            if (! in_array($case->value, $known, true)) {
-                throw new RuntimeException('ApiErrorCodeEnum case missing from the documented set: '.$case->name);
+            if (! in_array($case->value, $documented, true)) {
+                throw new RuntimeException('ApiErrorCodeEnum case missing from docs/api-errors.md: '.$case->name);
             }
         }
     },
