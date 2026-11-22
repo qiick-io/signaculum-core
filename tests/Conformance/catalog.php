@@ -71,8 +71,8 @@ return [
     [
         'id' => 'C9',
         'tag' => 'schema',
-        'description' => 'principals.id UUID; user_id nullable; unique(organisation_id, user_id); organisation_id required except singleton instance_service (NULL org); deactivated_at; membership-scoped human principals',
-        'decision' => 'knowledge/decisions/2026-11-22-principal-organisation-required-in-multi-tenant-products',
+        'description' => 'principals.id UUID; user_id nullable UNIQUE; organisation_id UUID nullable; deactivated_at; every seeded user has one principal',
+        'decision' => 'knowledge/decisions/2026-11-19-fleet-core-schema',
     ],
     [
         'id' => 'C10',

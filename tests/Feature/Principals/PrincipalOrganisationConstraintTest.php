@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Database CHECK + singleton: organisation_id is null iff type is instance_service (#229 nits).
+ *
+ * Pack catalogue C9 (`tests/Conformance/catalog.php`) is synced from app-ui and still
+ * describes the pre-#229 shape. Intended C9 wording until the pack lands it:
+ * "principals.id UUID; user_id nullable; unique(organisation_id, user_id);
+ * organisation_id required except singleton instance_service (NULL org);
+ * deactivated_at; membership-scoped human principals"
+ * (decision 2026-11-22-principal-organisation-required-in-multi-tenant-products).
  */
 test('a user principal without organisation_id is rejected by the database', function (): void {
     $user = User::factory()->create();
