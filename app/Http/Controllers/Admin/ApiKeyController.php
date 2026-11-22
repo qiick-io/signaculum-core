@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\CreateApiKeyAction;
+use App\Actions\EnsureInstanceServicePrincipalAction;
 use App\Actions\RevokeApiKeyAction;
 use App\Enums\ApiKeyScopeEnum;
 use App\Http\Controllers\Controller;
@@ -18,20 +19,23 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Admin → API keys: list, create and revoke the signed-in admin's keys for the Admin REST API.
- * Session-authenticated only: no API key can reach key management.
+ * Admin → API keys: list, create and revoke Admin REST API keys owned by the
+ * instance_service principal. Session-authenticated only: no API key can reach key management.
  */
 final class ApiKeyController extends Controller
 {
+    public function __construct(
+        private readonly EnsureInstanceServicePrincipalAction $ensureInstanceServicePrincipalAction,
+    ) {}
+
     public function index(Request $request): Response
     {
         Gate::authorize('viewAny', ApiKey::class);
 
-        /** @var User $user */
-        $user = $request->user();
+        $instancePrincipal = $this->ensureInstanceServicePrincipalAction->execute();
 
         $apiKeys = ApiKey::query()
-            ->where('owner_id', $user->getKey())
+            ->where('owner_principal_id', $instancePrincipal->getKey())
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get()

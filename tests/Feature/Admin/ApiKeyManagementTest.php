@@ -116,15 +116,20 @@ it('refuses to rotate a revoked or expired key', function (array $keyState): voi
     'expired' => [['expires_at' => now()->subMinute()]],
 ]);
 
-it('refuses to let one admin rotate or revoke another admin\'s key', function (): void {
+it('lets any instance admin rotate or revoke an instance_service key', function (): void {
     $owner = apiKeyIssuingAdmin();
     $otherAdmin = apiKeyIssuingAdmin();
     $issuedApiKey = app(CreateApiKeyAction::class)->execute($owner, new ApiKeyData('Mine', [ApiKeyScopeEnum::UsersRead->value]));
 
-    $this->actingAs($otherAdmin)->put(route('admin.api-keys.secret.update', $issuedApiKey->apiKey->uuid))->assertForbidden();
-    $this->actingAs($otherAdmin)->delete(route('admin.api-keys.destroy', $issuedApiKey->apiKey->uuid))->assertForbidden();
+    $this->actingAs($otherAdmin)->put(route('admin.api-keys.secret.update', $issuedApiKey->apiKey->uuid))
+        ->assertRedirect(route('admin.api-keys.index'));
 
     expect($issuedApiKey->apiKey->fresh()?->isActive())->toBeTrue();
+
+    $this->actingAs($otherAdmin)->delete(route('admin.api-keys.destroy', $issuedApiKey->apiKey->uuid))
+        ->assertRedirect(route('admin.api-keys.index'));
+
+    expect($issuedApiKey->apiKey->fresh()?->isRevoked())->toBeTrue();
 });
 
 it('refuses key management to users who are not instance admins', function (): void {

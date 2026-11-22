@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class CreateOrganizationAction
 {
+    public function __construct(
+        private readonly EnsureOrganizationMembershipPrincipalAction $ensureOrganizationMembershipPrincipalAction,
+    ) {}
+
     public function execute(OrganizationData $organizationData, User $creator): Organization
     {
         return DB::transaction(function () use ($organizationData, $creator): Organization {
@@ -31,6 +35,8 @@ final class CreateOrganizationAction
                 'user_id' => $creator->getKey(),
                 'roles' => [OrganizationRoleEnum::Owner->value],
             ]);
+
+            $this->ensureOrganizationMembershipPrincipalAction->execute($organization, $creator);
 
             activity()
                 ->performedOn($organization)

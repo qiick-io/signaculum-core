@@ -26,6 +26,7 @@ final class AddOrganizationMemberAction
     public function __construct(
         private readonly WebhookDispatcherService $webhookDispatcher,
         private readonly RevokeUserOidcGrantsAction $revokeUserOidcGrantsAction,
+        private readonly EnsureOrganizationMembershipPrincipalAction $ensureOrganizationMembershipPrincipalAction,
     ) {}
 
     /**
@@ -45,11 +46,15 @@ final class AddOrganizationMemberAction
                 ]);
             }
 
-            return OrganizationMembership::query()->create([
+            $createdMembership = OrganizationMembership::query()->create([
                 'organization_id' => $organization->getKey(),
                 'user_id' => $user->getKey(),
                 'roles' => $roles,
             ]);
+
+            $this->ensureOrganizationMembershipPrincipalAction->execute($organization, $user);
+
+            return $createdMembership;
         });
 
         activity()

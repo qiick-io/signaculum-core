@@ -17,11 +17,11 @@ use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 
 /**
- * Creates an Admin REST API key that acts as the instance admin who issues it.
+ * Creates an Admin REST API key owned by the singleton `instance_service` principal.
  *
- * A key never holds more than its issuer: only an active instance admin (who holds every Admin
- * API scope) may create one, and only with scopes of this product's vocabulary. Key management
- * is reached through the session-authenticated admin UI only; no API route leads here.
+ * Only an active instance admin may create one, with this product's instance scopes
+ * (`users`, `organizations`, `applications`). `created_by` is the issuing admin;
+ * `owner_principal_id` is the instance service account (decision 2026-11-22 / #229).
  *
  * Side effects: stores the row (SHA-256 of the full token only) and writes a `created` entry in the
  * `api-keys` activity log, caused by the issuer. The plain-text token is returned once, in
@@ -31,6 +31,7 @@ final class CreateApiKeyAction
 {
     public function __construct(
         private readonly ApiKeySecretService $apiKeySecretService,
+        private readonly EnsureInstanceServicePrincipalAction $ensureInstanceServicePrincipalAction,
     ) {}
 
     /**
@@ -48,17 +49,16 @@ final class CreateApiKeyAction
         }
 
         $secret = $this->apiKeySecretService->issue();
+        $instancePrincipal = $this->ensureInstanceServicePrincipalAction->execute();
 
-        $apiKey = DB::transaction(function () use ($issuer, $apiKeyData, $grantedScopes, $secret): ApiKey {
-            $ownerPrincipal = $issuer->principal
-                ?? $issuer->principal()->firstOrFail();
-
+        $apiKey = DB::transaction(function () use ($issuer, $apiKeyData, $grantedScopes, $secret, $instancePrincipal): ApiKey {
             $apiKey = ApiKey::query()->create([
                 'name' => $apiKeyData->name,
                 'key_prefix' => $secret->keyPrefix,
                 'key_hash' => $secret->keyHash,
+                // Attribution / FK: the issuing admin. Ownership for auth is the principal.
                 'owner_id' => $issuer->getKey(),
-                'owner_principal_id' => $ownerPrincipal->getKey(),
+                'owner_principal_id' => $instancePrincipal->getKey(),
                 'created_by' => $issuer->getKey(),
                 'scopes' => $grantedScopes->scopes,
                 'ip_allowlist' => $apiKeyData->ipAllowlist,

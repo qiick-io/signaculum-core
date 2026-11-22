@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\PrincipalTypeEnum;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Traits\LogsApplicationActivityTrait;
 use Database\Factories\UserFactory;
@@ -16,7 +15,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -73,25 +72,6 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     protected $appends = ['name'];
 
     /**
-     * Every user gets a fleet `user` principal (API-key owner) on create.
-     */
-    protected static function booted(): void
-    {
-        static::created(function (User $user): void {
-            if (Principal::query()->where('user_id', $user->getKey())->exists()) {
-                return;
-            }
-
-            Principal::query()->create([
-                'type' => PrincipalTypeEnum::User,
-                'user_id' => $user->getKey(),
-                'organisation_id' => null,
-                'name' => $user->name !== '' ? $user->name : $user->email,
-            ]);
-        });
-    }
-
-    /**
      * Full display name from first and last name, as in externa-core (OIDC `name`).
      */
     public function getNameAttribute(): string
@@ -100,13 +80,13 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     }
 
     /**
-     * Fleet principal for this person (one per user).
+     * Organisation membership principals for this person (one per organisation).
      *
-     * @return HasOne<Principal, $this>
+     * @return HasMany<Principal, $this>
      */
-    public function principal(): HasOne
+    public function principals(): HasMany
     {
-        return $this->hasOne(Principal::class);
+        return $this->hasMany(Principal::class);
     }
 
     /**

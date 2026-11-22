@@ -8,6 +8,8 @@ OpenAPI 3.1: `GET /api/v1/openapi.json` (hand-written; no generator package).
 ## Authentication
 
 1. Create a key as an instance admin in **Admin → API keys**. The token is shown once.
+   Keys are owned by the singleton `instance_service` principal (`organisation_id` null);
+   `created_by` records the issuing admin and is distinct from that owner (#229).
 2. Send `Authorization: Bearer sig_live_…` (`sig_test_…` outside production).
 3. The token is `sig_<live|test>_<id><secret>`: the public part `sig_<env>_<id>` (8-character id)
    is what the UI, the activity log and support threads show; the 32-character secret is never
@@ -15,20 +17,26 @@ OpenAPI 3.1: `GET /api/v1/openapi.json` (hand-written; no generator package).
    pattern `^(ext|exc|ins|sig)_(live|test)_[A-Za-z0-9]{40,}$`.
 4. Every refusal of a key is `401` with `WWW-Authenticate: Bearer error="invalid_token"` and
    `{"message": "…", "error": "invalid_token"}`: missing, unknown, expired or revoked key, a key
-   whose scopes no longer parse, or an owner who is no longer an active instance admin.
+   whose scopes no longer parse, a key whose `instance_service` principal is missing or
+   deactivated, or when **no active instance admin** (someone with `can-manage-api-keys`)
+   remains on the instance. Demoting or deactivating the creating admin alone does **not**
+   revoke the key while another instance admin is still active; revocation stays manual.
 5. A missing scope is `403` with `"error": "insufficient_scope"` and the `scope` it needed; an
    address outside the key's IP allowlist is `403`; the per-key rate limit is `429`.
 6. **Rotation** issues a new secret for the same key (same prefix, scopes and audit trail). The
    old token keeps working for `api.key_rotation_grace_hours` (24 by default). Revoking ends both.
+   Any instance admin with `can-manage-api-keys` may rotate or revoke any Admin API key.
 7. Keys are managed in the signed-in admin UI only: no API key can create, rotate or widen a key,
    and an API key never establishes a web session (it has its own `api-key` guard).
-8. Owners (and issuers) get a mail seven days before a key expires
-   (`signaculum:notify-expiring-api-keys`, scheduled daily).
+8. Creators (and, when the creator is gone, remaining instance admins) get a mail seven days
+   before a key expires (`signaculum:notify-expiring-api-keys`, scheduled daily).
 
 ## Scopes
 
 Scopes follow the shared qiick vocabulary `<resource>:<read|write>`. **`write` implies `read`** on
-the same resource, so a key stores one scope per resource, the highest it holds.
+the same resource, so a key stores one scope per resource, the highest it holds. These are
+**instance-only** scopes: an Admin API key cannot hold organisation-scoped capabilities, and
+there is no Admin API surface inside a single organisation.
 
 | Scope                 | Access                                              |
 | --------------------- | --------------------------------------------------- |
