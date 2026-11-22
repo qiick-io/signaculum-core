@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property string $scope
- * @property string|null $scope_id
+ * @property string $scope_id
  * @property string $group
  * @property string $key
  * @property mixed $value

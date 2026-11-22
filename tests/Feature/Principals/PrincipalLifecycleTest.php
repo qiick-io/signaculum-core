@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\CreateApiKeyAction;
 use App\Actions\DeactivateUserAction;
+use App\Actions\ReactivateUserAction;
 use App\Data\ApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Enums\PrincipalTypeEnum;
@@ -66,4 +67,19 @@ test('deactivating a user also sets principals.deactivated_at', function (): voi
 
     expect($user->refresh()->is_active)->toBeFalse()
         ->and($principal->refresh()->deactivated_at)->not->toBeNull();
+});
+
+test('reactivating a user clears principals.deactivated_at', function (): void {
+    User::factory()->instanceAdmin()->create();
+    $user = User::factory()->create();
+    $principal = Principal::query()->where('user_id', $user->getKey())->firstOrFail();
+
+    app(DeactivateUserAction::class)->execute($user);
+
+    expect($principal->refresh()->deactivated_at)->not->toBeNull();
+
+    app(ReactivateUserAction::class)->execute($user->refresh());
+
+    expect($user->refresh()->is_active)->toBeTrue()
+        ->and($principal->refresh()->deactivated_at)->toBeNull();
 });

@@ -17,6 +17,8 @@ fi
 
 if [[ "${RUN_MIGRATIONS:-false}" == "true" ]]; then
   php artisan migrate --force --no-interaction
+  # Roles/permissions are not seeded by migrate; sync before the app serves traffic.
+  php artisan signaculum:sync-permissions --no-interaction
 fi
 
 php-fpm -D

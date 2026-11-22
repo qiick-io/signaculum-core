@@ -14,11 +14,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
@@ -49,6 +52,9 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
+ * @property Carbon|null $last_login_at
+ * @property string|null $last_login_ip
+ * @property Carbon|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -57,7 +63,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail, OAuthenticatable, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, HasUuids, LogsApplicationActivityTrait, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasRoles, HasUuids, LogsApplicationActivityTrait, Notifiable, PasskeyAuthenticatable, SoftDeletes, TwoFactorAuthenticatable;
 
     /**
      * The full name travels with the user to the pages (avatar, menus).
@@ -204,7 +210,15 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     public function getActivitylogOptions(): LogOptions
     {
         return $this->applicationActivityLogOptions()
-            ->logExcept(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token']);
+            ->logExcept([
+                'password',
+                'two_factor_secret',
+                'two_factor_recovery_codes',
+                'remember_token',
+                // Login stamps only; never an "updated" activity row or audit noise.
+                'last_login_at',
+                'last_login_ip',
+            ]);
     }
 
     /**
@@ -215,6 +229,22 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     public function uniqueIds(): array
     {
         return ['subject'];
+    }
+
+    /**
+     * Admin API binds `{user:subject}`; refuse a non-UUID before PostgreSQL raises 22P02 (#197).
+     * The Inertia admin still binds the bigint primary key.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     */
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        if ($field === 'subject' && (! is_string($value) || ! Str::isUuid($value))) {
+            return null;
+        }
+
+        return parent::resolveRouteBinding($value, $field);
     }
 
     /**
@@ -229,8 +259,10 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
             'is_active' => 'boolean',
             'failed_login_attempts' => 'integer',
             'locked_until' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 }

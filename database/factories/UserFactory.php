@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -75,6 +76,8 @@ class UserFactory extends Factory
     public function instanceAdmin(): static
     {
         return $this->afterCreating(function (User $user): void {
+            // Roles live in sync-permissions, not the migration (core-hardening).
+            Artisan::call('signaculum:sync-permissions');
             $user->assignRole(RoleEnum::SuperAdmin->value);
         });
     }

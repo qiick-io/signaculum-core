@@ -19,10 +19,10 @@ Every qiick app runs the same stack, so code, rules and registry items move betw
 
 ## Local development
 
-**Laravel Herd** serves the app at `https://<app>.test` (`herd link`, `herd secure`); `composer run dev` starts Vite, the queue worker and Pail. No Sail or Docker for day-to-day work: Docker is the distribution image, not the dev environment.
+A local PHP environment (Flock, Laravel Herd or Valet) serves the app at `https://<app>.test` and runs its database and Redis; `composer run dev` starts Vite, the queue worker and Pail. Nothing in a repo depends on one tool: PHP comes from `PATH` (or `PHP_BINARY`), Vite HTTPS from `VITE_DEV_SERVER_KEY` / `VITE_DEV_SERVER_CERT`, Reverb from `php artisan reverb:start`. No Sail or Docker for day-to-day work: Docker is the distribution image, not the dev environment.
 
 - **One database per app**, named after it (`externa_core`, `excubia_app`). Local data is disposable: for a clean state, empty and re-seed it (`php artisan migrate:fresh --seed`); never create per-version or per-branch copies. Before dropping a database, check which `.env` files use it. Production databases only when the maintainer says so.
-- **Clean up after a task.** Worktrees, clones, Herd sites or workspaces and extra databases are fine while a task needs them; when its PR is merged or the work is dropped, remove them (`git worktree remove`, `herd unlink`, drop the database) after checking for unpushed work.
+- **Clean up after a task.** Worktrees, clones, local sites or workspaces and extra databases are fine while a task needs them; when its PR is merged or the work is dropped, remove them (`git worktree remove`, unlink the site, drop the database) after checking for unpushed work.
 
 ## Bootstrap
 
@@ -55,7 +55,7 @@ Composer and npm keep caret ranges inside the pinned major; Dependabot (or Renov
 
 **Vite+** for TypeScript / React (`vp check`: Oxlint and Oxfmt), **Pint** (`laravel` preset) and **Larastan** for PHP. A new app keeps the starter kit's Vite+ setup as it is (decision of 2026-11-09: a standard that fights the official starter kit costs every new product); an existing app upgrades to it. excubia-app is the reference (`vite.config.ts`, `.oxlintrc.standards.json`, `.oxlintrc.i18n.json`).
 
-- **The pack's ratcheted rules** run in Oxlint from the synced `.oxlintrc.standards.json` (`"oxlint": true` in `qiick-standards.json`): `no-restricted-imports`, `no-restricted-properties` (`navigator.clipboard`), `id-length`, ratcheted by `qiick-ratchet.mjs lint --rule eslint/<rule>`. The i18n ratchet runs Oxlint with `eslint-plugin-i18next` as a JS plugin (`.oxlintrc.i18n.json`).
+- **The pack's ratcheted rules** run in Oxlint from the synced `.oxlintrc.standards.json` (`"oxlint": true` in `qiick-standards.json`): `no-restricted-imports`, `no-restricted-properties` (`navigator.clipboard`), `id-length`, `max-lines`, `max-lines-per-function`, ratcheted by `qiick-ratchet.mjs lint --rule eslint/<rule>`. The i18n ratchet runs Oxlint with `eslint-plugin-i18next` as a JS plugin (`.oxlintrc.i18n.json`).
 - **Boolean prefixes** (type-aware `@typescript-eslint/naming-convention`) have no Oxlint equivalent and typescript-eslint does not support TypeScript 7 yet: the rule waits for typescript-eslint. Never downgrade TypeScript or the toolchain to run it.
 - **Apps still on ESLint + Prettier** (externa-core until 1.5.0) keep `qiick-standards.eslint.js` (`"eslint": true`) and `npm run lint:standards` with `QIICK_RATCHET=1`, until they move.
 - Externa catches up with excubia-app's packages (TypeScript 7, Vite+, Inertia 3, Pest 5 in 1.5.0); excubia-app is never held back to match it.

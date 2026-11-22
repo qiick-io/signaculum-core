@@ -334,7 +334,8 @@
             "warningTitle": "Warning",
             "warningDescription": "Please proceed with caution, this cannot be undone.",
             "confirmTitle": "Are you sure you want to delete your account?",
-            "confirmDescription": "Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to confirm you would like to permanently delete your account."
+            "confirmDescription": "Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.",
+            "directoryManagedDescription": "This account is managed by the identity directory. Ask a directory administrator to disable or remove it."
         },
         "twoFactor": {
             "title": "Two-factor authentication",

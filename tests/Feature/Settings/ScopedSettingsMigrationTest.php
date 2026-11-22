@@ -29,7 +29,7 @@ test('settings repository still reads and writes through the public API', functi
 
     $row = Setting::query()
         ->where('scope', 'instance')
-        ->whereNull('scope_id')
+        ->where('scope_id', '')
         ->where('group', 'app')
         ->where('key', 'app_name')
         ->first();

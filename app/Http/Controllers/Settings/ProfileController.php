@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\DeleteUserAction;
 use App\Enums\WebhookEventEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Account settings → Profile: show, update, and delete the signed-in user's profile.
@@ -29,10 +31,14 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+
         return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
             'timezones' => timezone_identifiers_list(),
+            // Directory-linked accounts cannot self-delete (decision 2026-11-22).
+            'canDeleteAccount' => $user instanceof User && ! $user->isLdapSourced(),
         ]);
     }
 
@@ -73,11 +79,20 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's profile.
+     *
+     * Deactivates (tokens / sessions / principal), revokes API keys, then soft-deletes.
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(ProfileDeleteRequest $request, DeleteUserAction $deleteUserAction): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
+
+        if ($user->isLdapSourced()) {
+            throw new HttpException(
+                403,
+                __('This account is managed by the identity directory. Ask a directory administrator to disable or remove it.'),
+            );
+        }
 
         if (app(SuperAdminGuardService::class)->isLastActiveSuperAdmin($user)) {
             throw ValidationException::withMessages([
@@ -93,7 +108,7 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $user->delete();
+        $deleteUserAction->execute($user);
 
         app(WebhookDispatcherService::class)->dispatch(WebhookEventEnum::UserDeleted, $payload);
 

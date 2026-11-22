@@ -31,10 +31,12 @@ export default function Profile({
     mustVerifyEmail,
     status,
     timezones,
+    canDeleteAccount = true,
 }: {
     mustVerifyEmail: boolean;
     status?: string;
     timezones: string[];
+    canDeleteAccount?: boolean;
 }) {
     const { t } = useTranslation();
     const { auth, availableLocales, locale: pageLocale } = usePage().props;
@@ -346,7 +348,19 @@ export default function Profile({
 
                     <Separator />
 
-                    <DeleteUser />
+                    {canDeleteAccount ? (
+                        <DeleteUser />
+                    ) : (
+                        <div className="space-y-2">
+                            <Heading
+                                variant="small"
+                                title={t('settings.deleteAccount.title')}
+                                description={t(
+                                    'settings.deleteAccount.directoryManagedDescription',
+                                )}
+                            />
+                        </div>
+                    )}
                 </div>
             </SettingsLayout>
         </AppLayout>

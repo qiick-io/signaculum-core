@@ -13,12 +13,12 @@ it('refuses the user write endpoints without a key, and changes nothing', functi
     $user = User::factory()->create(['email' => 'untouched@example.test', 'first_name' => 'Un']);
 
     foreach ([
-        fn () => $this->patchJson('/api/v1/users/'.$user->getKey(), [
+        fn () => $this->patchJson('/api/v1/users/'.$user->subject, [
             'first_name' => 'Hijacked',
             'email' => 'hijacked@example.test',
         ]),
-        fn () => $this->postJson('/api/v1/users/'.$user->getKey().'/deactivate'),
-        fn () => $this->postJson('/api/v1/users/'.$user->getKey().'/reset-two-factor'),
+        fn () => $this->postJson('/api/v1/users/'.$user->subject.'/deactivate'),
+        fn () => $this->postJson('/api/v1/users/'.$user->subject.'/reset-two-factor'),
     ] as $call) {
         $call()
             ->assertUnauthorized()
@@ -37,15 +37,15 @@ it('refuses a users read key on the user write endpoints, and changes nothing', 
     $user = User::factory()->create(['email' => 'readonly@example.test']);
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$user->getKey(), ['first_name' => 'Hijacked', 'email' => 'hijacked@example.test'])
+        ->patchJson('/api/v1/users/'.$user->subject, ['first_name' => 'Hijacked', 'email' => 'hijacked@example.test'])
         ->assertForbidden()
         ->assertJsonPath('scope', 'users:write');
 
-    $this->withToken($plain)->postJson('/api/v1/users/'.$user->getKey().'/deactivate')
+    $this->withToken($plain)->postJson('/api/v1/users/'.$user->subject.'/deactivate')
         ->assertForbidden()
         ->assertJsonPath('scope', 'users:write');
 
-    $this->withToken($plain)->postJson('/api/v1/users/'.$user->getKey().'/reset-two-factor')
+    $this->withToken($plain)->postJson('/api/v1/users/'.$user->subject.'/reset-two-factor')
         ->assertForbidden()
         ->assertJsonPath('scope', 'users:write');
 
@@ -60,7 +60,7 @@ it('refuses a malformed user update payload field by field', function (array $pa
     $user = User::factory()->create(['email' => 'target@example.test', 'first_name' => 'Target']);
     User::factory()->create(['email' => 'taken@example.test']);
 
-    $this->withToken($plain)->patchJson('/api/v1/users/'.$user->getKey(), $payload)
+    $this->withToken($plain)->patchJson('/api/v1/users/'.$user->subject, $payload)
         ->assertUnprocessable()
         ->assertJsonValidationErrors($invalidFields);
 
@@ -81,7 +81,7 @@ it('refuses a user update that takes an email another account already has', func
     User::factory()->create(['email' => 'theirs@example.test']);
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$user->getKey(), ['first_name' => 'Ada', 'email' => 'theirs@example.test'])
+        ->patchJson('/api/v1/users/'.$user->subject, ['first_name' => 'Ada', 'email' => 'theirs@example.test'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['email']);
 
@@ -93,7 +93,7 @@ it('lets a user keep their own email on update', function (): void {
     $user = User::factory()->create(['email' => 'same@example.test', 'first_name' => 'Old']);
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$user->getKey(), ['first_name' => 'New', 'email' => 'same@example.test'])
+        ->patchJson('/api/v1/users/'.$user->subject, ['first_name' => 'New', 'email' => 'same@example.test'])
         ->assertOk()
         ->assertJsonPath('data.first_name', 'New')
         ->assertJsonPath('data.email', 'same@example.test');
@@ -113,7 +113,7 @@ it('refuses a weak password on create and on update', function (): void {
         ->assertJsonValidationErrors(['password']);
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$user->getKey(), [
+        ->patchJson('/api/v1/users/'.$user->subject, [
             'first_name' => 'Ada',
             'email' => 'weak@example.test',
             'password' => 'short',
@@ -145,7 +145,7 @@ it('never lets a users write key grant instance admin or reactivate an account',
     $deactivated = User::factory()->create(['is_active' => false, 'email' => 'dormant@example.test']);
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$deactivated->getKey(), [
+        ->patchJson('/api/v1/users/'.$deactivated->subject, [
             'first_name' => 'Dormant',
             'email' => 'dormant@example.test',
             'is_active' => true,
@@ -164,10 +164,10 @@ it('never lets a users write key grant instance admin or reactivate an account',
 it('answers 404 for a user id that does not exist', function (): void {
     ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersWrite->value]);
 
-    $this->withToken($plain)->getJson('/api/v1/users/999999')->assertNotFound();
-    $this->withToken($plain)->patchJson('/api/v1/users/999999', ['first_name' => 'A', 'email' => 'a@example.test'])->assertNotFound();
-    $this->withToken($plain)->postJson('/api/v1/users/999999/deactivate')->assertNotFound();
-    $this->withToken($plain)->postJson('/api/v1/users/999999/reset-two-factor')->assertNotFound();
+    $this->withToken($plain)->getJson('/api/v1/users/00000000-0000-4000-8000-000000000000')->assertNotFound();
+    $this->withToken($plain)->patchJson('/api/v1/users/00000000-0000-4000-8000-000000000000', ['first_name' => 'A', 'email' => 'a@example.test'])->assertNotFound();
+    $this->withToken($plain)->postJson('/api/v1/users/00000000-0000-4000-8000-000000000000/deactivate')->assertNotFound();
+    $this->withToken($plain)->postJson('/api/v1/users/00000000-0000-4000-8000-000000000000/reset-two-factor')->assertNotFound();
 });
 
 it('updates a user name email and password', function (): void {
@@ -176,7 +176,7 @@ it('updates a user name email and password', function (): void {
     $passwordBefore = $user->password;
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$user->getKey(), [
+        ->patchJson('/api/v1/users/'.$user->subject, [
             'first_name' => 'Grace',
             'last_name' => 'Murray Hopper',
             'email' => 'grace.hopper@example.test',
@@ -199,7 +199,7 @@ it('leaves the password alone when the update omits it', function (): void {
     $passwordBefore = $user->password;
 
     $this->withToken($plain)
-        ->patchJson('/api/v1/users/'.$user->getKey(), ['first_name' => 'Kept', 'email' => 'keep@example.test'])
+        ->patchJson('/api/v1/users/'.$user->subject, ['first_name' => 'Kept', 'email' => 'keep@example.test'])
         ->assertOk();
 
     expect($user->fresh()?->password)->toBe($passwordBefore);
@@ -210,7 +210,7 @@ it('deactivates a user through the api', function (): void {
     $user = User::factory()->create(['email' => 'leaving@example.test']);
 
     $this->withToken($plain)
-        ->postJson('/api/v1/users/'.$user->getKey().'/deactivate')
+        ->postJson('/api/v1/users/'.$user->subject.'/deactivate')
         ->assertOk()
         ->assertJsonPath('data.is_active', false);
 
@@ -224,7 +224,7 @@ it('refuses to deactivate the last instance admin', function (): void {
     expect(User::role('super-admin')->count())->toBe(1);
 
     $this->withToken($plain)
-        ->postJson('/api/v1/users/'.$admin->getKey().'/deactivate')
+        ->postJson('/api/v1/users/'.$admin->subject.'/deactivate')
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['user']);
 
@@ -238,7 +238,7 @@ it('resets a two factor enrolment through the api', function (): void {
     expect($user->hasEnabledTwoFactorAuthentication())->toBeTrue();
 
     $this->withToken($plain)
-        ->postJson('/api/v1/users/'.$user->getKey().'/reset-two-factor')
+        ->postJson('/api/v1/users/'.$user->subject.'/reset-two-factor')
         ->assertOk()
         ->assertJsonPath('data.has_two_factor', false);
 
@@ -286,7 +286,11 @@ it('searches sorts and clamps the users list', function (): void {
     $firstNamesAscending = collect($byName->json('data'))->pluck('first_name');
     $emailsDescending = collect($byEmailDescending->json('data'))->pluck('email');
 
-    expect($firstNamesAscending->search('Ada'))->toBeLessThan($firstNamesAscending->search('Zoe'))
+    expect($firstNamesAscending->search('Ada'))->not->toBeFalse()
+        ->and($firstNamesAscending->search('Zoe'))->not->toBeFalse()
+        ->and($firstNamesAscending->search('Ada'))->toBeLessThan($firstNamesAscending->search('Zoe'))
+        ->and($emailsDescending->search('zoe@example.test'))->not->toBeFalse()
+        ->and($emailsDescending->search('ada@example.test'))->not->toBeFalse()
         ->and($emailsDescending->search('zoe@example.test'))
         ->toBeLessThan($emailsDescending->search('ada@example.test'));
 
@@ -309,7 +313,7 @@ it('never exposes a password hash or a two factor secret in a user payload', fun
 
     foreach ([
         $this->withToken($plain)->getJson('/api/v1/users')->assertOk(),
-        $this->withToken($plain)->getJson('/api/v1/users/'.$user->getKey())->assertOk(),
+        $this->withToken($plain)->getJson('/api/v1/users/'.$user->subject)->assertOk(),
     ] as $response) {
         $body = $response->getContent();
 

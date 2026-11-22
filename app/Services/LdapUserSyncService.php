@@ -92,9 +92,21 @@ final class LdapUserSyncService
                 ? $directoryUser->isDirectoryAccountDisabled()
                 : $this->isAccountControlDisabled($directoryUser);
 
-            $linkedUser = User::query()->where('ldap_guid', $guid)->first();
+            // Include soft-deleted rows: a recreated local user would violate unique ldap_guid.
+            // Soft-deleted LDAP accounts are never restored — the directory owns lifecycle (2026-11-22).
+            $linkedUser = User::withTrashed()->where('ldap_guid', $guid)->first();
 
             if ($linkedUser !== null) {
+                if ($linkedUser->trashed()) {
+                    Log::warning('LDAP sync skipped soft-deleted user; directory owns lifecycle', [
+                        'user_subject' => $linkedUser->subject,
+                        'ldap_guid' => $guid,
+                    ]);
+                    $skipped++;
+
+                    continue;
+                }
+
                 if ($this->updateLinkedUser(
                     $linkedUser,
                     $firstName,
@@ -112,7 +124,8 @@ final class LdapUserSyncService
                 continue;
             }
 
-            $emailOwner = User::query()->where('email', $email)->first();
+            // Soft-deleted emails stay taken until erasure (#220 / C17).
+            $emailOwner = User::withTrashed()->where('email', $email)->first();
 
             if ($emailOwner !== null) {
                 if ($emailOwner->ldap_guid !== null) {
@@ -235,7 +248,7 @@ final class LdapUserSyncService
         ?string $distinguishedName,
         bool $isDirectoryAccountDisabled,
     ): bool {
-        $emailOwner = User::query()
+        $emailOwner = User::withTrashed()
             ->where('email', $email)
             ->whereKeyNot($user->getKey())
             ->first();

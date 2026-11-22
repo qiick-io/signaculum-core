@@ -20,7 +20,7 @@ use Illuminate\Validation\Rules\Password;
  * same way; in Signaculum "project" means this instance.
  *
  * Storage is scoped (fleet / externa-core shape): every Signaculum setting lives at
- * scope=`instance`, scope_id=null, group=`app`. Public method signatures stay flat-keyed so
+ * scope=`instance`, scope_id=`''`, group=`app`. Public method signatures stay flat-keyed so
  * callers do not change.
  *
  * Registered as a singleton; values are read once per instance and reloaded after a write.
@@ -144,7 +144,7 @@ final class SettingsRepositoryService
                 Setting::query()->updateOrCreate(
                     [
                         'scope' => self::SCOPE_INSTANCE,
-                        'scope_id' => null,
+                        'scope_id' => '',
                         'group' => self::GROUP_APP,
                         'key' => $key,
                     ],
@@ -165,7 +165,7 @@ final class SettingsRepositoryService
     {
         return Setting::query()
             ->where('scope', self::SCOPE_INSTANCE)
-            ->whereNull('scope_id')
+            ->where('scope_id', '')
             ->where('group', self::GROUP_APP);
     }
 
