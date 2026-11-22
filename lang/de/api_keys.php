@@ -14,4 +14,18 @@ return [
         'action' => 'API-Schlüssel verwalten',
     ],
 
+    'creator_demoted' => [
+        'subject' => 'API-Schlüssel :name: Ersteller ist kein Instanz-Admin mehr',
+        'intro' => 'Der API-Schlüssel :name (:prefix) auf :app wurde von :creator erstellt, der kein Instanz-Admin mehr ist.',
+        'advice' => 'Der Schlüssel funktioniert weiterhin. Widerrufen Sie ihn in der Konsole, wenn ihn niemand mehr verwenden soll.',
+        'action' => 'API-Schlüssel prüfen',
+    ],
+
+    'creator_deleted' => [
+        'subject' => 'API-Schlüssel :name wurde widerrufen',
+        'intro' => 'Der API-Schlüssel :name (:prefix) auf :app wurde widerrufen, weil sein Ersteller :creator gelöscht wurde.',
+        'advice' => 'Integrationen, die ihn verwendet haben, funktionieren nicht mehr. Erstellen Sie einen neuen Schlüssel, wenn sie weiterhin Zugriff brauchen.',
+        'action' => 'API-Schlüssel prüfen',
+    ],
+
 ];

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\InstanceAdminDemotionReasonEnum;
 use App\Models\OidcSession;
 use App\Models\Principal;
 use App\Models\User;
 use App\Services\Authorization\SuperAdminGuardService;
+use App\Services\InstanceAdminDemotionService;
 use App\Services\OidcSessionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -24,10 +26,13 @@ final class DeactivateUserAction
         private readonly DispatchBackChannelLogoutAction $dispatchBackChannelLogoutAction,
         private readonly OidcSessionService $oidcSessionService,
         private readonly SuperAdminGuardService $superAdminGuard,
+        private readonly InstanceAdminDemotionService $instanceAdminDemotionService,
     ) {}
 
     /**
-     * Side effects: token revocation, session row deletes, queued back-channel jobs.
+     * Side effects: token revocation, session row deletes, queued back-channel jobs, and
+     * InstanceAdminDemotedEvent (`deactivated`) when the user was an instance admin. Their
+     * Admin API keys stay valid.
      *
      * @throws ValidationException when the target is the last active super-admin
      */
@@ -39,6 +44,15 @@ final class DeactivateUserAction
             ]);
         }
 
+        $this->instanceAdminDemotionService->track(
+            [$user->getKey()],
+            InstanceAdminDemotionReasonEnum::Deactivated,
+            fn () => $this->deactivate($user),
+        );
+    }
+
+    private function deactivate(User $user): void
+    {
         DB::transaction(function () use ($user): void {
             $user->forceFill(['is_active' => false])->save();
 

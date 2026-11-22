@@ -36,6 +36,22 @@ OpenAPI 3.1: `GET /api/v1/openapi.json` (hand-written; no generator package).
    at most `api.key_max_lifetime_days` (`API_KEY_MAX_LIFETIME_DAYS`, 90 by default) after the
    creation or rotation; the limit itself is allowed. A request without an expiry or past the
    limit is refused with `422` (the console form shows the error); the actions refuse it too.
+10. **When the creator stops being an instance admin**, every other active instance admin gets
+    one mail per Admin API key the creator made that still works: "the key `name` was created
+    by `user`, who is no longer an instance admin", with a link to **Admin → API keys** to
+    revoke it. The paths differ in what happens to the key:
+
+    | Path                                                                           | Key         | Mail                                        |
+    | ------------------------------------------------------------------------------ | ----------- | ------------------------------------------- |
+    | Super-admin role revoked (console, `signaculum:make-admin --revoke`)           | stays valid | creator is no longer an instance admin      |
+    | Group edit or deletion removes the admin role they held through it             | stays valid | creator is no longer an instance admin      |
+    | Account deactivated (console, `POST /api/v1/users/{id}/deactivate`, LDAP sync) | stays valid | creator is no longer an instance admin      |
+    | Account deleted                                                                | **revoked** | key revoked because its creator was deleted |
+
+    Deletion revokes on purpose: it is deliberate and irreversible, and a key whose `created_by`
+    no longer names a person would weaken the audit trail. Every path raises the domain event
+    `InstanceAdminDemotedEvent` once per demotion: a user demoted on one path and then touched
+    on another (deactivated, then deleted) is reported once.
 
 ## Scopes
 

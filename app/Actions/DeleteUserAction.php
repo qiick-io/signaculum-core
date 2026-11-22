@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\InstanceAdminDemotionReasonEnum;
 use App\Models\ApiKey;
 use App\Models\User;
+use App\Services\InstanceAdminDemotionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -22,14 +24,26 @@ final class DeleteUserAction
 {
     public function __construct(
         private readonly DeactivateUserAction $deactivateUserAction,
+        private readonly InstanceAdminDemotionService $instanceAdminDemotionService,
     ) {}
 
     /**
-     * Side effects: deactivation, API-key revocation, soft delete.
+     * Side effects: deactivation, API-key revocation, soft delete, and one
+     * InstanceAdminDemotedEvent (`deleted`, never also `deactivated`) when the user was an
+     * instance admin, so the other admins hear which keys the deletion revoked.
      *
      * @throws ValidationException when the target is the last active super-admin
      */
     public function execute(User $user): void
+    {
+        $this->instanceAdminDemotionService->track(
+            [$user->getKey()],
+            InstanceAdminDemotionReasonEnum::Deleted,
+            fn () => $this->delete($user),
+        );
+    }
+
+    private function delete(User $user): void
     {
         $this->deactivateUserAction->execute($user);
 

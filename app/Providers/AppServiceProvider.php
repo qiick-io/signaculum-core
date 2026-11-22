@@ -26,6 +26,7 @@ use App\Policies\ApplicationPolicy;
 use App\Services\ActivityOrganisationResolverService;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\EmailTemplateService;
+use App\Services\InstanceAdminDemotionService;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
 use App\Services\WebhookDispatcherService;
@@ -83,6 +84,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(DeviceCodeRepository::class, OidcDeviceCodeRepository::class);
         $this->app->singleton(SettingsRepositoryService::class);
         $this->app->singleton(EffectivePermissionResolverService::class);
+        // One instance per process, so a tracked change nested in another is reported once.
+        $this->app->singleton(InstanceAdminDemotionService::class);
     }
 
     /**

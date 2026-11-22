@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\InstanceAdminDemotionReasonEnum;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\Authorization\SuperAdminGuardService;
+use App\Services\InstanceAdminDemotionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\PermissionRegistrar;
@@ -15,12 +17,16 @@ use Spatie\Permission\PermissionRegistrar;
 /**
  * Grants or revokes the `super-admin` role (replaces the former `is_instance_admin` flag).
  * Only a super-admin may call this; refuses to remove the last active super-admin.
+ *
+ * Side effects: a revocation that ends the user's instance admin status raises
+ * InstanceAdminDemotedEvent (`role_revoked`) through {@see InstanceAdminDemotionService}.
  */
 final class SetInstanceAdminAction
 {
     public function __construct(
         private readonly EffectivePermissionResolverService $permissionResolver,
         private readonly SuperAdminGuardService $superAdminGuard,
+        private readonly InstanceAdminDemotionService $instanceAdminDemotionService,
     ) {}
 
     /**
@@ -43,13 +49,15 @@ final class SetInstanceAdminAction
             ]);
         }
 
-        if ($isInstanceAdmin) {
-            $user->assignRole(RoleEnum::SuperAdmin->value);
-        } else {
-            $user->removeRole(RoleEnum::SuperAdmin->value);
-        }
+        $this->instanceAdminDemotionService->track([$user->getKey()], InstanceAdminDemotionReasonEnum::RoleRevoked, function () use ($user, $isInstanceAdmin): void {
+            if ($isInstanceAdmin) {
+                $user->assignRole(RoleEnum::SuperAdmin->value);
+            } else {
+                $user->removeRole(RoleEnum::SuperAdmin->value);
+            }
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-        $this->permissionResolver->forget($user);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+            $this->permissionResolver->forget($user);
+        });
     }
 }
