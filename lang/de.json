@@ -8,5 +8,7 @@
     "api_errors.server_error": "Serverfehler.",
     "api_errors.too_many_requests": "Zu viele Anfragen.",
     "api_errors.unauthenticated": "Nicht authentifiziert.",
-    "api_errors.validation_failed": "Validierung fehlgeschlagen."
+    "api_errors.validation_failed": "Validierung fehlgeschlagen.",
+    "Every API key needs an expiry date.": "Jeder API-Schlüssel braucht ein Ablaufdatum.",
+    "An API key may last at most :days days.": "Ein API-Schlüssel darf höchstens :days Tage gültig sein."
 }

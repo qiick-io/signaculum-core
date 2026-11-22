@@ -12,6 +12,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreApiKeyRequest;
 use App\Models\ApiKey;
 use App\Models\User;
+use App\Services\ApiKeyLifetimeService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -26,6 +28,7 @@ final class ApiKeyController extends Controller
 {
     public function __construct(
         private readonly EnsureInstanceServicePrincipalAction $ensureInstanceServicePrincipalAction,
+        private readonly ApiKeyLifetimeService $apiKeyLifetimeService,
     ) {}
 
     public function index(Request $request): Response
@@ -56,6 +59,8 @@ final class ApiKeyController extends Controller
         return Inertia::render('admin/api-keys/index', [
             'apiKeys' => $apiKeys,
             'availableScopes' => ApiKeyScopeEnum::values(),
+            // The form's date picker: a whole day, so the latest day that stays within the limit.
+            'latestExpiryDate' => $this->apiKeyLifetimeService->latestExpiryFor(CarbonImmutable::now())->toDateString(),
             'plainTextSecret' => $request->session()->pull('plain_text_api_key'),
         ]);
     }

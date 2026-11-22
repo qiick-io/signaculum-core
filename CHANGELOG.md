@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed the PAR storage table from `oauth_pushed_authorization_requests` to `signaculum_pushed_authorization_requests` so the standard name stays free for `qiick/laravel-mcp-oauth` (#238). **Recreate beta.1 databases with `php artisan migrate:fresh --seed`** (the `create_` migration was edited in place). Spent and expired PAR rows are pruned daily via `model:prune`.
 - Spatie `permission.column_names.team_foreign_key` is `organisation_id` while `teams` stays `false` (decision 2026-11-22). With teams off the Spatie team column is not created yet; recreate beta.1 databases with `php artisan migrate:fresh --seed` so config (and any atypical `permission.testing` schema) stays aligned.
 - Principals are one per organisation membership (`organisation_id` required) with a bidirectional CHECK and a DB singleton for `instance_service` (NULL org only for that type) (#229). **Recreate beta.1 databases with `php artisan migrate:fresh --seed`**. Admin API keys belong to that service principal; they stay valid while any active instance admin remains.
+- Every Admin API key expires: `expires_at` is required at creation and at rotation, at most `api.key_max_lifetime_days` (`API_KEY_MAX_LIFETIME_DAYS`, default 90) from then; requests without one or past it get `422`. Expiry warnings go to every active instance admin when the creator no longer is one.
 
 ## [1.0.0-beta.1] - 2026-11-22
 

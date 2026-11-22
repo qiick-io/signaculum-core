@@ -27,4 +27,11 @@ return [
      * How many days before `expires_at` the owner (and the issuer) are told a key expires.
      */
     'key_expiry_warning_days' => 7,
+
+    /*
+     * The longest an Admin API key may live, in days, counted from its creation and again from
+     * each rotation. Every key has an expiry within it; a request without one, or past it, is
+     * refused (decision 2026-11-22 on the instance_service principal).
+     */
+    'key_max_lifetime_days' => (int) env('API_KEY_MAX_LIFETIME_DAYS', 90),
 ];

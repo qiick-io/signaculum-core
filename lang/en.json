@@ -8,5 +8,7 @@
     "api_errors.server_error": "Server error.",
     "api_errors.too_many_requests": "Too many requests.",
     "api_errors.unauthenticated": "Unauthenticated.",
-    "api_errors.validation_failed": "Validation failed."
+    "api_errors.validation_failed": "Validation failed.",
+    "Every API key needs an expiry date.": "Every API key needs an expiry date.",
+    "An API key may last at most :days days.": "An API key may last at most :days days."
 }

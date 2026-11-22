@@ -18,6 +18,7 @@ use App\Models\SigningKey;
 use App\Models\User;
 use App\Models\Webhook;
 use App\Services\SigningKeyService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -239,6 +240,22 @@ function mintSignedHint(User $user, string $audience, array $claimOverrides = []
 }
 
 /**
+ * An Admin API key expiry well inside the maximum lifetime: 30 days from now.
+ */
+function apiKeyExpiry(): CarbonImmutable
+{
+    return CarbonImmutable::now()->addDays(30);
+}
+
+/**
+ * {@see apiKeyExpiry()} as the console form posts it.
+ */
+function apiKeyExpiryInput(): string
+{
+    return apiKeyExpiry()->toDateTimeString();
+}
+
+/**
  * An instance admin and a key they issued, with its plain-text token.
  *
  * @param  list<string>  $scopes
@@ -248,7 +265,7 @@ function adminApiKey(array $scopes = [ApiKeyScopeEnum::UsersWrite->value], ?ApiK
 {
     syncPermissions();
     $admin = User::factory()->instanceAdmin()->create();
-    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, $apiKeyData ?? new ApiKeyData('Test key', $scopes));
+    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, $apiKeyData ?? new ApiKeyData('Test key', $scopes, expiresAt: apiKeyExpiry()));
 
     return [
         'admin' => $admin,

@@ -26,10 +26,16 @@ OpenAPI 3.1: `GET /api/v1/openapi.json` (hand-written; no generator package).
 6. **Rotation** issues a new secret for the same key (same prefix, scopes and audit trail). The
    old token keeps working for `api.key_rotation_grace_hours` (24 by default). Revoking ends both.
    Any instance admin with `can-manage-api-keys` may rotate or revoke any Admin API key.
+   A rotation sets a new `expires_at` (see 9), so it never extends a key past the maximum.
 7. Keys are managed in the signed-in admin UI only: no API key can create, rotate or widen a key,
    and an API key never establishes a web session (it has its own `api-key` guard).
-8. Creators (and, when the creator is gone, remaining instance admins) get a mail seven days
-   before a key expires (`signaculum:notify-expiring-api-keys`, scheduled daily).
+8. Creators get a mail seven days before a key expires (`signaculum:notify-expiring-api-keys`,
+   scheduled daily) while they are still active instance admins; when the creator is not, every
+   active instance admin gets it.
+9. **Every key expires.** `expires_at` is required at creation and at rotation, in the future and
+   at most `api.key_max_lifetime_days` (`API_KEY_MAX_LIFETIME_DAYS`, 90 by default) after the
+   creation or rotation; the limit itself is allowed. A request without an expiry or past the
+   limit is refused with `422` (the console form shows the error); the actions refuse it too.
 
 ## Scopes
 

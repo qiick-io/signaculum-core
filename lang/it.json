@@ -8,5 +8,7 @@
     "api_errors.server_error": "Errore del server.",
     "api_errors.too_many_requests": "Troppe richieste.",
     "api_errors.unauthenticated": "Autenticazione richiesta.",
-    "api_errors.validation_failed": "Convalida non riuscita."
+    "api_errors.validation_failed": "Convalida non riuscita.",
+    "Every API key needs an expiry date.": "Ogni chiave API deve avere una data di scadenza.",
+    "An API key may last at most :days days.": "Una chiave API può durare al massimo :days giorni."
 }

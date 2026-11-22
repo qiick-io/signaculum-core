@@ -7,8 +7,8 @@ namespace App\Http\Requests\Admin;
 use App\Data\ApiKeyData;
 use App\Data\ApiKeyScopesData;
 use App\Enums\ApiKeyScopeEnum;
+use App\Http\Requests\Concerns\ValidatesApiKeyExpiryTrait;
 use App\Models\ApiKey;
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -16,14 +16,17 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Admin → API keys: a new key with a name, at least one scope of this product's vocabulary and
- * the optional restrictions of the shared form (expiry, IP allowlist, rate limit).
+ * Admin → API keys: a new key with a name, at least one scope of this product's vocabulary, a
+ * mandatory expiry within the maximum lifetime and the optional restrictions of the shared form
+ * (IP allowlist, rate limit).
  *
  * `ip_allowlist` arrives as the form's free text, addresses and CIDR ranges separated by commas
  * or new lines; every entry must parse, so a typo never turns into "every address".
  */
 final class StoreApiKeyRequest extends FormRequest
 {
+    use ValidatesApiKeyExpiryTrait;
+
     public function authorize(): bool
     {
         return Gate::allows('create', ApiKey::class);
@@ -38,10 +41,18 @@ final class StoreApiKeyRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'scopes' => ['required', 'array', 'min:1'],
             'scopes.*' => ['required', 'string', 'distinct', Rule::enum(ApiKeyScopeEnum::class)],
-            'expires_at' => ['nullable', 'date', 'after:now'],
+            'expires_at' => $this->apiKeyExpiryRules(),
             'ip_allowlist' => ['nullable', 'string', 'max:2000'],
             'rate_limit_per_minute' => ['nullable', 'integer', 'min:1', 'max:100000'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->apiKeyExpiryMessages();
     }
 
     public function withValidator(Validator $validator): void
@@ -57,7 +68,6 @@ final class StoreApiKeyRequest extends FormRequest
 
     public function apiKeyData(): ApiKeyData
     {
-        $expiresAt = $this->validated('expires_at');
         $rateLimitPerMinute = $this->validated('rate_limit_per_minute');
         $ipAllowlist = $this->ipAllowlistEntries();
 
@@ -67,7 +77,7 @@ final class StoreApiKeyRequest extends FormRequest
         return new ApiKeyData(
             name: $this->string('name')->trim()->toString(),
             scopes: ApiKeyScopesData::highestPerResource($scopes),
-            expiresAt: is_string($expiresAt) ? CarbonImmutable::parse($expiresAt) : null,
+            expiresAt: $this->validatedExpiresAt(),
             ipAllowlist: $ipAllowlist === [] ? null : $ipAllowlist,
             rateLimitPerMinute: $rateLimitPerMinute === null ? null : (int) $rateLimitPerMinute,
         );
