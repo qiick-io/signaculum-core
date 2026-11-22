@@ -1,0 +1,63 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Concerns;
+
+use App\Http\Requests\Concerns\ValidatesUsernameTrait;
+use App\Models\User;
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
+
+/**
+ * Shared name, email and username validation rules for profile forms (Fortify and Settings).
+ * Lives under Concerns to keep the starter-kit trait name and location.
+ */
+trait ProfileValidationRules
+{
+    use ValidatesUsernameTrait;
+
+    /**
+     * Get the validation rules used to validate user profiles.
+     *
+     * @return array<string, array<int, Unique|ValidationRule|array<mixed>|string>>
+     */
+    protected function profileRules(?int $userId = null): array
+    {
+        return [
+            'first_name' => $this->nameRules(),
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'email' => $this->emailRules($userId),
+            'username' => $this->usernameRules($userId),
+        ];
+    }
+
+    /**
+     * Get the validation rules used to validate user names.
+     *
+     * @return array<int, Unique|ValidationRule|array<mixed>|string>
+     */
+    protected function nameRules(): array
+    {
+        return ['required', 'string', 'max:255'];
+    }
+
+    /**
+     * Get the validation rules used to validate user emails.
+     *
+     * @return array<int, Unique|ValidationRule|array<mixed>|string>
+     */
+    protected function emailRules(?int $userId = null): array
+    {
+        return [
+            'required',
+            'string',
+            'email',
+            'max:255',
+            $userId === null
+                ? Rule::unique(User::class)
+                : Rule::unique(User::class)->ignore($userId),
+        ];
+    }
+}

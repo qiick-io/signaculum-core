@@ -1,0 +1,45 @@
+# qiick checks, from qiick-io/app-ui at the pinned release (docs/new-product.md).
+# Bump the ref together with "ref" in qiick-standards.json and the @qiick URL in components.json.
+# distribution-smoke calls app-ui app-distribution-smoke.yml (signaculum:install / upgrade).
+name: qiick
+
+on:
+  push:
+    branches: [develop, main]
+  # All PR bases (incl. stacked feat/* → feat/*), so drift/php/ui gates run on #3/#4 too.
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  # Never cancel on main or develop: those runs are the release evidence.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
+
+jobs:
+  pr-title:
+    if: github.event_name == 'pull_request'
+    uses: qiick-io/app-ui/.github/workflows/pr-title.yml@f613af9febfce3b6d7f7f41785e9845a610080c7
+
+  app-ui-drift:
+    uses: qiick-io/app-ui/.github/workflows/drift-check.yml@f613af9febfce3b6d7f7f41785e9845a610080c7
+    with:
+      standards: true
+
+  php-quality:
+    uses: qiick-io/app-ui/.github/workflows/php-quality.yml@f613af9febfce3b6d7f7f41785e9845a610080c7
+
+  ui-quality:
+    uses: qiick-io/app-ui/.github/workflows/ui-quality.yml@f613af9febfce3b6d7f7f41785e9845a610080c7
+
+  migrations-frozen:
+    uses: qiick-io/app-ui/.github/workflows/migrations-frozen.yml@f613af9febfce3b6d7f7f41785e9845a610080c7
+
+  # Check name for required checks: distribution-smoke / smoke
+  distribution-smoke:
+    uses: qiick-io/app-ui/.github/workflows/app-distribution-smoke.yml@f613af9febfce3b6d7f7f41785e9845a610080c7
+    with:
+      package: qiick/signaculum-core
+      command: signaculum

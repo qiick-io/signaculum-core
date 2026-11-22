@@ -1,0 +1,3 @@
+# Baseline of known raw Tailwind palette / #hex className usages outside components/ui.
+# Maintained with scripts/check-ui-tokens.mjs. Do not grow counts; fix call sites instead.
+# Format: path:kind:token:count

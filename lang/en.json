@@ -1,0 +1,12 @@
+{
+    "An organisation you belong to requires a second factor. Sign in with your authenticator or a passkey.": "An organisation you belong to requires a second factor. Sign in with your authenticator or a passkey.",
+    "This account is managed by the identity directory. Ask a directory administrator to disable or remove it.": "This account is managed by the identity directory. Ask a directory administrator to disable or remove it.",
+    "api_errors.bad_request": "Bad request.",
+    "api_errors.forbidden": "Forbidden.",
+    "api_errors.method_not_allowed": "Method not allowed.",
+    "api_errors.not_found": "Not found.",
+    "api_errors.server_error": "Server error.",
+    "api_errors.too_many_requests": "Too many requests.",
+    "api_errors.unauthenticated": "Unauthenticated.",
+    "api_errors.validation_failed": "Validation failed."
+}

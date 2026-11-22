@@ -1,0 +1,882 @@
+{
+    "a11y": {
+        "breadcrumb": "Breadcrumb",
+        "close": "Close",
+        "mainNav": "Main navigation",
+        "moreActions": "More actions",
+        "saving": "Saving",
+        "skipToContent": "Skip to content",
+        "toggleSidebar": "Toggle sidebar",
+        "loading": "Loading",
+        "notifications": "Notifications",
+        "notificationsUnread": "Notifications, {{count}} unread",
+        "scrollableTable": "Scrollable table",
+        "search": "Search",
+        "unreadCount": "{{count}} unread"
+    },
+    "ai": {
+        "fabDescription": "Quick assistant drawer. Open the full page for history.",
+        "fabTitle": "New chat",
+        "openFullPage": "Open full page"
+    },
+    "impersonation": {
+        "bannerTitle": "Impersonating a user",
+        "bannerDescription": "You are viewing the app as this account. Signed in as {{name}} when you stop.",
+        "stop": "Stop impersonation"
+    },
+    "common": {
+        "actions": "Actions",
+        "cancel": "Cancel",
+        "confirmPassword": "Confirm password",
+        "delete": "Delete",
+        "emailAddress": "Email address",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "name": "Name",
+        "offline": "Offline",
+        "online": "Online",
+        "pageRange": "{{from}}–{{to}} of {{total}}",
+        "perPageOption": "{{count}} / page",
+        "rowsPerPage": "Rows per page",
+        "save": "Save",
+        "saved": "Saved",
+        "selectedCount": "{{count}} selected",
+        "email": "Email",
+        "password": "Password",
+        "create": "Create",
+        "copy": "Copy",
+        "clearFilters": "Clear filters",
+        "sortAscending": "Sort ascending",
+        "sortDescending": "Sort descending",
+        "back": "Back",
+        "continue": "Continue",
+        "close": "Close",
+        "confirm": "Confirm",
+        "edit": "Edit"
+    },
+    "confirmDestructive": {
+        "typeToConfirm": "Type \"{{name}}\" to confirm"
+    },
+    "files": {
+        "card": {
+            "select": "Select {{name}}"
+        },
+        "loadMore": "Load more",
+        "loading": "Loading…",
+        "tags": {
+            "moreTags": "{{count}} more tags"
+        }
+    },
+    "home": {
+        "applications": {
+            "description": "Apps you signed in to with this account.",
+            "manage": "Manage connected apps",
+            "title": "Connected apps"
+        },
+        "breadcrumb": "Home",
+        "head": "Home",
+        "stats": {
+            "applications": "Connected apps",
+            "applicationsHeadline": "Apps that can sign you in",
+            "passkeys": "Passkeys",
+            "passkeysHeadline": "Sign in without a password",
+            "sessions": "Signed-in browsers",
+            "sessionsHeadline": "Review your sessions",
+            "twoFactor": "Two-factor authentication",
+            "twoFactorEnable": "Turn it on",
+            "twoFactorManage": "Manage security",
+            "twoFactorOff": "Off",
+            "twoFactorOn": "On"
+        }
+    },
+    "nav": {
+        "documentation": "Documentation",
+        "home": "Home",
+        "platform": "Platform",
+        "repository": "Repository",
+        "settings": "Settings",
+        "admin": "Admin",
+        "users": "Users",
+        "applications": "Applications",
+        "activityLog": "Activity Log",
+        "organizations": "Organisations",
+        "apiKeys": "API keys",
+        "groups": "Groups"
+    },
+    "realtime": {
+        "connected": "Realtime connected",
+        "connecting": "Connecting…",
+        "disabled": "Realtime off",
+        "offline": "Realtime offline"
+    },
+    "settings": {
+        "appearance": {
+            "brandContrastWarning": "This brand colour does not meet WCAG AA contrast (4.5:1 text / 3:1 UI). Try a darker or lighter shade.",
+            "brandingDescription": "Brand colour used in the app chrome and on login",
+            "brandingTitle": "Branding",
+            "breadcrumb": "Appearance settings",
+            "changeFile": "Change file",
+            "chooseFile": "Choose file",
+            "clearCustomColor": "Clear custom colour",
+            "clearFile": "Clear",
+            "customColorDescription": "Optional override for primary. Leave empty to use the selected preset.",
+            "customColorTitle": "Custom brand colour",
+            "dark": "Dark",
+            "defaultAppearance": "Default appearance",
+            "defaultThemeDescription": "Used when a user has not chosen a personal light/dark preference",
+            "defaultThemeTitle": "Default theme",
+            "description": "Branding, theme and the default light or dark mode",
+            "head": "Appearance settings",
+            "light": "Light",
+            "noFile": "No file selected",
+            "presetPreviewDark": "Dark",
+            "presetPreviewLight": "Light",
+            "projectColor": "Brand colour",
+            "projectColorDark": "Brand colour (dark)",
+            "projectLogo": "Logo",
+            "projectLogoDark": "Logo (dark)",
+            "publicFavicon": "Favicon",
+            "sidebar": {
+                "breadcrumb": "Sidebar settings",
+                "head": "Sidebar settings"
+            },
+            "system": "System",
+            "themePresetAmetista": "Ametista",
+            "themePresetArdesia": "Ardesia",
+            "themePresetCiclamino": "Ciclamino (default)",
+            "themePresetDescription": "Pick a built-in palette. A custom brand colour still overrides primary.",
+            "themePresetIndaco": "Indaco",
+            "themePresetTitle": "Theme preset",
+            "title": "Appearance settings"
+        },
+        "connectedApplications": {
+            "breadcrumb": "Connected apps",
+            "columns": {
+                "access": "Access",
+                "application": "App",
+                "lastSignIn": "Last sign-in"
+            },
+            "confirm": {
+                "description": "Its tokens stop working now. The next time you sign in to it, it asks for your permission again.",
+                "title": "Remove access for {{name}}?"
+            },
+            "description": "Apps you allowed to sign you in. If you remove access, the app asks for your permission again next time.",
+            "emptyDescription": "Apps appear here after you sign in to them with this account.",
+            "emptyTitle": "No connected apps",
+            "head": "Connected apps",
+            "removeAccess": "Remove access",
+            "title": "Connected apps"
+        },
+        "instance": {
+            "breadcrumb": "Instance settings",
+            "defaultLanguage": "Default language",
+            "description": "Description",
+            "generalDescription": "Name, description and support link of this Signaculum",
+            "generalTitle": "General",
+            "head": "Instance settings",
+            "localization": {
+                "breadcrumb": "Localization settings",
+                "description": "Default language for people without a personal choice, the login page included",
+                "head": "Localization settings",
+                "title": "Default language"
+            },
+            "loginMaxAttempts": "Max login attempts per minute",
+            "name": "Name",
+            "passwordPolicies": {
+                "medium": {
+                    "description": "Minimum 8 characters, with mixed case letters and at least one number.",
+                    "label": "Medium"
+                },
+                "strong": {
+                    "description": "Minimum 12 characters, mixed case, letters, numbers, symbols, and not found in known data breaches.",
+                    "label": "Strong"
+                },
+                "weak": {
+                    "description": "Minimum 6 characters. No mixed case, numbers, or symbols required.",
+                    "label": "Weak"
+                }
+            },
+            "passwordPolicy": "Password security",
+            "reportBugUrl": "Report bug URL",
+            "reportBugUrlHint": "Leave empty to use the Signaculum issue tracker.",
+            "reportingDescription": "Where \"Report a bug\" in the settings nav points",
+            "reportingTitle": "Bug reports",
+            "registrationDescription": "Public sign-up is off by default on a closed IdP; turn it on when this instance should accept new accounts (for example qiick Cloud).",
+            "registrationEnabled": "Allow self-registration",
+            "registrationEnabledHint": "When enabled, guests can create an account from the login page. When disabled, only instance admins can create users.",
+            "registrationTitle": "User registration",
+            "securityDescription": "Password strength, login limits, and two-factor policy",
+            "securityNav": {
+                "breadcrumb": "Authentication & security",
+                "head": "Authentication & security"
+            },
+            "securityTitle": "Security",
+            "twoFactorRequired": "Require two-factor authentication for all users",
+            "twoFactorRequiredHint": "When enabled, users must enable TOTP 2FA or register a passkey on the Security page before using the app.",
+            "secondFactorUnavailableTitle": "No second-factor method is enabled",
+            "secondFactorUnavailableDescription": "config/fortify.php turns on neither TOTP nor passkeys, so nobody can meet a two-factor requirement. Requiring two-factor authentication for all users would refuse every page.",
+            "secondFactorUnavailableOrganizations": "Members of these organisations are refused when they sign in to apps: {{names}}",
+            "retentionTitle": "Data retention",
+            "retentionDescription": "How long Signaculum keeps the activity log. Older entries are deleted daily.",
+            "activityRetentionDays": "Activity log (days)",
+            "activityRetentionDaysHint": "Activity log entries older than this are deleted.",
+            "loginLockoutThreshold": "Failed attempts before lockout",
+            "loginLockoutThresholdDescription": "Wrong passwords for one account before it is locked.",
+            "loginLockoutMinutes": "Lockout duration (minutes)",
+            "loginLockoutMinutesDescription": "How long a locked account must wait before trying again.",
+            "emailTemplates": {
+                "breadcrumb": "Email templates",
+                "head": "Email templates",
+                "title": "Transactional emails",
+                "description": "Verification, password reset and organisation invitation emails. Empty fields keep the Signaculum defaults for that language.",
+                "typeLabel": "Email type",
+                "locale": "Language",
+                "subject": "Subject",
+                "body": "Body",
+                "actionLabel": "Button label",
+                "placeholdersHint": "Available placeholders: {{placeholders}}",
+                "restoreDefaults": "Restore defaults",
+                "previewTitle": "Preview",
+                "previewDescription": "Sample values only; real emails use the recipient’s details.",
+                "types": {
+                    "verification": "Verification",
+                    "reset": "Password reset",
+                    "invitation": "Invitation",
+                    "email_login_code": "Email sign-in code"
+                }
+            },
+            "passwordMinLength": "Minimum password length",
+            "passwordRequireMixedCase": "Require upper and lower case letters",
+            "passwordRequireNumbers": "Require at least one number",
+            "passwordRequireSymbols": "Require at least one symbol",
+            "passwordRejectCompromised": "Reject passwords found in known data breaches",
+            "passwordRejectCompromisedHint": "Off by default. When enabled, Signaculum sends only a short SHA-1 hash prefix of the password to Have I Been Pwned (k-anonymity API). The password itself never leaves this server. See docs/password-policy.md.",
+            "emailCodeLoginEnabled": "Allow passwordless sign-in with an email code",
+            "emailCodeLoginEnabledHint": "Off by default. Guests can request a six-digit code by email. The code alone records amr otp and never counts as MFA by itself."
+        },
+        "layout": {
+            "appearance": "Appearance",
+            "authSecurity": "Authentication & Security",
+            "connectedApplications": "Connected apps",
+            "description": "Manage your profile and account settings",
+            "general": "General",
+            "localization": "Localization",
+            "navAria": "Settings",
+            "profile": "Profile",
+            "reportBug": "Report a Bug",
+            "sectionAccount": "Account",
+            "sectionInstance": "Instance",
+            "security": "Security",
+            "sessions": "Sessions",
+            "title": "Settings",
+            "emailTemplates": "Email templates",
+            "webhooks": "Webhooks"
+        },
+        "profile": {
+            "breadcrumb": "Profile settings",
+            "description": "Update your first name, last name, email, language and timezone",
+            "head": "Profile settings",
+            "linkSent": "A new verification link has been sent to your email address.",
+            "locale": "Language",
+            "resend": "Click here to resend the verification email.",
+            "timezone": "Timezone",
+            "title": "Profile information",
+            "unverified": "Your email address is unverified.",
+            "exportTitle": "Download your data",
+            "exportDescription": "A JSON file with your profile, organisations, sessions and connected apps. Passwords and two-factor secrets are never included.",
+            "exportDownload": "Download JSON"
+        },
+        "security": {
+            "addPasskey": "Add passkey",
+            "breadcrumb": "Security settings",
+            "currentPassword": "Current password",
+            "deletePasskey": "Delete",
+            "head": "Security settings",
+            "newPassword": "New password",
+            "passkeyCreated": "Added {{date}}",
+            "passkeyName": "Passkey name",
+            "passkeyNamePlaceholder": "e.g. MacBook Pro",
+            "passkeysDescription": "Sign in without a password using a device passkey. A passkey also counts as a second factor.",
+            "passkeysEmpty": "No passkeys registered yet.",
+            "passkeysNeedHttps": "Passkeys need HTTPS.",
+            "passkeysTitle": "Passkeys",
+            "passkeysUnsupported": "Passkeys are not supported in this browser.",
+            "passwordDescription": "Ensure your account is using a long, random password to stay secure",
+            "passwordTitle": "Update password",
+            "savePassword": "Save password"
+        },
+        "sessions": {
+            "breadcrumb": "Sessions",
+            "browserOnPlatform": "{{browser}} on {{platform}}",
+            "columns": {
+                "browser": "Browser",
+                "ipAddress": "IP address",
+                "lastActive": "Last active"
+            },
+            "confirm": {
+                "description": "The browser has to sign in again to use your account.",
+                "othersDescription": "Every browser except this one has to sign in again. Remembered logins stop working too.",
+                "othersTitle": "Sign out of all other browsers?",
+                "title": "Sign out of this browser?"
+            },
+            "description": "Browsers where your account is signed in. Sign out of any you do not recognise.",
+            "emptyDescription": "Only this browser is signed in.",
+            "emptyTitle": "No other sessions",
+            "head": "Sessions",
+            "signOut": "Sign out",
+            "signOutOthers": "Sign out of all other browsers",
+            "thisDevice": "This device",
+            "title": "Signed-in browsers"
+        },
+        "deleteAccount": {
+            "title": "Delete account",
+            "description": "Delete your account and all of its resources",
+            "warningTitle": "Warning",
+            "warningDescription": "Please proceed with caution, this cannot be undone.",
+            "confirmTitle": "Are you sure you want to delete your account?",
+            "confirmDescription": "Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.",
+            "directoryManagedDescription": "This account is managed by the identity directory. Ask a directory administrator to disable or remove it."
+        },
+        "twoFactor": {
+            "title": "Two-factor authentication",
+            "description": "Manage your two-factor authentication settings",
+            "enabledDescription": "You will be prompted for a secure, random pin during login, which you can retrieve from the TOTP-supported application on your phone.",
+            "disabledDescription": "When you enable two-factor authentication, you will be prompted for a secure pin during login. This pin can be retrieved from a TOTP-supported application on your phone.",
+            "enable": "Enable 2FA",
+            "disable": "Disable 2FA",
+            "continueSetup": "Continue setup",
+            "recoveryCodes": {
+                "title": "2FA recovery codes",
+                "description": "Recovery codes let you regain access if you lose your 2FA device. Store them in a secure password manager.",
+                "view": "View recovery codes",
+                "hide": "Hide recovery codes",
+                "regenerate": "Regenerate codes",
+                "listLabel": "Recovery codes",
+                "loading": "Loading recovery codes",
+                "regenerateHint": "Each recovery code can be used once to access your account and will be removed after use. If you need more, click <bold>Regenerate codes</bold> above."
+            },
+            "setup": {
+                "manualEntry": "or, enter the code manually",
+                "enabledTitle": "Two-factor authentication enabled",
+                "enabledDescription": "Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.",
+                "verifyTitle": "Verify authentication code",
+                "verifyDescription": "Enter the 6-digit code from your authenticator app",
+                "enableTitle": "Enable two-factor authentication",
+                "enableDescription": "To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app"
+            }
+        },
+        "webhooks": {
+            "head": "Webhooks",
+            "title": "Webhooks",
+            "description": "Push Signaculum domain events to your own HTTPS endpoints. Deliveries are signed with HMAC-SHA256; see the docs for the wire format.",
+            "add": "Add endpoint",
+            "empty": "No webhook endpoints yet.",
+            "secretTitle": "Signing secret (shown once)",
+            "allowPrivateUrls": "Allow private webhook URLs",
+            "allowPrivateUrlsDescription": "Off by default. When on, deliveries may target loopback and private networks (local QA). Cloud metadata hosts stay blocked. This is not telemetry; Signaculum only POSTs to URLs you register.",
+            "active": "Active",
+            "inactive": "Inactive",
+            "recentDeliveries": "Recent deliveries",
+            "editTitle": "Edit webhook",
+            "createTitle": "Add webhook",
+            "formDescription": "Subscribe to events and receive signed POSTs. Prefer HTTPS public URLs.",
+            "url": "Endpoint URL",
+            "urlDescription": "Exact URL Signaculum will POST to. Private and loopback hosts are refused unless the setting above is on.",
+            "events": "Events"
+        }
+    },
+    "userMenu": {
+        "accessibility": "Accessibility",
+        "accessibilityOff": "Off",
+        "accessibilityOnCount": "{{count}} on",
+        "appearance": "Appearance",
+        "highContrast": "High contrast",
+        "language": "Language",
+        "logOut": "Log out",
+        "reduceMotion": "Reduce motion",
+        "settings": "Settings"
+    },
+    "oauth": {
+        "authorize": {
+            "title": "Authorize application",
+            "description": "Review what this application can access.",
+            "requestingAccess": "is requesting access to your account.",
+            "permissionsLabel": "Requested permissions",
+            "approve": "Authorize"
+        },
+        "device": {
+            "userCodeTitle": "Enter device code",
+            "userCodeDescription": "Type the code shown on your device or CLI to continue.",
+            "userCodeLabel": "Device code",
+            "userCodePlaceholder": "ABCD-EFGH",
+            "continue": "Continue",
+            "authorizeTitle": "Authorize device",
+            "authorizeDescription": "Confirm that this device may access your account.",
+            "requestingAccess": "is requesting access from a device."
+        },
+        "logout": {
+            "title": "Sign out",
+            "description": "Confirm that you want to sign out of Signaculum.",
+            "confirm": "Sign out"
+        },
+        "frontchannelLogout": {
+            "title": "Signing out",
+            "description": "Signing you out of connected applications…",
+            "iframeTitle": "Application logout"
+        }
+    },
+    "errorBoundary": {
+        "title": "Something went wrong",
+        "description": "The interface hit an unexpected error. You can try reloading the page.",
+        "tryAgain": "Try again",
+        "reload": "Reload page"
+    },
+    "auth": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "login": {
+            "title": "Log in to your account",
+            "description": "Enter your email and password below to log in",
+            "head": "Log in",
+            "forgotPassword": "Forgot your password?",
+            "rememberMe": "Remember me",
+            "submit": "Log in",
+            "passkey": "Sign in with a passkey",
+            "authenticating": "Authenticating...",
+            "orContinueWithEmail": "Or continue with email",
+            "noAccount": "Don't have an account?",
+            "signUp": "Sign up"
+        },
+        "register": {
+            "title": "Create an account",
+            "description": "Enter your details below to create your account",
+            "head": "Register",
+            "submit": "Create account",
+            "hasAccount": "Already have an account?",
+            "logIn": "Log in"
+        },
+        "forgotPassword": {
+            "title": "Forgot password",
+            "description": "Enter your email to receive a password reset link",
+            "head": "Forgot password",
+            "submit": "Email password reset link",
+            "orReturn": "Or, return to",
+            "logIn": "log in"
+        },
+        "resetPassword": {
+            "title": "Reset password",
+            "description": "Please enter your new password below",
+            "head": "Reset password",
+            "submit": "Reset password"
+        },
+        "confirmPassword": {
+            "title": "Confirm password",
+            "description": "This is a secure area of the application. Please confirm your password before continuing.",
+            "head": "Confirm password",
+            "submit": "Confirm password",
+            "passkey": "Confirm with passkey",
+            "confirming": "Confirming...",
+            "orConfirmWithPassword": "Or confirm with password"
+        },
+        "verifyEmail": {
+            "title": "Email verification",
+            "description": "Please verify your email address by clicking on the link we just emailed to you.",
+            "head": "Email verification",
+            "linkSent": "A new verification link has been sent to the email address you provided during registration.",
+            "resend": "Resend verification email",
+            "logOut": "Log out"
+        },
+        "twoFactorChallenge": {
+            "head": "Two-factor authentication",
+            "recoveryTitle": "Recovery code",
+            "recoveryDescription": "Please confirm access to your account by entering one of your emergency recovery codes.",
+            "recoveryToggle": "login using an authentication code",
+            "authTitle": "Authentication code",
+            "authDescription": "Enter the authentication code provided by your authenticator application.",
+            "authToggle": "login using a recovery code",
+            "recoveryPlaceholder": "Enter recovery code",
+            "orYouCan": "or you can "
+        },
+        "emailCode": {
+            "head": "Sign in with email code",
+            "orUseCode": "Or sign in with a one-time email code",
+            "email": "Email address",
+            "sendCode": "Email me a code",
+            "code": "Sign-in code",
+            "verify": "Sign in",
+            "resend": "Resend code",
+            "backToLogin": "Back to password login"
+        }
+    },
+    "admin": {
+        "users": {
+            "head": "Users",
+            "title": "Users",
+            "newUser": "New user",
+            "searchPlaceholder": "Search users…",
+            "sortBy": "Sort by",
+            "columns": {
+                "created": "Created",
+                "updated": "Updated",
+                "name": "Name",
+                "email": "Email",
+                "status": "Status",
+                "actions": "Actions"
+            },
+            "actions": {
+                "edit": "Edit user",
+                "deactivate": "Deactivate",
+                "reactivate": "Reactivate",
+                "resetTwoFactor": "Reset two-factor",
+                "grantInstanceAdmin": "Make instance admin",
+                "revokeInstanceAdmin": "Remove instance admin",
+                "unlock": "Clear lockout",
+                "impersonate": "Impersonate"
+            },
+            "confirm": {
+                "deactivateTitle": "Deactivate {{name}}?",
+                "deactivateDescription": "They cannot sign in. Their tokens are revoked and connected apps receive a back-channel logout.",
+                "resetTwoFactorTitle": "Reset two-factor for {{name}}?",
+                "resetTwoFactorDescription": "Their authenticator and recovery codes stop working. They must enrol again.",
+                "revokeInstanceAdminTitle": "Remove instance admin from {{name}}?",
+                "revokeInstanceAdminDescription": "They lose access to Admin and instance settings. At least one instance admin must remain."
+            },
+            "status": {
+                "active": "Active",
+                "inactive": "Inactive"
+            },
+            "form": {
+                "editTitle": "Edit user",
+                "editDescription": "Update the person's name and email. Leave the password empty to keep it.",
+                "createDescription": "Create a Signaculum user. The email counts as verified.",
+                "requiredHint": "Fields marked with * are required.",
+                "firstNameRequired": "First name *",
+                "emailRequired": "Email *",
+                "emailHint": "Use a valid email address, for example",
+                "newPasswordOptional": "New password (optional)",
+                "passwordRequired": "Password *"
+            },
+            "empty": {
+                "title": "No users yet",
+                "description": "Create the first account for this Signaculum instance.",
+                "filteredTitle": "No users match",
+                "filteredDescription": "Try another search or clear the filters.",
+                "cta": "New user"
+            }
+        },
+        "applications": {
+            "head": "Applications",
+            "title": "Applications",
+            "newApplication": "New application",
+            "searchPlaceholder": "Search applications…",
+            "sortBy": "Sort by",
+            "redirectUriCount": "{{count}} redirect URIs",
+            "columns": {
+                "created": "Created",
+                "updated": "Updated",
+                "name": "Name",
+                "type": "Type",
+                "redirectUris": "Redirect URIs",
+                "actions": "Actions"
+            },
+            "actions": {
+                "edit": "Edit application",
+                "regenerateSecret": "Regenerate secret",
+                "delete": "Delete application"
+            },
+            "type": {
+                "confidential": "Confidential",
+                "public": "Public",
+                "firstParty": "First-party"
+            },
+            "secretBanner": {
+                "title": "Copy the client secret now",
+                "description": "This is the only time Signaculum shows the secret. Store it in the relying party configuration."
+            },
+            "confirm": {
+                "regenerateTitle": "Regenerate client secret?",
+                "regenerateDescription": "The current secret stops working immediately. Copy the new secret from the banner after confirming.",
+                "deleteTitle": "Delete this application?",
+                "deleteDescription": "The client is revoked and its tokens stop working. Type the application name to confirm."
+            },
+            "form": {
+                "editTitle": "Edit application",
+                "editDescription": "Update the OIDC client name, redirect URIs and flags.",
+                "createDescription": "Register an OIDC client for a relying party. The client secret is generated for confidential apps.",
+                "requiredHint": "Fields marked with * are required.",
+                "nameRequired": "Name *",
+                "redirectUrisRequired": "Redirect URIs *",
+                "redirectUrisHint": "One absolute URL per line. https required except http://localhost or http://127.0.0.1. No fragments. Exact match at runtime.",
+                "clientId": "Client ID",
+                "discoveryUrl": "Discovery URL",
+                "configureCommand": "oidc:configure",
+                "confidential": "Confidential client",
+                "confidentialHint": "Uses a client secret at the token endpoint. Turn off for public SPAs.",
+                "firstParty": "First-party qiick app",
+                "firstPartyHint": "Skips the consent screen for signed-in users.",
+                "clientCredentials": "Allow client credentials",
+                "clientCredentialsHint": "Machine-to-machine access token without a user. Use for jobs, MCP agents and services — not for browser SSO.",
+                "deviceAuthorization": "Allow device authorization",
+                "deviceAuthorizationHint": "RFC 8628 device flow for CLI, TV and IoT clients. Users enter a code at /oauth/device.",
+                "pushedAuthorization": "Require pushed authorization requests (PAR)",
+                "pushedAuthorizationHint": "The application must send every sign-in request to the PAR endpoint first. Plain authorization links from it are refused. Turn on only when the application supports PAR.",
+                "frontchannelLogoutUri": "Front-channel logout URI",
+                "frontchannelLogoutUriHint": "Absolute https URL loaded in a hidden iframe on logout (OIDC Front-Channel Logout). Leave empty to skip. Exact value; no fragment.",
+                "frontchannelLogoutSessionRequired": "Require iss and sid on front-channel logout",
+                "frontchannelLogoutSessionRequiredHint": "When enabled, Signaculum appends issuer and session id query parameters to the logout URI."
+            },
+            "empty": {
+                "title": "No applications yet",
+                "description": "Register the first OIDC client for this Signaculum instance.",
+                "filteredTitle": "No applications match",
+                "filteredDescription": "Try another search or clear the filters.",
+                "cta": "New application"
+            }
+        },
+        "apiKeys": {
+            "head": "API keys",
+            "title": "API keys",
+            "description": "Bearer keys for the Admin REST API. Secrets are shown once; scopes gate each resource.",
+            "add": "Create key",
+            "empty": "No API keys yet.",
+            "secretTitle": "API key secret (shown once)",
+            "createTitle": "Create API key",
+            "formDescription": "Choose scopes carefully. Prefer read scopes for automation that only lists data.",
+            "scopes": "Scopes",
+            "active": "Active",
+            "inactive": "Revoked or expired",
+            "revoke": "Revoke"
+        },
+        "groups": {
+            "head": "Groups",
+            "title": "Groups",
+            "newGroup": "New group",
+            "searchPlaceholder": "Search groups…",
+            "sortBy": "Sort by",
+            "columns": {
+                "name": "Name",
+                "description": "Description",
+                "members": "Members",
+                "roles": "Roles",
+                "actions": "Actions",
+                "created": "Created",
+                "updated": "Updated"
+            },
+            "actions": {
+                "edit": "Edit",
+                "delete": "Delete",
+                "restore": "Restore",
+                "forceDelete": "Delete permanently"
+            },
+            "status": {
+                "active": "Active",
+                "trashed": "Trash"
+            },
+            "form": {
+                "editTitle": "Edit group",
+                "description": "Groups grant roles to their members. Effective permissions are the union of direct and group roles.",
+                "descriptionLabel": "Description",
+                "rolesHint": "Assignable roles only. Super-admin stays reserved for super-admins.",
+                "users": "Members",
+                "noRoles": "No assignable roles yet.",
+                "noUsers": "No active users yet.",
+                "create": "Create group"
+            },
+            "empty": {
+                "title": "No groups yet",
+                "description": "Create a group to grant the same roles to several users at once.",
+                "filteredTitle": "No matching groups",
+                "filteredDescription": "Try a different search or clear the filters.",
+                "cta": "New group"
+            },
+            "confirm": {
+                "deleteTitle": "Delete {{name}}?",
+                "deleteDescription": "The group moves to trash. Members keep any roles they still have directly.",
+                "forceDeleteTitle": "Permanently delete {{name}}?",
+                "forceDeleteDescription": "This cannot be undone. Membership and role links are removed."
+            }
+        }
+    },
+    "activityLog": {
+        "title": "Activity Log",
+        "description": "Read-only audit trail of model changes and authentication events.",
+        "searchPlaceholder": "Search description or subject…",
+        "allUsers": "All users",
+        "allActions": "All actions",
+        "allLogs": "All logs",
+        "filterByAction": "Filter by action",
+        "filterByLog": "Filter by log name",
+        "dateFrom": "From date",
+        "dateTo": "To date",
+        "empty": "No activity found for the selected filters.",
+        "system": "System",
+        "noChanges": "No field changes recorded.",
+        "expand": "Expand changes",
+        "collapse": "Collapse changes",
+        "logName": "Log name",
+        "columns": {
+            "date": "Date",
+            "user": "User",
+            "action": "Action",
+            "description": "Description",
+            "subject": "Subject"
+        },
+        "events": {
+            "created": "Created",
+            "updated": "Updated",
+            "deleted": "Deleted",
+            "login": "Login",
+            "logout": "Logout",
+            "failed": "Failed login",
+            "two_factor_enabled": "Two-factor setup started",
+            "two_factor_confirmed": "Authenticator app confirmed",
+            "two_factor_disabled": "Two-factor authentication turned off",
+            "recovery_codes_regenerated": "Recovery codes regenerated",
+            "passkey_registered": "Passkey added",
+            "passkey_deleted": "Passkey removed",
+            "settings_updated": "Settings updated",
+            "consent_granted": "Consent granted",
+            "token_revoked": "Access revoked",
+            "secret_rotated": "Secret rotated",
+            "rotated": "Rotated",
+            "revoked": "Revoked",
+            "user_impersonation_started": "Impersonation started",
+            "user_impersonation_stopped": "Impersonation stopped",
+            "user_impersonation_expired": "Impersonation expired",
+            "locked": "Account locked",
+            "organization_created": "Organisation created",
+            "organization_updated": "Organisation updated",
+            "organization_deleted": "Organisation deleted",
+            "organization_member_added": "Organisation member added",
+            "organization_member_removed": "Organisation member removed",
+            "organization_member_roles_updated": "Organisation member roles updated",
+            "organization_invitation_created": "Organisation invitation created",
+            "organization_invitation_resent": "Organisation invitation resent",
+            "organization_invitation_revoked": "Organisation invitation revoked",
+            "organization_mfa_requirement_updated": "Organisation MFA requirement updated",
+            "organization_member_tokens_revoked": "Member tokens revoked",
+            "organization_member_backchannel_logout_dispatched": "Member back-channel logout dispatched",
+            "ldap_sync_completed": "LDAP sync completed",
+            "ldap_sync_conflict": "LDAP sync conflict"
+        },
+        "logs": {
+            "default": "Application",
+            "auth": "Authentication",
+            "settings": "Settings",
+            "organizations": "Organisations",
+            "api-keys": "API keys",
+            "ldap": "LDAP"
+        },
+        "ipAddress": "IP"
+    },
+    "errors": {
+        "forbidden": {
+            "head": "Forbidden",
+            "title": "You do not have permission",
+            "description": "This page needs a different role or permission. Ask an instance admin if you need access.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "secondFactorUnavailable": {
+            "head": "Second factor unavailable",
+            "title": "A second factor is required",
+            "description": "Your account has to sign in with two-factor authentication, but this Signaculum instance has no second-factor method turned on. Ask your administrator.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "notFound": {
+            "head": "Not found",
+            "title": "Page not found",
+            "description": "That address does not match anything here. Check the URL or go back.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "serverError": {
+            "head": "Something went wrong",
+            "title": "Something went wrong",
+            "description": "An unexpected error occurred. Try again in a moment.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        },
+        "serviceUnavailable": {
+            "head": "Unavailable",
+            "title": "Temporarily unavailable",
+            "description": "Signaculum is briefly unavailable. Please try again soon.",
+            "goHome": "Back to dashboard",
+            "signIn": "Sign in"
+        }
+    },
+    "organizations": {
+        "breadcrumb": "Organisations",
+        "head": "Organisations",
+        "title": "Organisations",
+        "description": "Organisations you belong to. Create one to start managing members and roles.",
+        "slug": "Slug",
+        "create": "Create organisation",
+        "emptyTitle": "No organisations yet",
+        "emptyDescription": "Create an organisation to group members and roles for the qiick.orgs claim.",
+        "showDescription": "Organisation members and roles.",
+        "members": {
+            "title": "Members",
+            "description": "Each member may hold one or more roles. An organisation always keeps at least one owner.",
+            "rolesLabel": "Roles",
+            "userId": "User ID",
+            "add": "Add member",
+            "remove": "Remove",
+            "roles": {
+                "owner": "Owner",
+                "admin": "Admin",
+                "member": "Member",
+                "billing": "Billing"
+            }
+        },
+        "danger": {
+            "title": "Delete organisation",
+            "description": "Deletes the organisation and every membership. This cannot be undone.",
+            "confirmTitle": "Delete this organisation?",
+            "confirmDescription": "Type the organisation name to confirm permanent deletion."
+        },
+        "views": {
+            "label": "Organisation views",
+            "members": "Members",
+            "invitations": "Invitations",
+            "settings": "Settings"
+        },
+        "invitations": {
+            "head": "Invitations — {{name}}",
+            "title": "Invitations",
+            "description": "Invite people by email. They join with the roles you choose when they accept.",
+            "expires": "Expires",
+            "expired": "Expired",
+            "empty": "No pending invitations.",
+            "send": "Send invitation",
+            "resend": "Resend",
+            "revoke": "Revoke"
+        },
+        "settings": {
+            "head": "Settings — {{name}}",
+            "title": "Settings",
+            "description": "Organisation name, slug, branding and deletion.",
+            "brandingTitle": "Branding",
+            "brandingDescription": "Logo and colours shown on login and consent when this organisation is in context.",
+            "brandColor": "Brand colour",
+            "brandColorDark": "Brand colour (dark)",
+            "logo": "Logo",
+            "logoDark": "Logo (dark)",
+            "saveBranding": "Save branding",
+            "requireMfa": "Members must use two-factor authentication",
+            "requireMfaHint": "Members without TOTP or a passkey are sent to Security before they can authorize an application. Signaculum never claims MFA in amr or acr unless the user actually used a second factor.",
+            "requireMfaRevokesTokens": "Turning this on revokes every member's access and refresh tokens and signs them out of connected apps that support back-channel logout. Front-channel logout cannot run without each member's browser, so apps without a back-channel logout URI keep their own session until it expires. Members must sign in again with a second factor."
+        },
+        "accept": {
+            "head": "Organisation invitation",
+            "title": "Organisation invitation",
+            "description": "Accept an invitation to join an organisation on Signaculum",
+            "expired": "This invitation to {{name}} has expired.",
+            "guest": "You were invited to {{name}} as {{email}}. Sign in with that email to continue.",
+            "signIn": "Sign in",
+            "ready": "Join {{name}} as {{email}}?",
+            "confirm": "Accept invitation"
+        }
+    }
+}

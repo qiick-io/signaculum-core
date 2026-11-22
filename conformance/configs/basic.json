@@ -1,0 +1,20 @@
+{
+    "alias": "${CONFORMANCE_ALIAS}",
+    "description": "Signaculum Basic OP conformance",
+    "publish": "no",
+    "server": {
+        "discoveryUrl": "${SIGNACULUM_BASE_URL}/.well-known/openid-configuration"
+    },
+    "client": {
+        "client_id": "${OIDC_CLIENT_ID_1}",
+        "client_secret": "${OIDC_CLIENT_SECRET_1}"
+    },
+    "client_secret_post": {
+        "client_id": "${OIDC_CLIENT_ID_1}",
+        "client_secret": "${OIDC_CLIENT_SECRET_1}"
+    },
+    "client2": {
+        "client_id": "${OIDC_CLIENT_ID_2}",
+        "client_secret": "${OIDC_CLIENT_SECRET_2}"
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "An organisation you belong to requires a second factor. Sign in with your authenticator or a passkey.": "Un'organizzazione a cui appartieni richiede un secondo fattore. Accedi con l'autenticatore o una passkey.",
+    "This account is managed by the identity directory. Ask a directory administrator to disable or remove it.": "Questo account è gestito dalla directory delle identità. Chiedi a un amministratore della directory di disabilitarlo o rimuoverlo.",
+    "api_errors.bad_request": "Richiesta non valida.",
+    "api_errors.forbidden": "Accesso negato.",
+    "api_errors.method_not_allowed": "Metodo non consentito.",
+    "api_errors.not_found": "Risorsa non trovata.",
+    "api_errors.server_error": "Errore del server.",
+    "api_errors.too_many_requests": "Troppe richieste.",
+    "api_errors.unauthenticated": "Autenticazione richiesta.",
+    "api_errors.validation_failed": "Convalida non riuscita."
+}

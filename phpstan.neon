@@ -1,0 +1,15 @@
+includes:
+    # Level 8 debt at adoption, starter-kit settings controllers (qiick standards ratchet: it may only shrink).
+    - phpstan-baseline.neon
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - bootstrap/app.php
+        - config/
+        - database/
+        - routes/
+
+    level: 8

@@ -1,0 +1,74 @@
+{
+    "$comment": "qiick standards pack: https://github.com/qiick-io/app-ui/tree/v0.12.0/standards. Sync: node <app-ui>/scripts/sync-standards.mjs --target .",
+    "ref": "v0.12.0",
+    "uiPreset": "Signaculum (rose, 348°) once app-ui ships it; until then the shared base theme",
+    "php": true,
+    "frontendRoots": ["resources/js"],
+    "app": true,
+    "oxlint": true,
+    "conformance": {
+        "userModel": "App\\Models\\User",
+        "publicIdColumn": "subject",
+        "apiPrefix": "api/v1",
+        "usesSpatieTeams": false,
+        "hasOrganisations": true,
+        "hasUserGroups": true,
+        "hasPrincipals": true,
+        "hasApiKeys": true,
+        "hasSettings": true,
+        "hasUserIdentities": false,
+        "organisationTable": "organizations",
+        "membershipTable": "organization_user",
+        "openApiPath": "resources/openapi/admin-v1.json"
+    },
+    "divergences": {
+        "C3": {
+            "reason": "Signaculum is the IdP: identities are local users; users.subject is the public UUID and there is no user_identities / oidc_sub table (permanent exemption)",
+            "decision": "knowledge/decisions/2026-11-22-ldap-lifecycle-identities-and-key-rechecks",
+            "review_by": "2027-05-01",
+            "issue": "https://github.com/qiick-io/signaculum-core/issues/219"
+        },
+        "C17": {
+            "reason": "Erasure job with unique tombstones is not built yet; due before the first stable release",
+            "decision": "knowledge/decisions/2026-11-20-core-hardening",
+            "review_by": "2026-12-20",
+            "issue": "https://github.com/qiick-io/signaculum-core/issues/220"
+        },
+        "C23": {
+            "reason": "Throttle-header contract moves into qiick/laravel-http-basics",
+            "decision": "knowledge/decisions/2026-11-20-fleet-contracts",
+            "review_by": "2027-05-01",
+            "issue": "https://github.com/qiick-io/signaculum-core/issues/221"
+        },
+        "C24": {
+            "reason": "X-Request-Id moves into qiick/laravel-http-basics",
+            "decision": "knowledge/decisions/2026-11-20-fleet-contracts",
+            "review_by": "2027-05-01",
+            "issue": "https://github.com/qiick-io/signaculum-core/issues/221"
+        },
+        "C25": {
+            "reason": "Idempotency-Key moves into qiick/laravel-http-basics",
+            "decision": "knowledge/decisions/2026-11-20-fleet-contracts",
+            "review_by": "2027-05-01",
+            "issue": "https://github.com/qiick-io/signaculum-core/issues/221"
+        },
+        "C27": {
+            "reason": "Standard Webhooks envelope lands with qiick/laravel-outbound adoption",
+            "decision": "knowledge/decisions/2026-11-19-shared-packages-for-api-keys-and-outbound-http",
+            "review_by": "2027-05-01",
+            "issue": "https://github.com/qiick-io/signaculum-core/issues/222"
+        },
+        "C29": {
+            "reason": "Organisation roles stay JSON on memberships (Spatie teams => false); team-switch check waits on teams",
+            "decision": "knowledge/decisions/2026-11-19-roles-groups-initial-admin-and-username",
+            "review_by": "2027-05-01",
+            "issue": "https://github.com/qiick-io/signaculum-core/issues/223"
+        },
+        "C34": {
+            "reason": "Remaining historical add_/alter_ files fold before the first stable tag",
+            "decision": "knowledge/decisions/2026-11-20-migrations-freeze-at-first-stable-release",
+            "review_by": "2027-05-01",
+            "issue": "https://github.com/qiick-io/signaculum-core/issues/218"
+        }
+    }
+}

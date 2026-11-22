@@ -1,0 +1,45 @@
+/*
+ * Signaculum brand preset (rose, slot 348° of the qiick product colour system):
+ * knowledge `brand/signaculum/palette.md` and `brand/colors/tokens/qiick-product-colors.css`.
+ * Same shape as app-ui's `@qiick/theme-blue`: brand-only tokens over the shared base in
+ * qiick-theme.css, nothing else.
+ *
+ * ponytail: lives here until app-ui ships it as `@qiick/theme-signaculum`; then install
+ * the registry item and delete this file.
+ *
+ * Light: `signaculum-accent` #A24A7B (white text 5.9:1), sidebar accent on
+ * `signaculum-subtle-light` with `signaculum-text-strong`. Dark: `signaculum-mark`
+ * #DC77AD (ink text from the base), sidebar accent on `signaculum-subtle-dark` with
+ * `signaculum-hover-dark`. chart-2 keeps the base preset's teal.
+ *
+ * The rose values are fallbacks behind `--brand-primary` / `--brand-primary-dark`, the
+ * same chain as qiick-theme.css, so a custom instance or organisation brand colour
+ * (rendered inline by app.blade.php) still replaces them.
+ */
+
+@layer base {
+    :root {
+        --primary: var(--brand-primary, #a24a7b);
+        --ring: #a24a7b;
+        --chart-1: var(--brand-primary, #a24a7b);
+        --chart-2: #0e7c86;
+        --sidebar-primary: var(--brand-primary, #a24a7b);
+        --sidebar-accent: #fff3f8;
+        --sidebar-accent-foreground: #733357;
+        --sidebar-ring: #a24a7b;
+    }
+
+    .dark {
+        --primary: var(--brand-primary-dark, var(--brand-primary, #dc77ad));
+        --ring: #dc77ad;
+        --chart-1: var(--brand-primary-dark, var(--brand-primary, #dc77ad));
+        --chart-2: #2cb1bc;
+        --sidebar-primary: var(
+            --brand-primary-dark,
+            var(--brand-primary, #dc77ad)
+        );
+        --sidebar-accent: #301724;
+        --sidebar-accent-foreground: #f5a2cc;
+        --sidebar-ring: #dc77ad;
+    }
+}

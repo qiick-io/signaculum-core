@@ -1,0 +1,882 @@
+{
+    "a11y": {
+        "breadcrumb": "Brotkrümelnavigation",
+        "close": "Schließen",
+        "mainNav": "Hauptnavigation",
+        "moreActions": "Weitere Aktionen",
+        "saving": "Wird gespeichert",
+        "skipToContent": "Zum Inhalt springen",
+        "toggleSidebar": "Seitenleiste umschalten",
+        "loading": "Wird geladen",
+        "notifications": "Benachrichtigungen",
+        "notificationsUnread": "Benachrichtigungen, {{count}} ungelesen",
+        "scrollableTable": "Scrollbare Tabelle",
+        "search": "Suchen",
+        "unreadCount": "{{count}} ungelesen"
+    },
+    "ai": {
+        "fabDescription": "Schnelle Assistenten-Schublade. Öffnen Sie die Vollseite für den Verlauf.",
+        "fabTitle": "Neuer Chat",
+        "openFullPage": "Ganze Seite öffnen"
+    },
+    "impersonation": {
+        "bannerTitle": "Benutzer wird imitiert",
+        "bannerDescription": "Sie sehen die App als dieses Konto. Nach dem Beenden sind Sie wieder {{name}}.",
+        "stop": "Imitation beenden"
+    },
+    "common": {
+        "actions": "Aktionen",
+        "cancel": "Abbrechen",
+        "confirmPassword": "Passwort bestätigen",
+        "delete": "Löschen",
+        "emailAddress": "E-Mail-Adresse",
+        "firstName": "Vorname",
+        "lastName": "Nachname",
+        "name": "Name",
+        "offline": "Offline",
+        "online": "Online",
+        "pageRange": "{{from}}–{{to}} von {{total}}",
+        "perPageOption": "{{count}} / Seite",
+        "rowsPerPage": "Zeilen pro Seite",
+        "save": "Speichern",
+        "saved": "Gespeichert",
+        "selectedCount": "{{count}} ausgewählt",
+        "email": "E-Mail",
+        "password": "Passwort",
+        "create": "Erstellen",
+        "copy": "Kopieren",
+        "clearFilters": "Filter zurücksetzen",
+        "sortAscending": "Aufsteigend sortieren",
+        "sortDescending": "Absteigend sortieren",
+        "back": "Zurück",
+        "continue": "Weiter",
+        "close": "Schließen",
+        "confirm": "Bestätigen",
+        "edit": "Bearbeiten"
+    },
+    "confirmDestructive": {
+        "typeToConfirm": "Tippe „{{name}}“ zur Bestätigung"
+    },
+    "files": {
+        "card": {
+            "select": "{{name}} auswählen"
+        },
+        "loadMore": "Mehr laden",
+        "loading": "Laden…",
+        "tags": {
+            "moreTags": "{{count}} weitere Tags"
+        }
+    },
+    "home": {
+        "applications": {
+            "description": "Apps, bei denen Sie sich mit diesem Konto angemeldet haben.",
+            "manage": "Verbundene Apps verwalten",
+            "title": "Verbundene Apps"
+        },
+        "breadcrumb": "Startseite",
+        "head": "Startseite",
+        "stats": {
+            "applications": "Verbundene Apps",
+            "applicationsHeadline": "Apps, die Sie anmelden können",
+            "passkeys": "Passkeys",
+            "passkeysHeadline": "Ohne Passwort anmelden",
+            "sessions": "Angemeldete Browser",
+            "sessionsHeadline": "Sitzungen prüfen",
+            "twoFactor": "Zwei-Faktor-Authentifizierung",
+            "twoFactorEnable": "Jetzt aktivieren",
+            "twoFactorManage": "Sicherheit verwalten",
+            "twoFactorOff": "Aus",
+            "twoFactorOn": "An"
+        }
+    },
+    "nav": {
+        "documentation": "Dokumentation",
+        "home": "Startseite",
+        "platform": "Plattform",
+        "repository": "Repository",
+        "settings": "Einstellungen",
+        "admin": "Administration",
+        "users": "Benutzer",
+        "applications": "Anwendungen",
+        "activityLog": "Aktivitätsprotokoll",
+        "organizations": "Organisationen",
+        "apiKeys": "API-Schlüssel",
+        "groups": "Gruppen"
+    },
+    "realtime": {
+        "connected": "Realtime verbunden",
+        "connecting": "Verbinde…",
+        "disabled": "Realtime aus",
+        "offline": "Realtime offline"
+    },
+    "settings": {
+        "appearance": {
+            "brandContrastWarning": "Diese Markenfarbe erfüllt nicht den WCAG-AA-Kontrast (4.5:1 Text / 3:1 UI). Bitte eine dunklere oder hellere Nuance wählen.",
+            "brandingDescription": "Markenfarbe für App-Oberfläche und Login",
+            "brandingTitle": "Branding",
+            "breadcrumb": "Darstellungseinstellungen",
+            "changeFile": "Datei ändern",
+            "chooseFile": "Datei wählen",
+            "clearCustomColor": "Eigene Farbe entfernen",
+            "clearFile": "Entfernen",
+            "customColorDescription": "Optionaler Override für Primary. Leer lassen, um den gewählten Preset zu nutzen.",
+            "customColorTitle": "Eigene Markenfarbe",
+            "dark": "Dunkel",
+            "defaultAppearance": "Standard-Darstellung",
+            "defaultThemeDescription": "Wird verwendet, wenn der Benutzer keine persönliche Hell/Dunkel-Einstellung gewählt hat",
+            "defaultThemeTitle": "Standard-Theme",
+            "description": "Instanz-Branding und Standard-Theme aktualisieren",
+            "head": "Darstellungseinstellungen",
+            "light": "Hell",
+            "noFile": "Keine Datei ausgewählt",
+            "presetPreviewDark": "Dunkel",
+            "presetPreviewLight": "Hell",
+            "projectColor": "Markenfarbe",
+            "projectColorDark": "Markenfarbe (dunkel)",
+            "projectLogo": "Logo",
+            "projectLogoDark": "Logo (dunkel)",
+            "publicFavicon": "Favicon",
+            "sidebar": {
+                "breadcrumb": "Seitenleisten-Einstellungen",
+                "head": "Seitenleisten-Einstellungen"
+            },
+            "system": "System",
+            "themePresetAmetista": "Ametista",
+            "themePresetArdesia": "Ardesia",
+            "themePresetCiclamino": "Ciclamino (Standard)",
+            "themePresetDescription": "Wähle eine integrierte Palette für das Admin. Eine eigene Markenfarbe überschreibt weiterhin Primary.",
+            "themePresetIndaco": "Indaco",
+            "themePresetTitle": "Theme-Preset",
+            "title": "Darstellungseinstellungen"
+        },
+        "connectedApplications": {
+            "breadcrumb": "Verbundene Apps",
+            "columns": {
+                "access": "Zugriff",
+                "application": "App",
+                "lastSignIn": "Letzte Anmeldung"
+            },
+            "confirm": {
+                "description": "Ihre Tokens funktionieren ab sofort nicht mehr. Bei der nächsten Anmeldung fragt die App erneut nach Ihrer Erlaubnis.",
+                "title": "Zugriff für {{name}} entfernen?"
+            },
+            "description": "Apps, denen Sie die Anmeldung erlaubt haben. Wenn Sie den Zugriff entfernen, fragt die App beim nächsten Mal erneut nach Ihrer Erlaubnis.",
+            "emptyDescription": "Apps erscheinen hier, sobald Sie sich mit diesem Konto bei ihnen anmelden.",
+            "emptyTitle": "Keine verbundenen Apps",
+            "head": "Verbundene Apps",
+            "removeAccess": "Zugriff entfernen",
+            "title": "Verbundene Apps"
+        },
+        "instance": {
+            "breadcrumb": "Instanzeinstellungen",
+            "defaultLanguage": "Standardsprache",
+            "description": "Beschreibung",
+            "generalDescription": "Instanzidentität und Support-Links",
+            "generalTitle": "Allgemein",
+            "head": "Instanzeinstellungen",
+            "localization": {
+                "breadcrumb": "Lokalisierungseinstellungen",
+                "description": "Standardsprache der Admin-Oberfläche",
+                "head": "Lokalisierungseinstellungen",
+                "title": "Admin-Sprache"
+            },
+            "loginMaxAttempts": "Max. Login-Versuche pro Minute",
+            "name": "Name",
+            "passwordPolicies": {
+                "medium": {
+                    "description": "Mindestens 8 Zeichen, mit Groß- und Kleinbuchstaben sowie mindestens einer Zahl.",
+                    "label": "Mittel"
+                },
+                "strong": {
+                    "description": "Mindestens 12 Zeichen, Groß-/Kleinbuchstaben, Buchstaben, Zahlen, Sonderzeichen und nicht in bekannten Datenlecks.",
+                    "label": "Stark"
+                },
+                "weak": {
+                    "description": "Mindestens 6 Zeichen. Keine Groß-/Kleinschreibung, Zahlen oder Sonderzeichen erforderlich.",
+                    "label": "Schwach"
+                }
+            },
+            "passwordPolicy": "Passwortsicherheit",
+            "reportBugUrl": "URL für Bug melden",
+            "reportBugUrlHint": "Leer lassen, um den Issue-Tracker von Signaculum zu verwenden.",
+            "reportingDescription": "Optionale Links für Problem-, Bug- und Fehlermeldungen",
+            "reportingTitle": "Melde-URLs",
+            "registrationDescription": "Öffentliche Registrierung ist auf einem geschlossenen IdP standardmäßig aus; schalten Sie sie ein, wenn diese Instanz neue Konten annehmen soll (z. B. qiick Cloud).",
+            "registrationEnabled": "Selbstregistrierung erlauben",
+            "registrationEnabledHint": "Wenn aktiv, können Gäste über die Anmeldeseite ein Konto erstellen. Wenn deaktiviert, können nur Instanz-Admins Benutzer anlegen.",
+            "registrationTitle": "Benutzerregistrierung",
+            "securityDescription": "Passwortstärke, Login-Limits und Zwei-Faktor-Richtlinie",
+            "securityNav": {
+                "breadcrumb": "Authentifizierung & Sicherheit",
+                "head": "Authentifizierung & Sicherheit"
+            },
+            "securityTitle": "Sicherheit",
+            "twoFactorRequired": "Zwei-Faktor-Authentifizierung für alle Benutzer verlangen",
+            "twoFactorRequiredHint": "Wenn aktiv, müssen Benutzer TOTP-2FA aktivieren oder einen Passkey auf der Sicherheitsseite registrieren, bevor sie die App nutzen.",
+            "secondFactorUnavailableTitle": "Keine Methode für einen zweiten Faktor aktiviert",
+            "secondFactorUnavailableDescription": "config/fortify.php aktiviert weder TOTP noch Passkeys, daher kann niemand eine Zwei-Faktor-Anforderung erfüllen. Zwei-Faktor-Authentifizierung für alle Benutzer zu verlangen, würde jede Seite sperren.",
+            "secondFactorUnavailableOrganizations": "Mitglieder dieser Organisationen werden bei der Anmeldung an Apps abgewiesen: {{names}}",
+            "retentionTitle": "Datenaufbewahrung",
+            "retentionDescription": "Wie lange Signaculum das Aktivitätsprotokoll behält. Ältere Einträge werden täglich gelöscht.",
+            "activityRetentionDays": "Aktivitätsprotokoll (Tage)",
+            "activityRetentionDaysHint": "Aktivitätsprotokolleinträge älter als dieser Wert werden gelöscht.",
+            "loginLockoutThreshold": "Fehlversuche vor Sperre",
+            "loginLockoutThresholdDescription": "Falsche Passwörter für ein Konto, bevor es gesperrt wird.",
+            "loginLockoutMinutes": "Sperrdauer (Minuten)",
+            "loginLockoutMinutesDescription": "Wie lange ein gesperrtes Konto warten muss, bevor es erneut versuchen darf.",
+            "emailTemplates": {
+                "breadcrumb": "E-Mail-Vorlagen",
+                "head": "E-Mail-Vorlagen",
+                "title": "Transaktionale E-Mails",
+                "description": "Verifizierung, Passwortzurücksetzung und Organisations-Einladungen. Leere Felder behalten die Signaculum-Standards für diese Sprache.",
+                "typeLabel": "E-Mail-Typ",
+                "locale": "Sprache",
+                "subject": "Betreff",
+                "body": "Text",
+                "actionLabel": "Schaltflächenbeschriftung",
+                "placeholdersHint": "Verfügbare Platzhalter: {{placeholders}}",
+                "restoreDefaults": "Standards wiederherstellen",
+                "previewTitle": "Vorschau",
+                "previewDescription": "Nur Beispielwerte; echte E-Mails verwenden die Empfängerdaten.",
+                "types": {
+                    "verification": "Verifizierung",
+                    "reset": "Passwortzurücksetzung",
+                    "invitation": "Einladung",
+                    "email_login_code": "E-Mail-Anmeldecode"
+                }
+            },
+            "passwordMinLength": "Mindestlänge des Passworts",
+            "passwordRequireMixedCase": "Groß- und Kleinbuchstaben erforderlich",
+            "passwordRequireNumbers": "Mindestens eine Zahl erforderlich",
+            "passwordRequireSymbols": "Mindestens ein Sonderzeichen erforderlich",
+            "passwordRejectCompromised": "In bekannten Datenlecks gefundene Passwörter ablehnen",
+            "passwordRejectCompromisedHint": "Standardmäßig aus. Wenn aktiviert, sendet Signaculum nur ein kurzes SHA-1-Hash-Präfix des Passworts an Have I Been Pwned (k-Anonymity-API). Das Passwort selbst verlässt diesen Server nie. Siehe docs/password-policy.md.",
+            "emailCodeLoginEnabled": "Passwortlose Anmeldung mit E-Mail-Code erlauben",
+            "emailCodeLoginEnabledHint": "Standardmäßig aus. Gäste können einen sechsstelligen Code per E-Mail anfordern. Der Code allein setzt amr otp und zählt nie allein als MFA."
+        },
+        "layout": {
+            "appearance": "Darstellung",
+            "authSecurity": "Authentifizierung & Sicherheit",
+            "connectedApplications": "Verbundene Apps",
+            "description": "Profil und Kontoeinstellungen verwalten",
+            "general": "Allgemein",
+            "localization": "Lokalisierung",
+            "navAria": "Einstellungen",
+            "profile": "Profil",
+            "reportBug": "Bug melden",
+            "sectionAccount": "Konto",
+            "sectionInstance": "Instanz",
+            "security": "Sicherheit",
+            "sessions": "Sitzungen",
+            "title": "Einstellungen",
+            "emailTemplates": "E-Mail-Vorlagen",
+            "webhooks": "Webhooks"
+        },
+        "profile": {
+            "breadcrumb": "Profileinstellungen",
+            "description": "Vorname, Nachname, E-Mail, Sprache und Zeitzone aktualisieren",
+            "head": "Profileinstellungen",
+            "linkSent": "Ein neuer Bestätigungslink wurde an Ihre E-Mail-Adresse gesendet.",
+            "locale": "Sprache",
+            "resend": "Hier klicken, um die Bestätigungs-E-Mail erneut zu senden.",
+            "timezone": "Zeitzone",
+            "title": "Profilinformationen",
+            "unverified": "Ihre E-Mail-Adresse ist nicht bestätigt.",
+            "exportTitle": "Ihre Daten herunterladen",
+            "exportDescription": "Eine JSON-Datei mit Profil, Organisationen, Sitzungen und verbundenen Apps. Passwörter und 2FA-Geheimnisse sind nie enthalten.",
+            "exportDownload": "JSON herunterladen"
+        },
+        "security": {
+            "addPasskey": "Passkey hinzufügen",
+            "breadcrumb": "Sicherheitseinstellungen",
+            "currentPassword": "Aktuelles Passwort",
+            "deletePasskey": "Löschen",
+            "head": "Sicherheitseinstellungen",
+            "newPassword": "Neues Passwort",
+            "passkeyCreated": "Hinzugefügt {{date}}",
+            "passkeyName": "Passkey-Name",
+            "passkeyNamePlaceholder": "z. B. MacBook Pro",
+            "passkeysDescription": "Melden Sie sich ohne Passwort mit einem Geräte-Passkey an. Ein Passkey zählt auch als zweiter Faktor.",
+            "passkeysEmpty": "Noch keine Passkeys registriert.",
+            "passkeysNeedHttps": "Passkeys benötigen HTTPS.",
+            "passkeysTitle": "Passkeys",
+            "passkeysUnsupported": "Passkeys werden in diesem Browser nicht unterstützt.",
+            "passwordDescription": "Verwenden Sie ein langes, zufälliges Passwort, um Ihr Konto zu schützen",
+            "passwordTitle": "Passwort aktualisieren",
+            "savePassword": "Passwort speichern"
+        },
+        "sessions": {
+            "breadcrumb": "Sitzungen",
+            "browserOnPlatform": "{{browser}} auf {{platform}}",
+            "columns": {
+                "browser": "Browser",
+                "ipAddress": "IP-Adresse",
+                "lastActive": "Zuletzt aktiv"
+            },
+            "confirm": {
+                "description": "Der Browser muss sich erneut anmelden, um Ihr Konto zu nutzen.",
+                "othersDescription": "Alle Browser außer diesem müssen sich erneut anmelden. Gespeicherte Anmeldungen funktionieren ebenfalls nicht mehr.",
+                "othersTitle": "Von allen anderen Browsern abmelden?",
+                "title": "Von diesem Browser abmelden?"
+            },
+            "description": "Browser, in denen Ihr Konto angemeldet ist. Melden Sie sich bei unbekannten ab.",
+            "emptyDescription": "Nur dieser Browser ist angemeldet.",
+            "emptyTitle": "Keine weiteren Sitzungen",
+            "head": "Sitzungen",
+            "signOut": "Abmelden",
+            "signOutOthers": "Von allen anderen Browsern abmelden",
+            "thisDevice": "Dieses Gerät",
+            "title": "Angemeldete Browser"
+        },
+        "deleteAccount": {
+            "title": "Konto löschen",
+            "description": "Ihr Konto und alle zugehörigen Ressourcen löschen",
+            "warningTitle": "Warnung",
+            "warningDescription": "Bitte gehen Sie vorsichtig vor, dies kann nicht rückgängig gemacht werden.",
+            "confirmTitle": "Möchten Sie Ihr Konto wirklich löschen?",
+            "confirmDescription": "Wenn Ihr Konto gelöscht ist, werden auch alle zugehörigen Ressourcen und Daten endgültig gelöscht. Geben Sie Ihr Passwort ein, um zu bestätigen, dass Sie Ihr Konto endgültig löschen möchten.",
+            "directoryManagedDescription": "Dieses Konto wird vom Identitätsverzeichnis verwaltet. Bitten Sie einen Verzeichnisadministrator, es zu deaktivieren oder zu entfernen."
+        },
+        "twoFactor": {
+            "title": "Zwei-Faktor-Authentifizierung",
+            "description": "Einstellungen der Zwei-Faktor-Authentifizierung verwalten",
+            "enabledDescription": "Bei der Anmeldung werden Sie nach einer sicheren, zufälligen PIN gefragt, die Sie in der TOTP-fähigen App auf Ihrem Telefon abrufen.",
+            "disabledDescription": "Wenn Sie die Zwei-Faktor-Authentifizierung aktivieren, werden Sie bei der Anmeldung nach einer sicheren PIN gefragt. Diese PIN rufen Sie in einer TOTP-fähigen App auf Ihrem Telefon ab.",
+            "enable": "2FA aktivieren",
+            "disable": "2FA deaktivieren",
+            "continueSetup": "Einrichtung fortsetzen",
+            "recoveryCodes": {
+                "title": "2FA-Wiederherstellungscodes",
+                "description": "Mit Wiederherstellungscodes erhalten Sie wieder Zugriff, wenn Sie Ihr 2FA-Gerät verlieren. Bewahren Sie sie in einem sicheren Passwortmanager auf.",
+                "view": "Wiederherstellungscodes anzeigen",
+                "hide": "Wiederherstellungscodes ausblenden",
+                "regenerate": "Codes neu erzeugen",
+                "listLabel": "Wiederherstellungscodes",
+                "loading": "Wiederherstellungscodes werden geladen",
+                "regenerateHint": "Jeder Wiederherstellungscode kann einmal für den Zugriff auf Ihr Konto verwendet werden und wird danach entfernt. Wenn Sie weitere benötigen, klicken Sie oben auf <bold>Codes neu erzeugen</bold>."
+            },
+            "setup": {
+                "manualEntry": "oder geben Sie den Code manuell ein",
+                "enabledTitle": "Zwei-Faktor-Authentifizierung aktiviert",
+                "enabledDescription": "Die Zwei-Faktor-Authentifizierung ist jetzt aktiviert. Scannen Sie den QR-Code oder geben Sie den Einrichtungsschlüssel in Ihrer Authenticator-App ein.",
+                "verifyTitle": "Authentifizierungscode bestätigen",
+                "verifyDescription": "Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein",
+                "enableTitle": "Zwei-Faktor-Authentifizierung aktivieren",
+                "enableDescription": "Um die Zwei-Faktor-Authentifizierung zu aktivieren, scannen Sie den QR-Code oder geben Sie den Einrichtungsschlüssel in Ihrer Authenticator-App ein"
+            }
+        },
+        "webhooks": {
+            "head": "Webhooks",
+            "title": "Webhooks",
+            "description": "Sende Signaculum-Domänenereignisse an eigene HTTPS-Endpunkte. Lieferungen sind mit HMAC-SHA256 signiert; das Format steht in der Doku.",
+            "add": "Endpunkt hinzufügen",
+            "empty": "Noch keine Webhook-Endpunkte.",
+            "secretTitle": "Signaturgeheimnis (nur einmal sichtbar)",
+            "allowPrivateUrls": "Private Webhook-URLs erlauben",
+            "allowPrivateUrlsDescription": "Standardmäßig aus. Wenn aktiv, dürfen Lieferungen Loopback- und private Netze erreichen (lokale QA). Cloud-Metadaten bleiben gesperrt. Keine Telemetrie: Signaculum POSTet nur an von dir registrierte URLs.",
+            "active": "Aktiv",
+            "inactive": "Inaktiv",
+            "recentDeliveries": "Letzte Lieferungen",
+            "editTitle": "Webhook bearbeiten",
+            "createTitle": "Webhook hinzufügen",
+            "formDescription": "Ereignisse abonnieren und signierte POSTs empfangen. Bevorzuge öffentliche HTTPS-URLs.",
+            "url": "Endpunkt-URL",
+            "urlDescription": "Exakte URL für POSTs. Private und Loopback-Hosts werden abgelehnt, außer die Einstellung oben ist aktiv.",
+            "events": "Ereignisse"
+        }
+    },
+    "userMenu": {
+        "accessibility": "Barrierefreiheit",
+        "accessibilityOff": "Aus",
+        "accessibilityOnCount": "{{count}} an",
+        "appearance": "Darstellung",
+        "highContrast": "Hoher Kontrast",
+        "language": "Sprache",
+        "logOut": "Abmelden",
+        "reduceMotion": "Bewegung reduzieren",
+        "settings": "Einstellungen"
+    },
+    "oauth": {
+        "authorize": {
+            "title": "Anwendung autorisieren",
+            "description": "Prüfen Sie, worauf diese Anwendung zugreifen kann.",
+            "requestingAccess": "fordert Zugriff auf Ihr Konto an.",
+            "permissionsLabel": "Angeforderte Berechtigungen",
+            "approve": "Autorisieren"
+        },
+        "device": {
+            "userCodeTitle": "Gerätecode eingeben",
+            "userCodeDescription": "Geben Sie den auf dem Gerät oder in der CLI angezeigten Code ein.",
+            "userCodeLabel": "Gerätecode",
+            "userCodePlaceholder": "ABCD-EFGH",
+            "continue": "Weiter",
+            "authorizeTitle": "Gerät autorisieren",
+            "authorizeDescription": "Bestätigen Sie, dass dieses Gerät auf Ihr Konto zugreifen darf.",
+            "requestingAccess": "fordert Zugriff von einem Gerät an."
+        },
+        "logout": {
+            "title": "Abmelden",
+            "description": "Bestätigen Sie, dass Sie sich von Signaculum abmelden möchten.",
+            "confirm": "Abmelden"
+        },
+        "frontchannelLogout": {
+            "title": "Abmelden",
+            "description": "Abmeldung von verbundenen Anwendungen…",
+            "iframeTitle": "Anwendungsabmeldung"
+        }
+    },
+    "errorBoundary": {
+        "title": "Etwas ist schiefgelaufen",
+        "description": "Die Oberfläche ist auf einen unerwarteten Fehler gestoßen. Sie können die Seite neu laden.",
+        "tryAgain": "Erneut versuchen",
+        "reload": "Seite neu laden"
+    },
+    "auth": {
+        "firstName": "Vorname",
+        "lastName": "Nachname",
+        "login": {
+            "title": "In Ihr Konto einloggen",
+            "description": "Geben Sie unten E-Mail und Passwort ein, um sich anzumelden",
+            "head": "Anmelden",
+            "forgotPassword": "Passwort vergessen?",
+            "rememberMe": "Angemeldet bleiben",
+            "submit": "Anmelden",
+            "passkey": "Mit einem Passkey anmelden",
+            "authenticating": "Authentifizierung läuft...",
+            "orContinueWithEmail": "Oder mit E-Mail fortfahren",
+            "noAccount": "Noch kein Konto?",
+            "signUp": "Registrieren"
+        },
+        "register": {
+            "title": "Konto erstellen",
+            "description": "Geben Sie Ihre Daten ein, um ein Konto zu erstellen",
+            "head": "Registrieren",
+            "submit": "Konto erstellen",
+            "hasAccount": "Bereits ein Konto?",
+            "logIn": "Anmelden"
+        },
+        "forgotPassword": {
+            "title": "Passwort vergessen",
+            "description": "Geben Sie Ihre E-Mail ein, um einen Reset-Link zu erhalten",
+            "head": "Passwort vergessen",
+            "submit": "Reset-Link senden",
+            "orReturn": "Oder zurück zur",
+            "logIn": "Anmeldung"
+        },
+        "resetPassword": {
+            "title": "Passwort zurücksetzen",
+            "description": "Bitte geben Sie unten Ihr neues Passwort ein",
+            "head": "Passwort zurücksetzen",
+            "submit": "Passwort zurücksetzen"
+        },
+        "confirmPassword": {
+            "title": "Passwort bestätigen",
+            "description": "Dies ist ein geschützter Bereich der Anwendung. Bitte bestätigen Sie Ihr Passwort, um fortzufahren.",
+            "head": "Passwort bestätigen",
+            "submit": "Passwort bestätigen",
+            "passkey": "Mit Passkey bestätigen",
+            "confirming": "Bestätigung läuft...",
+            "orConfirmWithPassword": "Oder mit Passwort bestätigen"
+        },
+        "verifyEmail": {
+            "title": "E-Mail-Bestätigung",
+            "description": "Bitte bestätigen Sie Ihre E-Mail-Adresse über den Link, den wir Ihnen gerade gesendet haben.",
+            "head": "E-Mail-Bestätigung",
+            "linkSent": "Ein neuer Bestätigungslink wurde an die bei der Registrierung angegebene E-Mail-Adresse gesendet.",
+            "resend": "Bestätigungs-E-Mail erneut senden",
+            "logOut": "Abmelden"
+        },
+        "twoFactorChallenge": {
+            "head": "Zwei-Faktor-Authentifizierung",
+            "recoveryTitle": "Wiederherstellungscode",
+            "recoveryDescription": "Bestätigen Sie den Zugriff auf Ihr Konto mit einem Ihrer Notfall-Wiederherstellungscodes.",
+            "recoveryToggle": "mit einem Authentifizierungscode anmelden",
+            "authTitle": "Authentifizierungscode",
+            "authDescription": "Geben Sie den Code aus Ihrer Authenticator-App ein.",
+            "authToggle": "mit einem Wiederherstellungscode anmelden",
+            "recoveryPlaceholder": "Wiederherstellungscode eingeben",
+            "orYouCan": "oder Sie können sich "
+        },
+        "emailCode": {
+            "head": "Mit E-Mail-Code anmelden",
+            "orUseCode": "Oder mit einem einmaligen E-Mail-Code anmelden",
+            "email": "E-Mail-Adresse",
+            "sendCode": "Code per E-Mail senden",
+            "code": "Anmeldecode",
+            "verify": "Anmelden",
+            "resend": "Code erneut senden",
+            "backToLogin": "Zurück zur Passwort-Anmeldung"
+        }
+    },
+    "admin": {
+        "users": {
+            "head": "Benutzer",
+            "title": "Benutzer",
+            "newUser": "Neuer Benutzer",
+            "searchPlaceholder": "Benutzer suchen…",
+            "sortBy": "Sortieren nach",
+            "columns": {
+                "created": "Erstellt",
+                "updated": "Aktualisiert",
+                "name": "Name",
+                "email": "E-Mail",
+                "status": "Status",
+                "actions": "Aktionen"
+            },
+            "actions": {
+                "edit": "Benutzer bearbeiten",
+                "deactivate": "Deaktivieren",
+                "reactivate": "Reaktivieren",
+                "resetTwoFactor": "Zwei-Faktor zurücksetzen",
+                "grantInstanceAdmin": "Zum Instanz-Admin machen",
+                "revokeInstanceAdmin": "Instanz-Admin entziehen",
+                "unlock": "Sperre aufheben",
+                "impersonate": "Imitieren"
+            },
+            "confirm": {
+                "deactivateTitle": "{{name}} deaktivieren?",
+                "deactivateDescription": "Anmeldung ist nicht mehr möglich. Tokens werden widerrufen und verbundene Apps erhalten einen Back-Channel-Logout.",
+                "resetTwoFactorTitle": "Zwei-Faktor für {{name}} zurücksetzen?",
+                "resetTwoFactorDescription": "Authenticator und Wiederherstellungscodes funktionieren nicht mehr. Die Person muss sie erneut einrichten.",
+                "revokeInstanceAdminTitle": "Instanz-Admin von {{name}} entfernen?",
+                "revokeInstanceAdminDescription": "Der Zugang zu Admin und Instanz-Einstellungen entfällt. Mindestens ein Instanz-Admin muss bleiben."
+            },
+            "status": {
+                "active": "Aktiv",
+                "inactive": "Deaktiviert"
+            },
+            "form": {
+                "editTitle": "Benutzer bearbeiten",
+                "editDescription": "Aktualisieren Sie Name und E-Mail. Lassen Sie das Passwort leer, um es beizubehalten.",
+                "createDescription": "Erstellen Sie einen Signaculum-Benutzer. Die E-Mail gilt als verifiziert.",
+                "requiredHint": "Mit * markierte Felder sind erforderlich.",
+                "firstNameRequired": "Vorname *",
+                "emailRequired": "E-Mail *",
+                "emailHint": "Verwenden Sie eine gültige E-Mail-Adresse, zum Beispiel",
+                "newPasswordOptional": "Neues Passwort (optional)",
+                "passwordRequired": "Passwort *"
+            },
+            "empty": {
+                "title": "Noch keine Benutzer",
+                "description": "Erstellen Sie das erste Konto für diese Signaculum-Instanz.",
+                "filteredTitle": "Keine Benutzer gefunden",
+                "filteredDescription": "Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.",
+                "cta": "Neuer Benutzer"
+            }
+        },
+        "applications": {
+            "head": "Anwendungen",
+            "title": "Anwendungen",
+            "newApplication": "Neue Anwendung",
+            "searchPlaceholder": "Anwendungen suchen…",
+            "sortBy": "Sortieren nach",
+            "redirectUriCount": "{{count}} Redirect-URIs",
+            "columns": {
+                "created": "Erstellt",
+                "updated": "Aktualisiert",
+                "name": "Name",
+                "type": "Typ",
+                "redirectUris": "Redirect-URIs",
+                "actions": "Aktionen"
+            },
+            "actions": {
+                "edit": "Anwendung bearbeiten",
+                "regenerateSecret": "Secret neu erzeugen",
+                "delete": "Anwendung löschen"
+            },
+            "type": {
+                "confidential": "Vertraulich",
+                "public": "Öffentlich",
+                "firstParty": "First-Party"
+            },
+            "secretBanner": {
+                "title": "Client-Secret jetzt kopieren",
+                "description": "Signaculum zeigt das Secret nur dieses eine Mal. Speichern Sie es in der Relying-Party-Konfiguration."
+            },
+            "confirm": {
+                "regenerateTitle": "Client-Secret neu erzeugen?",
+                "regenerateDescription": "Das aktuelle Secret funktioniert sofort nicht mehr. Kopieren Sie das neue Secret nach der Bestätigung aus dem Banner.",
+                "deleteTitle": "Diese Anwendung löschen?",
+                "deleteDescription": "Der Client wird widerrufen und seine Tokens funktionieren nicht mehr. Tippen Sie den Anwendungsnamen zur Bestätigung."
+            },
+            "form": {
+                "editTitle": "Anwendung bearbeiten",
+                "editDescription": "Aktualisieren Sie Name, Redirect-URIs und Flags des OIDC-Clients.",
+                "createDescription": "Registrieren Sie einen OIDC-Client für eine Relying Party. Für vertrauliche Apps wird ein Secret erzeugt.",
+                "requiredHint": "Mit * markierte Felder sind erforderlich.",
+                "nameRequired": "Name *",
+                "redirectUrisRequired": "Redirect-URIs *",
+                "redirectUrisHint": "Eine absolute URL pro Zeile. https erforderlich außer http://localhost oder http://127.0.0.1. Keine Fragmente. Zur Laufzeit exakter Abgleich.",
+                "clientId": "Client-ID",
+                "discoveryUrl": "Discovery-URL",
+                "configureCommand": "oidc:configure",
+                "confidential": "Vertraulicher Client",
+                "confidentialHint": "Nutzt ein Client-Secret am Token-Endpunkt. Für öffentliche SPAs deaktivieren.",
+                "firstParty": "First-Party-qiick-App",
+                "firstPartyHint": "Überspringt den Zustimmungsbildschirm für angemeldete Benutzer.",
+                "clientCredentials": "Client Credentials erlauben",
+                "clientCredentialsHint": "Maschinen-Access-Token ohne Benutzer. Für Jobs, MCP-Agenten und Dienste — nicht für Browser-SSO.",
+                "deviceAuthorization": "Geräteautorisierung erlauben",
+                "deviceAuthorizationHint": "RFC-8628-Gerätefluss für CLI, TV und IoT. Benutzer geben einen Code unter /oauth/device ein.",
+                "pushedAuthorization": "Pushed Authorization Requests (PAR) verlangen",
+                "pushedAuthorizationHint": "Die Anwendung muss jede Anmeldeanfrage zuerst an den PAR-Endpunkt senden. Normale Autorisierungslinks werden abgelehnt. Nur aktivieren, wenn die Anwendung PAR unterstützt.",
+                "frontchannelLogoutUri": "Front-Channel-Logout-URI",
+                "frontchannelLogoutUriHint": "Absolute https-URL, die beim Logout in einem versteckten iframe geladen wird (OIDC Front-Channel Logout). Leer lassen zum Überspringen. Exakter Wert; ohne Fragment.",
+                "frontchannelLogoutSessionRequired": "iss und sid beim Front-Channel-Logout verlangen",
+                "frontchannelLogoutSessionRequiredHint": "Wenn aktiv, hängt Signaculum Issuer- und Session-ID-Query-Parameter an die Logout-URI an."
+            },
+            "empty": {
+                "title": "Noch keine Anwendungen",
+                "description": "Registrieren Sie den ersten OIDC-Client für diese Signaculum-Instanz.",
+                "filteredTitle": "Keine Anwendungen gefunden",
+                "filteredDescription": "Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.",
+                "cta": "Neue Anwendung"
+            }
+        },
+        "apiKeys": {
+            "head": "API-Schlüssel",
+            "title": "API-Schlüssel",
+            "description": "Bearer-Schlüssel für die Admin-REST-API. Geheimnisse werden einmal angezeigt; Scopes steuern jede Ressource.",
+            "add": "Schlüssel erstellen",
+            "empty": "Noch keine API-Schlüssel.",
+            "secretTitle": "API-Schlüsselgeheimnis (nur einmal sichtbar)",
+            "createTitle": "API-Schlüssel erstellen",
+            "formDescription": "Scopes sorgfältig wählen. Lese-Scopes für Automationen bevorzugen, die nur listen.",
+            "scopes": "Scopes",
+            "active": "Aktiv",
+            "inactive": "Widerrufen oder abgelaufen",
+            "revoke": "Widerrufen"
+        },
+        "groups": {
+            "head": "Gruppen",
+            "title": "Gruppen",
+            "newGroup": "Neue Gruppe",
+            "searchPlaceholder": "Gruppen suchen…",
+            "sortBy": "Sortieren nach",
+            "columns": {
+                "name": "Name",
+                "description": "Beschreibung",
+                "members": "Mitglieder",
+                "roles": "Rollen",
+                "actions": "Aktionen",
+                "created": "Erstellt",
+                "updated": "Aktualisiert"
+            },
+            "actions": {
+                "edit": "Bearbeiten",
+                "delete": "Löschen",
+                "restore": "Wiederherstellen",
+                "forceDelete": "Endgültig löschen"
+            },
+            "status": {
+                "active": "Aktiv",
+                "trashed": "Papierkorb"
+            },
+            "form": {
+                "editTitle": "Gruppe bearbeiten",
+                "description": "Gruppen vergeben Rollen an ihre Mitglieder. Effektive Berechtigungen sind die Vereinigung direkter und Gruppenrollen.",
+                "descriptionLabel": "Beschreibung",
+                "rolesHint": "Nur zuweisbare Rollen. Super-Admin bleibt Super-Admins vorbehalten.",
+                "users": "Mitglieder",
+                "noRoles": "Keine zuweisbaren Rollen.",
+                "noUsers": "Keine aktiven Benutzer.",
+                "create": "Gruppe erstellen"
+            },
+            "empty": {
+                "title": "Noch keine Gruppen",
+                "description": "Erstellen Sie eine Gruppe, um mehreren Benutzern dieselben Rollen zu geben.",
+                "filteredTitle": "Keine passenden Gruppen",
+                "filteredDescription": "Andere Suche versuchen oder Filter zurücksetzen.",
+                "cta": "Neue Gruppe"
+            },
+            "confirm": {
+                "deleteTitle": "{{name}} löschen?",
+                "deleteDescription": "Die Gruppe landet im Papierkorb. Mitglieder behalten Rollen, die sie direkt haben.",
+                "forceDeleteTitle": "{{name}} endgültig löschen?",
+                "forceDeleteDescription": "Kann nicht rückgängig gemacht werden. Mitgliedschaften und Rollenverknüpfungen werden entfernt."
+            }
+        }
+    },
+    "activityLog": {
+        "title": "Aktivitätsprotokoll",
+        "description": "Schreibgeschützter Audit-Trail von Modelländerungen und Authentifizierungsereignissen.",
+        "searchPlaceholder": "Beschreibung oder Betreff suchen…",
+        "allUsers": "Alle Benutzer",
+        "allActions": "Alle Aktionen",
+        "allLogs": "Alle Protokolle",
+        "filterByAction": "Nach Aktion filtern",
+        "filterByLog": "Nach Protokollname filtern",
+        "dateFrom": "Von Datum",
+        "dateTo": "Bis Datum",
+        "empty": "Keine Aktivität für die gewählten Filter gefunden.",
+        "system": "System",
+        "noChanges": "Keine Feldänderungen erfasst.",
+        "expand": "Änderungen aufklappen",
+        "collapse": "Änderungen zuklappen",
+        "logName": "Protokollname",
+        "columns": {
+            "date": "Datum",
+            "user": "Benutzer",
+            "action": "Aktion",
+            "description": "Beschreibung",
+            "subject": "Betreff"
+        },
+        "events": {
+            "created": "Erstellt",
+            "updated": "Aktualisiert",
+            "deleted": "Gelöscht",
+            "login": "Anmeldung",
+            "logout": "Abmeldung",
+            "failed": "Fehlgeschlagene Anmeldung",
+            "two_factor_enabled": "Zwei-Faktor-Einrichtung gestartet",
+            "two_factor_confirmed": "Authenticator-App bestätigt",
+            "two_factor_disabled": "Zwei-Faktor-Authentifizierung deaktiviert",
+            "recovery_codes_regenerated": "Wiederherstellungscodes neu erstellt",
+            "passkey_registered": "Passkey hinzugefügt",
+            "passkey_deleted": "Passkey entfernt",
+            "settings_updated": "Einstellungen aktualisiert",
+            "consent_granted": "Zustimmung erteilt",
+            "token_revoked": "Zugriff widerrufen",
+            "secret_rotated": "Geheimnis rotiert",
+            "rotated": "Rotiert",
+            "revoked": "Widerrufen",
+            "user_impersonation_started": "Imitation gestartet",
+            "user_impersonation_stopped": "Imitation beendet",
+            "user_impersonation_expired": "Imitation abgelaufen",
+            "locked": "Konto gesperrt",
+            "organization_created": "Organisation erstellt",
+            "organization_updated": "Organisation aktualisiert",
+            "organization_deleted": "Organisation gelöscht",
+            "organization_member_added": "Organisationsmitglied hinzugefügt",
+            "organization_member_removed": "Organisationsmitglied entfernt",
+            "organization_member_roles_updated": "Mitgliedsrollen aktualisiert",
+            "organization_invitation_created": "Organisationseinladung erstellt",
+            "organization_invitation_resent": "Organisationseinladung erneut gesendet",
+            "organization_invitation_revoked": "Organisationseinladung widerrufen",
+            "organization_mfa_requirement_updated": "MFA-Pflicht der Organisation geändert",
+            "organization_member_tokens_revoked": "Mitglieder-Tokens widerrufen",
+            "organization_member_backchannel_logout_dispatched": "Back-Channel-Logout der Mitglieder ausgelöst",
+            "ldap_sync_completed": "LDAP-Synchronisierung abgeschlossen",
+            "ldap_sync_conflict": "LDAP-Synchronisierungskonflikt"
+        },
+        "logs": {
+            "default": "Anwendung",
+            "auth": "Authentifizierung",
+            "settings": "Einstellungen",
+            "organizations": "Organisationen",
+            "api-keys": "API-Schlüssel",
+            "ldap": "LDAP"
+        },
+        "ipAddress": "IP"
+    },
+    "errors": {
+        "forbidden": {
+            "head": "Nicht erlaubt",
+            "title": "Keine Berechtigung",
+            "description": "Für diese Seite ist eine andere Rolle oder Berechtigung nötig. Bitten Sie einen Instanz-Admin um Zugang.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
+        },
+        "secondFactorUnavailable": {
+            "head": "Zweiter Faktor nicht verfügbar",
+            "title": "Ein zweiter Faktor ist erforderlich",
+            "description": "Ihr Konto muss sich mit Zwei-Faktor-Authentifizierung anmelden, aber diese Signaculum-Instanz hat keine Methode für einen zweiten Faktor aktiviert. Wenden Sie sich an Ihren Administrator.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
+        },
+        "notFound": {
+            "head": "Nicht gefunden",
+            "title": "Seite nicht gefunden",
+            "description": "Diese Adresse gehört zu keiner Seite. Prüfen Sie die URL oder gehen Sie zurück.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
+        },
+        "serverError": {
+            "head": "Etwas ist schiefgelaufen",
+            "title": "Etwas ist schiefgelaufen",
+            "description": "Es ist ein unerwarteter Fehler aufgetreten. Versuchen Sie es gleich erneut.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
+        },
+        "serviceUnavailable": {
+            "head": "Nicht verfügbar",
+            "title": "Vorübergehend nicht verfügbar",
+            "description": "Signaculum ist kurz nicht erreichbar. Bitte versuchen Sie es bald erneut.",
+            "goHome": "Zur Übersicht",
+            "signIn": "Anmelden"
+        }
+    },
+    "organizations": {
+        "breadcrumb": "Organisationen",
+        "head": "Organisationen",
+        "title": "Organisationen",
+        "description": "Organisationen, denen Sie angehören. Erstellen Sie eine, um Mitglieder und Rollen zu verwalten.",
+        "slug": "Slug",
+        "create": "Organisation erstellen",
+        "emptyTitle": "Noch keine Organisationen",
+        "emptyDescription": "Erstellen Sie eine Organisation, um Mitglieder und Rollen für den Claim qiick.orgs zu gruppieren.",
+        "showDescription": "Mitglieder und Rollen der Organisation.",
+        "members": {
+            "title": "Mitglieder",
+            "description": "Jedes Mitglied kann eine oder mehrere Rollen haben. Eine Organisation behält immer mindestens einen Owner.",
+            "rolesLabel": "Rollen",
+            "userId": "Benutzer-ID",
+            "add": "Mitglied hinzufügen",
+            "remove": "Entfernen",
+            "roles": {
+                "owner": "Owner",
+                "admin": "Admin",
+                "member": "Member",
+                "billing": "Billing"
+            }
+        },
+        "danger": {
+            "title": "Organisation löschen",
+            "description": "Löscht die Organisation und alle Mitgliedschaften. Dies kann nicht rückgängig gemacht werden.",
+            "confirmTitle": "Diese Organisation löschen?",
+            "confirmDescription": "Geben Sie den Organisationsnamen ein, um die endgültige Löschung zu bestätigen."
+        },
+        "views": {
+            "label": "Organisationsansichten",
+            "members": "Mitglieder",
+            "invitations": "Einladungen",
+            "settings": "Einstellungen"
+        },
+        "invitations": {
+            "head": "Einladungen — {{name}}",
+            "title": "Einladungen",
+            "description": "Laden Sie Personen per E-Mail ein. Sie treten mit den von Ihnen gewählten Rollen bei, wenn sie annehmen.",
+            "expires": "Läuft ab",
+            "expired": "Abgelaufen",
+            "empty": "Keine ausstehenden Einladungen.",
+            "send": "Einladung senden",
+            "resend": "Erneut senden",
+            "revoke": "Widerrufen"
+        },
+        "settings": {
+            "head": "Einstellungen — {{name}}",
+            "title": "Einstellungen",
+            "description": "Name, Slug, Branding und Löschung der Organisation.",
+            "brandingTitle": "Branding",
+            "brandingDescription": "Logo und Farben auf Login und Zustimmung, wenn diese Organisation im Kontext ist.",
+            "brandColor": "Markenfarbe",
+            "brandColorDark": "Markenfarbe (dunkel)",
+            "logo": "Logo",
+            "logoDark": "Logo (dunkel)",
+            "saveBranding": "Branding speichern",
+            "requireMfa": "Mitglieder müssen die Zwei-Faktor-Authentifizierung nutzen",
+            "requireMfaHint": "Mitglieder ohne TOTP oder Passkey werden zur Sicherheit geleitet, bevor sie eine Anwendung autorisieren können. Signaculum behauptet MFA in amr oder acr nie, wenn kein zweiter Faktor verwendet wurde.",
+            "requireMfaRevokesTokens": "Beim Aktivieren werden die Access- und Refresh-Tokens aller Mitglieder widerrufen und sie von verbundenen Apps abgemeldet, die Back-Channel-Logout unterstützen. Front-Channel-Logout braucht den Browser jedes Mitglieds; Apps ohne Back-Channel-Logout-URI behalten ihre eigene Sitzung bis zum Ablauf. Mitglieder müssen sich erneut mit einem zweiten Faktor anmelden."
+        },
+        "accept": {
+            "head": "Organisationseinladung",
+            "title": "Organisationseinladung",
+            "description": "Nehmen Sie eine Einladung an, einer Organisation auf Signaculum beizutreten",
+            "expired": "Diese Einladung zu {{name}} ist abgelaufen.",
+            "guest": "Sie wurden zu {{name}} als {{email}} eingeladen. Melden Sie sich mit dieser E-Mail an, um fortzufahren.",
+            "signIn": "Anmelden",
+            "ready": "{{name}} als {{email}} beitreten?",
+            "confirm": "Einladung annehmen"
+        }
+    }
+}

@@ -1,0 +1,10 @@
+/**
+ * FE mirrors of the backend `max:` validation rules (the backend is the source of truth).
+ */
+export const STRING_LIMITS = {
+    SEARCH: 255,
+    NAME: 255,
+    DESCRIPTION: 2000,
+    EMAIL: 255,
+    URL: 2048,
+} as const;

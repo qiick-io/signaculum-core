@@ -1,0 +1,335 @@
+---
+description: qiick code standard: names, suffixes, architecture, docs, contracts, CI checks, git
+alwaysApply: true
+---
+
+<!-- Generated from qiick-io/app-ui standards: do not edit, run the sync. Repo-only rules go in AGENTS.md or another .mdc file. -->
+
+# Stack
+
+Every qiick app runs the same stack, so code, rules and registry items move between apps unchanged. A new app starts here; an existing app that differs converges on it, one PR per change. Steps from an empty repo to a green CI: https://github.com/qiick-io/app-ui/blob/develop/docs/new-product.md
+
+## Runtime defaults
+
+- **Database:** SQLite by default (install, tests, CI); MySQL 8 and PostgreSQL 17 supported and tested in CI. No vendor-specific SQL outside a driver check.
+- **Queue:** the `database` driver by default; **Horizon** (`laravel/horizon`) when Redis is configured. Slow work (mail, AI, imports, webhooks) is a queued `*Job`.
+- **Realtime:** **Reverb** (`laravel/reverb`) with `laravel-echo` + `pusher-js`; broadcasting is optional and the UI works without it (realtime badge grey).
+- **Cache / session:** `database` by default, Redis when configured.
+- **Locales:** `en`, `it`, `de` from the first commit: every UI string through `t('…')`, every key in all three locale files.
+- **Self-hosting:** an app is installed with `composer create-project` and `php artisan <app>:install`, updated with `<app>:upgrade` (see the distribution rules).
+
+## Frontend toolchain
+
+**Vite+** (`vite-plus`: `vp dev`, `vp build`, `vp check` with Oxlint and Oxfmt), as the Laravel React starter kit ships it. excubia-app is the reference and sets the lint rules: an app that differs converges on it, never the other way round, and no app moves from Vite+ back to plain Vite, ESLint or Prettier. externa-core still runs ESLint + Prettier and moves to Vite+ in 1.5.0 (externa-core#609).
+
+## Local development
+
+A local PHP environment (Flock, Laravel Herd or Valet) serves the app at `https://<app>.test` and runs its database and Redis; `composer run dev` starts Vite, the queue worker and Pail. Nothing in a repo depends on one tool: PHP comes from `PATH` (or `PHP_BINARY`), Vite HTTPS from `VITE_DEV_SERVER_KEY` / `VITE_DEV_SERVER_CERT`, Reverb from `php artisan reverb:start`. No Sail or Docker for day-to-day work: Docker is the distribution image, not the dev environment.
+
+- **One database per app**, named after it (`externa_core`, `excubia_app`). Local data is disposable: for a clean state, empty and re-seed it (`php artisan migrate:fresh --seed`); never create per-version or per-branch copies. Before dropping a database, check which `.env` files use it. Production databases only when the maintainer says so.
+- **Clean up after a task.** Worktrees, clones, local sites or workspaces and extra databases are fine while a task needs them; when its PR is merged or the work is dropped, remove them (`git worktree remove`, unlink the site, drop the database) after checking for unpushed work.
+
+## Bootstrap
+
+```bash
+laravel new <app> --react --pest --npm --database=sqlite --git
+```
+
+The Laravel installer with the official **React starter kit** (Inertia, React, TypeScript, Tailwind, shadcn, Fortify, Wayfinder). Same result without the installer: `composer create-project laravel/react-starter-kit <app>`. Do not start from another kit, template or a copy of an existing app.
+
+## Versions (majors are pinned; minors float)
+
+| Layer       | Package                                                                  | Major   |
+| ----------- | ------------------------------------------------------------------------ | ------- |
+| Runtime     | PHP                                                                      | `^8.4`  |
+| Framework   | `laravel/framework`                                                      | 13      |
+| Auth        | `laravel/fortify` (+ passkeys, 2FA from the kit)                         | 1       |
+| Routes      | `laravel/wayfinder` + `@laravel/vite-plugin-wayfinder`                   | 0.1     |
+| Server ↔ UI | `inertiajs/inertia-laravel`, `@inertiajs/react`                          | 3       |
+| UI          | `react` / `react-dom`, Tailwind CSS, TypeScript (the kit's major)        | 19 / 4  |
+| Primitives  | shadcn (`radix-ui`), `lucide-react`, `sonner` through `@/lib/toast` only | —       |
+| i18n        | `i18next` + `react-i18next`                                              | 26 / 17 |
+| Tests       | `pestphp/pest`, `pest-plugin-laravel`, `pest-plugin-browser`             | 5       |
+| Static      | `larastan/larastan`, `laravel/pint`                                      | 3 / 1   |
+| Node        | Node.js (`.nvmrc` `24`, `"engines": { "node": "24.x" }`), npm            | 24      |
+| Agents      | `laravel/boost` (dev)                                                    | 2       |
+
+Composer and npm keep caret ranges inside the pinned major; Dependabot (or Renovate) proposes minors and patches; a major bump is its own PR with the maintainer's OK.
+
+## One lint and format toolchain
+
+**Vite+** for TypeScript / React (`vp check`: Oxlint and Oxfmt), **Pint** (`laravel` preset) and **Larastan** for PHP. A new app keeps the starter kit's Vite+ setup as it is (decision of 2026-11-09: a standard that fights the official starter kit costs every new product); an existing app upgrades to it. excubia-app is the reference (`vite.config.ts`, `.oxlintrc.standards.json`, `.oxlintrc.i18n.json`).
+
+- **The pack's ratcheted rules** run in Oxlint from the synced `.oxlintrc.standards.json` (`"oxlint": true` in `qiick-standards.json`): `no-restricted-imports`, `no-restricted-properties` (`navigator.clipboard`), `id-length`, `max-lines`, `max-lines-per-function`, ratcheted by `qiick-ratchet.mjs lint --rule eslint/<rule>`. The i18n ratchet runs Oxlint with `eslint-plugin-i18next` as a JS plugin (`.oxlintrc.i18n.json`).
+- **Boolean prefixes** (type-aware `@typescript-eslint/naming-convention`) have no Oxlint equivalent and typescript-eslint does not support TypeScript 7 yet: the rule waits for typescript-eslint. Never downgrade TypeScript or the toolchain to run it.
+- **Apps still on ESLint + Prettier** (externa-core until 1.5.0) keep `qiick-standards.eslint.js` (`"eslint": true`) and `npm run lint:standards` with `QIICK_RATCHET=1`, until they move.
+- Externa catches up with excubia-app's packages (TypeScript 7, Vite+, Inertia 3, Pest 5 in 1.5.0); excubia-app is never held back to match it.
+
+The quality gate every app exposes as npm scripts: `lint` (`vp check` + `check-ui-tokens`), `types:check` (`tsc --noEmit`), `knip`, `lint:i18n`, `lint:standards`; and in PHP `vendor/bin/pint --test`, `vendor/bin/phpstan analyse`, `php artisan test`.
+
+## Code standard
+
+Every file follows classic craftsmanship, including files nobody reads line by line: self-explanatory names, English documentation of _why_ and of domain invariants, clean structure with breathing room, and no duplication.
+
+### Simplest thing that works
+
+Stop at the first rung that holds: YAGNI, standard library, platform, installed dependency, one line, then the minimum code.
+
+- No unrequested abstractions, dependencies or boilerplate. A new Composer or npm dependency needs the maintainer's OK.
+- Deletion over addition. Boring over clever. Fewest files possible.
+- Mark an intentional shortcut with a `ponytail:` comment that names the ceiling and the upgrade path.
+- Never lazy about trust-boundary validation, data-loss prevention, security, accessibility, or anything explicitly requested.
+- Non-trivial logic leaves one runnable check behind (a test).
+
+### Current sources, not memory
+
+Before writing framework or library code, or copying a component from an upstream registry (shadcn, AI Elements), read the current official page for the installed version. Training data and old copies go stale: until 2026-11-09 the registry's AI Elements were a superseded release, and nobody had compared them with the current pages. A file copied from upstream names its source page in its header comment, and the registry README records the source and date of every upstream item.
+
+### Names: full words
+
+- No single letters (`x`, `e`, `q`) and no abbreviations (`cfg`, `res`, `req`, `val`, `arr`, `tmp`, `idx`, `usr`, `ctx`, `def`, `cb`). Full words even at 30+ characters (`$collectionFieldDefinition`, `handleFormSubmissionError`).
+- `i`, `j`, `k` only as indices of tight numeric loops; prefer `foreach ($collectionItems as $collectionItem)`, `for...of`, `.map()`.
+- **Booleans** (variables, columns, custom props, boolean-returning methods) start with `is`, `has`, `can` or `should` (`$isEmailVerified`, `canManageCollection()`, `shouldBroadcastImmediately`). Exempt: names fixed by a framework or library contract (see [Contracts](#contracts-never-break-them)).
+- **Collections** use specific plurals (`$publishedArticles`) or explicit maps (`$usersIndexedById`), never `$data`, `$list`, `$arr`.
+- Every class of our own ends with its role suffix (`*Controller`, `*Action`, `*Service`, `*Data`, `*Enum`, `*Job`, …); only Eloquent models use bare nouns. The full table is in the details.
+- **Never rename framework or package scaffolding:** files native to Laravel or published by a package keep their upstream names: Fortify actions (`app/Actions/Fortify/*`), starter-kit files (`HandleInertiaRequests`, `HandleAppearance`, `app/Concerns/*`), default service providers, vendor-published files (Spatie, Horizon, Telescope, Pennant, Passport), and frontend primitives (`shadcn/ui` files in `components/ui/`). They are listed in the repo's `tests/Arch/naming-architecture.php`, never renamed.
+
+### Architecture: five layers
+
+1. **Thin controllers.** At most the 5 resource methods or one `__invoke`, about 10 to 15 lines each, doing three things: receive a typed `*Request`, call an `*Action` / `*Service` with a `*Data` DTO, return a `*Resource`, JSON or an Inertia page. No business logic, no `DB` facade.
+2. **Domain layer.** Writes in `app/Actions/*Action.php`, orchestration and reads in `app/Services/*Service.php`, typed `readonly` DTOs in `app/Data/*Data.php` instead of `array<string, mixed>` between controllers, actions, services and jobs.
+3. **Clean models.** Relationships, `casts()`, accessors / mutators, scopes (or an `app/Builders/*Builder.php`), table constants. Never HTTP calls, disk or S3 work, or multi-step orchestration in a model.
+4. **Authorization in Policies**, called through `Gate::authorize()` or a FormRequest `authorize()`, not scattered checks.
+5. **One domain for every surface.** The Inertia UI, the REST / GraphQL API, MCP / AI tools and the CLI call the same `*Action` and `*Service` classes; domain logic is never duplicated per surface.
+
+The Pest architecture test (`tests/Arch/NamingArchitectureTest.php`) enforces the suffixes, readonly DTOs, `declare(strict_types=1)`, no debugging helpers, no `env()` outside `config/`, no `DB` facade in controllers, and at most five public methods per controller (existing debt ratcheted in `naming-architecture.php`).
+
+### Formatting
+
+- Curly braces on every `if`, `else`, `for`, `foreach`, `while`, `do`. No single-line braceless control statements.
+- A blank line before and after control-flow blocks (`if`, `return`, `for`, `foreach`, `while`, `switch`, `try`, `throw`); ESLint `@stylistic/padding-line-between-statements` and Pint enforce it where configured.
+- `declare(strict_types=1);` in every PHP file you write or touch.
+- No `dd`, `dump`, `ray`, `var_dump`, `console.log` left behind. No `env()` outside `config/`.
+- Strict DRY: extract shared validation rules, scopes, DTO shapes and UI primitives instead of copying blocks.
+
+### Size: a tripwire, not a score
+
+- A frontend file holds at most **600** lines of code and a function (component, hook) at most **300**; blank lines and comments do not count, so documentation never pushes a file over. Generated Wayfinder output (`resources/js/actions`, `routes`, `wayfinder`) and `components/ui` are excluded.
+- The limits exist because the fleet grew dozens of god components nobody planned. They catch that shape of problem; they do not measure quality, and a file under them is not fine for that reason.
+- `max-lines` and `max-lines-per-function` are ratcheted warnings, never errors: today's outliers are listed in `qiick-lint-baseline.json` and a new one fails. An honest exception is baselined with `--update` and its reason in the PR. The ratchet counts files and functions over the limit, not lines, so a listed file can still grow: when you touch one, move code out, not in.
+
+### Documentation (English PHPDoc / JSDoc)
+
+This replaces the "comment only exceptionally complex logic" default of Laravel Boost and similar guidelines.
+
+- **Class, component and hook docblock** (mandatory): the unit's responsibility and why it exists.
+- **Method and function docblock** for what the signature cannot say:
+    1. Array shapes and generics for PHPStan / Larastan (`@param array{title: string, slug: string} $validatedPayload`, `@return Collection<int, CollectionItem>`).
+    2. Side effects: queued jobs, dispatched events, filesystem / S3 writes, external HTTP calls.
+    3. Business invariants, why a guard exists, `@throws` conditions.
+- No noise that restates the code (`// set loading to true`).
+
+### Contracts: never break them
+
+1. **Migrations freeze at the first stable release** (decision 2026-11-20). A stable release is a `v<major>.<minor>.<patch>` tag with no pre-release suffix (`v1.0.0` yes; `v1.0.0-beta.3`, `-rc.1` no). Until then, edit the `create_…` migration of the table (anyone with a local database runs `migrate:fresh --seed`); fold any `add_…` / `alter_…` / `drop_…` migrations accumulated during the betas into those `create_…` migrations so 1.0 ships one migration per table; beta release notes warn that an upgrade may need a fresh database. After the first stable tag, migrations are forward-only: never edit, rename or delete one in `database/migrations/` (existing self-hosted installs would no longer upgrade); a schema or stored-data change is a new migration with a safe backfill. The reusable `migrations-frozen.yml` passes with no stable tag (ignoring `origin/main`, pre-release tags and any `.frozen` baseline); once a stable tag exists it fails when a migration on `main`, on the latest _stable_ tag or in `database/migrations/.frozen` changes.
+2. **Framework method contracts keep their names** (no `is` / `has` prefix forced on them): `FormRequest::authorize()`, Policy methods (`viewAny`, `view`, `create`, `update`, `delete`, `restore`, `forceDelete`), `Rule::passes()` / `ValidationRule::validate()`, `broadcastWhen()`, `shouldQueue()`.
+3. **Native and library props keep their names:** `disabled`, `required`, `checked`, `open`, `defaultOpen`, `readOnly`, `asChild`, `modal`, `preserveScroll`, `preserveState`, `replace` (DOM, React, Radix / shadcn, Inertia). The prefix rule applies only to our own props and state.
+4. **Wire formats stay stable** when a PHP class is renamed: REST JSON keys, GraphQL type and field names, webhook payloads, `broadcastAs()` names, Inertia page paths, named routes, morph maps (`Relation::enforceMorphMap`), queued job class names. Enum backing values stay identical.
+5. **Convention-driven directories** (`app/GraphQL/`, `app/Ai/`, MCP tools) keep the names their resolver expects unless the resolver mapping changes in the same PR.
+6. **Mechanical renames and behaviour changes never share a PR.** Land the `git mv` + import updates first with green tests, then extract or change logic in a separate PR.
+
+### Casing
+
+PHP / Laravel (Pint `laravel` preset, PSR-4, PER-CS):
+
+- Classes, interfaces, traits, enums and their `.php` files: `PascalCase` (`StoreCollectionItemRequest.php`, 1:1 with PSR-4).
+- Methods, functions, properties, variables: `camelCase` (`$authenticatedUser`, `resolveEffectivePermissions()`).
+- Enum cases: `PascalCase` (`CollectionStatusEnum::PendingReview`).
+- Database tables and columns, `config/*.php` keys: `snake_case` (`created_by_user_id`).
+- Artisan commands and URL slugs: `kebab-case` (`externa:sync-permissions`, `/collection-items`).
+
+React / TypeScript / Inertia:
+
+- Components, `type`, `interface` and `enum` names: `PascalCase` (`CollectionItemDrawer`, `CollectionItemProps`).
+- Functions, hooks, variables, props: `camelCase` (`useAccessibilityPreferences`, `handleSubmission`).
+- **Files and directories on disk: `kebab-case`** (`collection-item-form.tsx`, `use-accessibility-preferences.tsx`), so macOS (case-insensitive) and Linux / Docker (case-sensitive) never disagree. No barrel `index.ts` files that only re-export. CI checks the file names.
+
+### Role suffixes
+
+Only Eloquent models use bare domain nouns (`User`, `CollectionItem`). Every other class of our own ends with its role, so neither a human nor an agent mistakes a model for a request, enum, event or job:
+
+| Directory                         | Suffix         | Notes                                                   |
+| --------------------------------- | -------------- | ------------------------------------------------------- |
+| `app/Models/`                     | none           | Relationships, casts, accessors, scopes, constants only |
+| `app/Http/Controllers/`           | `Controller`   |                                                         |
+| `app/Http/Requests/`              | `Request`      | Validation and authorization                            |
+| `app/Http/Resources/`             | `Resource`     |                                                         |
+| `app/Http/Responses/`             | `Response`     |                                                         |
+| `app/Http/Middleware/`            | `Middleware`   |                                                         |
+| `app/Actions/`                    | `Action`       | One write / use case, one public `execute(...)`         |
+| `app/Services/`                   | `Service`      | Orchestration, complex reads, external integrations     |
+| `app/Data/`                       | `Data`         | `readonly class` DTOs and value objects                 |
+| `app/Enums/`                      | `Enum`         | Backed values never change without a data migration     |
+| `app/Policies/`                   | `Policy`       |                                                         |
+| `app/Jobs/`                       | `Job`          |                                                         |
+| `app/Console/Commands/`           | `Command`      |                                                         |
+| `app/Events/`                     | `Event`        | Keep `broadcastAs()` wire names stable                  |
+| `app/Listeners/`                  | `Listener`     |                                                         |
+| `app/Notifications/`              | `Notification` |                                                         |
+| `app/Observers/`                  | `Observer`     |                                                         |
+| `app/Rules/`                      | `Rule`         |                                                         |
+| `app/Exceptions/`                 | `Exception`    |                                                         |
+| `app/Builders/`                   | `Builder`      | Dedicated query builders when scopes grow large         |
+| `app/Contracts/`                  | `Contract`     | Interfaces                                              |
+| traits (one place: `app/Traits/`) | `Trait`        |                                                         |
+| `tests/`                          | `Test`         | `*Test.php`, `*.test.ts(x)`                             |
+
+Do not invent other role nouns (`...Normalizer`, `...Publisher`, `...Recorder`, `...Writer`) or split domain classes arbitrarily between `app/Services/` and `app/Support/`: a write is an `Action`, an orchestrator or read pipeline is a `Service`. Packages apply the same table to their own namespace (`Qiick\Excubia\...`); a package may add roles of its own (`Parser`, `Renderer`, `Check`), listed in its architecture test config.
+
+## graphify
+
+When this workspace has `graphify-out/graph.json`:
+
+- For codebase or architecture questions, first run `graphify query "<question>"` (or `graphify path "<A>" "<B>"` / `graphify explain "<concept>"`). These return a scoped subgraph, usually much smaller than `GRAPH_REPORT.md` or raw grep.
+- If `graphify-out/wiki/index.md` exists, navigate it instead of reading raw files.
+- Read `graphify-out/GRAPH_REPORT.md` only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code files, run `graphify update .` (AST-only, no API cost). Do not run it for doc-only or config-only changes with no code edits.
+- If `graphify-out/graph.json` does not exist, skip the above; do not invent a graph.
+
+`graphify-out/` is local and never committed; the graph is rebuilt by local git hooks (`graphify hook install`), and the merge-driver line that command writes to `.gitattributes` must not be committed.
+
+## Backend conventions
+
+How the five layers look in a qiick app. Each topic has a page with the externa-core (or excubia-app) files to copy; read it before touching that area.
+
+| Topic                                                  | Page                                                                          |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Auth pages, 2FA, passkeys, SSO through Signaculum      | https://github.com/qiick-io/app-ui/blob/develop/docs/auth.md                  |
+| Roles, permissions, policies, `<app>:sync-permissions` | https://github.com/qiick-io/app-ui/blob/develop/docs/roles-and-permissions.md |
+| Error pages 403 / 404 / 500 / 503                      | https://github.com/qiick-io/app-ui/blob/develop/docs/error-pages.md           |
+| REST API, OpenAPI, rate limits                         | https://github.com/qiick-io/app-ui/blob/develop/docs/api.md                   |
+| API keys: storage, scopes, rotation, revocation        | https://github.com/qiick-io/app-ui/blob/develop/docs/api-keys.md              |
+| Realtime: Reverb, channels, presence                   | https://github.com/qiick-io/app-ui/blob/develop/docs/realtime.md              |
+| Security headers                                       | https://github.com/qiick-io/app-ui/blob/develop/docs/security-headers.md      |
+| Logging and activity (audit) log                       | https://github.com/qiick-io/app-ui/blob/develop/docs/logging-and-audit.md     |
+| AI backend: providers, tools, approvals                | https://github.com/qiick-io/app-ui/blob/develop/docs/ai-backend.md            |
+
+### Requests and controllers
+
+- Every write takes a `FormRequest` in `app/Http/Requests/<Area>/`: `Store<Model>Request`, `Update<Model>Request`, `Bulk<Model>ActionRequest`; shared rules live in `app/Http/Requests/Concerns/*Trait.php` (`ValidatesListPerPageTrait`, `ValidatesSearchQueryTrait`). `authorize()` checks the permission (or the policy); `rules()` validates the whole payload at the trust boundary.
+- A controller method receives the request, builds a `*Data` DTO from `validated()`, calls one `*Action` (write) or `*Service` (read), and returns an Inertia page, a redirect with a flash message, or a `*Resource`. Index pages paginate on the server (`?page`, `?per_page`, `?sort`, `?search`).
+- Wayfinder generates the frontend route helpers (`@/routes/...`, `@/actions/App/Http/Controllers/...`): never hard-code a URL in TypeScript.
+
+### Permissions and policies
+
+- Permissions are a string-backed `app/Enums/PermissionEnum.php` (`CanShowUsers = 'can-show-users'`, `can-<verb>-<resource>`), roles a `RoleEnum` (`super-admin`, `admin`, …), stored with `spatie/laravel-permission`.
+- `php artisan <app>:sync-permissions` creates the missing permissions from the enum, grants new ones to `admin`, clears the permission cache and writes `resources/js/enums/permission-enum.ts`. `<app>:install` and `<app>:upgrade` run it; never seed permissions by hand.
+- Route groups are gated with the `permission:<value>` middleware; record-level decisions (ownership, state) live in `app/Policies/*Policy.php`, called through `Gate::authorize()` or `authorize()`. `Gate::before` grants `super-admin` everything.
+- The UI receives `auth.permissions` as a shared Inertia prop and hides what the user cannot do (`useCan()`); the server check is the one that counts.
+
+### API
+
+Only when the spec asks for one: REST under `/api/v1`, `*Resource` responses, a hand-written OpenAPI file served at `/api/v1/openapi.json`, named rate limiters. Details: https://github.com/qiick-io/app-ui/blob/develop/docs/api.md. API keys (hashed, `<resource>:(read|write)` scopes, show-once secret, rotation): https://github.com/qiick-io/app-ui/blob/develop/docs/api-keys.md
+
+### Security
+
+- `SetSecurityHeadersMiddleware` on the `web` group (CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`), configured in `config/security.php`; HSTS belongs on the reverse proxy.
+- Rate limiters for login, 2FA, passkeys and sensitive actions; `DB::prohibitDestructiveCommands(app()->isProduction())`; secrets stored encrypted (`encrypted` cast), never logged.
+- Outbound URLs that users configure (OIDC issuers, webhooks) are SSRF-validated before the request.
+
+### Logging and audit
+
+- Every domain model a user can change uses `app/Traits/LogsApplicationActivityTrait.php` (`spatie/laravel-activitylog`: all attributes, only dirty, never empty), excluding secrets (`password`, `two_factor_*`, `remember_token`, key hashes).
+- Log names: `default`, `auth`, `settings`, `ai`, plus one per domain area; `ip` and `user_agent` are added to every entry. The activity log is a page behind `can-show-activity-logs`.
+- Application logs go to the stock `config/logging.php` channels (`stack` → `single` / `daily`, `stderr` in Docker). No personal data or secrets in log messages.
+
+### Realtime
+
+Broadcasting is optional: `BROADCAST_CONNECTION=null` must leave the app fully usable. Events are `app/Events/*Event.php` with `ShouldBroadcastNow` and a stable `broadcastAs()`; channels are `App.Models.User.{id}` (private), `online` (presence) and `<resource>.{id}` (presence when people collaborate), each authorised in `routes/channels.php` with `is_active` checked. Details: https://github.com/qiick-io/app-ui/blob/develop/docs/realtime.md
+
+### AI
+
+AI writes are on by default: read and reversible write tools work out of the box (in-app with approval, over MCP with an `mcp:write` key), an env switch turns writes off; destructive and security tools are off by default and approved one call at a time, and security actions never reach MCP. Every tool acts with the user's own permissions and every call is logged; tests fake the agent. Details: https://github.com/qiick-io/app-ui/blob/develop/docs/ai-backend.md
+
+### Operations
+
+- `GET /health/live` (process up, no I/O) and `GET /health/ready` (database, cache and queue reachable, `503` otherwise), outside auth, from `routes/health.php`.
+- Every Artisan command of the app is in the `<app>:` namespace (`<app>:install`, `<app>:upgrade`, `<app>:sync-permissions`, `<app>:create-user`).
+
+## Automated checks
+
+Machines enforce these in CI; keep them green, and never silence one to get green. Fix the new finding; a baseline only shrinks.
+
+- **PHP quality floor:** PHPStan (Larastan) at level **8** at least in apps and **`max`** in packages; the level never drops and `phpstan-baseline.neon` only shrinks. Apps run Pest with line coverage in CI and fail below the committed `coverage-floor.txt`, which only rises; packages keep a fixed minimum per path. Both run in the reusable `php-quality.yml`.
+- **Fleet conformance:** every core-hardening decision ships with a check in `tests/Conformance` (synced from the pack). The suite runs on a freshly migrated database; engine-dependent checks need PostgreSQL and MySQL via the reusable `conformance.yml`. A product skips a check only with a `divergences` object (`reason`, `decision`, `review_by`). Catalogue: [`standards/CONFORMANCE.md`](../CONFORMANCE.md).
+
+- **Dead code.** `knip` (unused files, exports, dependencies) runs in CI with the repo's committed `knip.json`. TypeScript has `noUnusedLocals` and `noUnusedParameters` on. Delete what is unused; prefix a parameter a signature forces on you with `_`. A knip `ignore*` entry needs a comment-worthy reason in the PR.
+- **Strict models.** Each app's `AppServiceProvider::boot()` calls `Model::shouldBeStrict(! app()->isProduction())`: lazy loading, silently discarded attributes and missing attributes throw outside production. Fix the query (eager load, `$fillable`, select the column), never turn it off.
+- **PHPStan level floor and baseline ratchet.** Apps run Larastan at level 8 or above, packages at `max`. `scripts/qiick-ratchet.mjs phpstan --min-level 8` (`max` in packages) fails CI when `level:` is below the floor or lower than on the base branch, and when `phpstan-baseline.neon` holds more errors than on the base branch. Only the PR that raises `level:` may baseline that level's errors, once. Never add to the baseline; fix the new error. An app below the floor (externa-core at 6) raises the level one step per PR, paying the baseline down in between, and calls `php-quality.yml` with `phpstan-min-level: ''` until it reaches 8.
+- **Coverage ratchet.** Pest runs with line coverage (pcov) and writes a Clover report; `scripts/qiick-ratchet.mjs coverage --clover <report>` counts its statement lines.
+    - **Apps:** the total must reach the floor committed in `coverage-floor.txt` (one number, a percentage). The floor only rises: CI fails when a PR lowers it below the base branch. When coverage passes the floor by a point or more, the job says so; raise the floor in that PR with `--update`, which writes the current total rounded down.
+    - **Packages:** a fixed minimum per path, `<path>=<percent>` (excubia-core: `src=90 src/Checks=90`); a path counts the files under it, and a path with no PHP file yet is skipped.
+- **One reusable job.** `qiick-io/app-ui/.github/workflows/php-quality.yml` runs PHPStan, the level floor, the baseline ratchet, Pest with coverage and the coverage ratchet with the repo's synced `scripts/qiick-ratchet.mjs` (check `php-quality / php-quality`). Apps call it instead of copying those steps; packages pass `phpstan-min-level: max`, `coverage-thresholds` and `build-command: ''`.
+- **Theme tokens only.** In apps with the qiick UI, `scripts/check-ui-tokens.mjs` (synced by the pack, part of `npm run lint`) fails on arbitrary font sizes (`text-[11px]`) and on raw palette / `#hex` classes beyond `scripts/ui-token-baseline.txt`; the baseline only shrinks. The reusable `ui-quality.yml` runs it with the WCAG 2.2 AA contrast check of the installed theme and the app's axe smoke browser test (light, dark, high contrast).
+- **Ratcheted code rules.** In Vite+ apps the synced `.oxlintrc.standards.json` runs them in Oxlint (`npm run lint:standards`, `--rule eslint/<rule>`); in repos still on ESLint, `qiickRatchetedRules()` from `qiick-standards.eslint.js` does. They turn prose rules into checks: only `lucide-react` icons and shadcn primitives (`no-restricted-imports` on other icon and component libraries), toasts only through `@/lib/toast` (not `sonner`), the clipboard only through `@/lib/clipboard` (`no-restricted-properties` on `navigator.clipboard`), booleans prefixed `is` / `has` / `can` / `should` (`@typescript-eslint/naming-convention`, type-aware; destructured contract names exempt), no single-letter names (`id-length`; `i`, `j`, `k`, `t`, `_` allowed), files and functions within the size tripwire (`max-lines` 600, `max-lines-per-function` 300, lines of code; generated Wayfinder output and `components/ui` excluded; see the code standard, Size). They run only in `npm run lint:standards` (`QIICK_RATCHET=1`), ratcheted per file and rule against `qiick-lint-baseline.json`: existing debt is listed, new findings fail, paid debt must be removed (`--update`). A rule missing from the script's `--rule` list is not checked at all: when the pack adds a rule, every app adds it to `lint:standards` and seeds it with `--update`.
+- **Registry coverage.** The drift check (`app-ui-drift / drift`, `scripts/check-drift.mjs`) compares every file of the registry items an app installed with the registry, and fails on a difference that `app-ui.overrides.json` does not explain. That proves the fidelity of what an app took and nothing about what it never took: four API key screens grew under a green check because none of them was an installed item. So the app also lists in `qiick-standards.json` the items its product must install (`requiredItems`), and each one it leaves out on purpose under `divergences` with the reason, the overrides idea one level up: `"divergences": { "api-key-form": "Keys are issued per tenant; the shared form has no tenant picker (#171)" }`. The check fails on a required item that is neither installed nor declared, and on a divergence whose item is installed (a stale exception: remove it; a file that differs belongs in the overrides), is not required, or has no reason. Divergence stays allowed; it has to be written down. Which items a product requires is the maintainer's decision; until it is made, the list is empty.
+- **Thin controllers.** The architecture test fails on a controller with more than five public methods of its own; controllers that already have more are listed with their count in `tests/Arch/naming-architecture.php` (`controllerPublicMethods`), and the test fails when a count grows or when it shrinks without the entry being lowered.
+- **Legacy web platform patterns (ratchet).** `scripts/check-legacy-web.mjs` runs Google Chrome's `legacy-scan` (`modern-web-guidance`, Apache-2.0, no dependencies) over the repo's frontend roots and ratchets it against `legacy-scan-baseline.json`. The scanner always exits 0, findings or not, so the script is the gate: it fails on a finding in a file the baseline does not list for that rule, on one more finding than it allows, and when a fixed finding is still allowed (lower it with `--update`, so paid debt cannot come back). Findings are keyed by **rule and file, never by line**, so an edit above a finding does not churn the baseline while a new file and a new rule are still caught. The scanner version is pinned in the script and recorded in each baseline; never `@latest`, which would turn every repo red the day Chrome adds a rule. Bumping the pin is its own PR: change it in the pack, sync, re-run with `--update` and review the new findings there. The findings are provisional (deterministic rules for 38 of about 200 guides, a fifth of the corpus), so read the guide with `npx modern-web-guidance retrieve <guideId>` and check the finding against its Keep/Drop criteria before fixing it. It runs as a step in the repo's existing lint job, never a job of its own.
+- **No hard-coded UI strings.** `i18next/no-literal-string` (JSX text only, not attributes such as `className` or `data-*`) flags visible text that bypasses translations: use `t('…')` with keys in every locale file. Existing debt is in `i18n-literal-baseline.json`; `scripts/qiick-ratchet.mjs lint` fails when a file's count grows, and when a count shrinks without the baseline being lowered (`--update`).
+- **graphify stays local.** The standards check (`app-ui-drift / standards`, `scripts/sync-standards.mjs --check`) fails when `.gitignore` does not ignore `graphify-out/`, when any `graphify-out/` path is tracked, or when `.gitattributes` contains `merge=graphify` (that line comes from `graphify hook install` and must stay uncommitted). Rebuild the graph locally; never commit it.
+- **Fleet conformance suite.** Synced Pest tests under `tests/Conformance/` assert schema, config, file and behaviour rules from the 2026-11-20 core-hardening decision. Scalars (user model, table names, flags) live in `qiick-standards.json` → `conformance`; behaviour hooks in the repo-owned `tests/Conformance/hooks.php`. Divergences for check ids are objects `{ reason, decision, review_by }` alongside string registry divergences. The reusable [`conformance.yml`](../../.github/workflows/conformance.yml) starts PostgreSQL 16 and MySQL 8.4 service containers and runs `pest --group=conformance` on both. App-ui proves each check RED/GREEN in `standards/php/conformance-harness/`. Full catalogue: [`CONFORMANCE.md`](../CONFORMANCE.md).
+
+### CI cost
+
+**GitHub bills per job, rounded up to the whole minute.** A job that runs for ten seconds costs a minute, so a seven-job workflow costs seven minutes however fast it is, and a workflow that runs twice per commit costs twice that. Measured on externa-core, one push cost ~95 billable minutes. Every rule below follows from that one fact: minutes are paid, and CI that burns them gets switched off, which blocks every repo behind it.
+
+- **`push` only on `main` and `develop`.** Everything else arrives through `pull_request`. Without the branch filter, pushing to a branch that already has an open pull request runs every workflow twice on the same commit: twice the bill, no extra signal.
+
+    ```yaml
+    on:
+        push:
+            branches: [main, develop]
+        pull_request:
+    ```
+
+- **`concurrency` on every workflow, with the event in the group.** A superseded run keeps paying until it finishes, so three pushes in a row cost three full runs. Keep `github.event_name` in the group: a group of `${{ github.workflow }}-${{ github.ref }}` alone does not distinguish the events, so the `push` run and the `pull_request` run on the same commit cancel each other and the cancelled required check never reports (externa-core#805). Never cancel in progress on `main` or `develop`: those runs are the release evidence.
+
+    ```yaml
+    concurrency:
+        group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+        cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
+    ```
+
+    **`concurrency` inside a reusable workflow does not govern the caller's run**, and the caller is where the duplicate runs come from: a `concurrency:` block in a `workflow_call` workflow cannot cancel the run that called it. This is the mistake everyone makes. The shared workflows in this repo therefore set none, and every repo that calls them sets `concurrency` in its own calling workflow.
+
+- **arm64 / QEMU builds only on a release.** Cross-architecture builds run under emulation and cost an order of magnitude more than the native one (externa-core: `multiarch-bake` alone is 39 of those 95 minutes). Build `linux/amd64` on every push, and the full `linux/amd64,linux/arm64` manifest only when the pull request targets `main`, the ref is a `v*` tag, or on `workflow_dispatch`. The amd64 job keeps its name and keeps running on every push: it is a required check in some repos (`image-build` on externa-core, `Docker image` on excubia-app).
+
+- **Never `paths:` or `paths-ignore:` on a workflow that produces a required check.** A required check that never runs stays _pending forever_ and the pull request can never be merged: there is no timeout and no way out short of the maintainer editing branch protection by hand. Skip the work inside the workflow instead: a tiny `changes` job that always runs and classifies the diff, and every heavy job gated on `if: needs.changes.outputs.<area> == 'true'` while still reporting. A required check that must be skipped still has to report success, so use a guard job with the same name, never a skipped job. When in doubt leave the heavy job running: a blocked `main` costs more than the minutes.
+
+- **Never buy minutes with a check name.** Merging small jobs into one saves a minute each, and renames the checks. A required check whose name no workflow reports any more blocks every pull request until the maintainer edits branch protection, so the saving is never an agent's to take: propose it, name the old and new check names, and wait (`rules/release.md`, "Required checks per repo").
+
+## Git, commits and pull requests
+
+- **English everywhere in the repo:** code, comments, docs, commit messages, issues, pull requests.
+- **Conventional Commits:** `type(scope): summary` in the imperative, lower case, no trailing period. Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `ci`, `build`, `security`. `!` or a `BREAKING CHANGE:` footer for breaking changes. commitlint checks PR titles in CI through the reusable `qiick-io/app-ui/.github/workflows/pr-title.yml` (check `pr-title / commitlint`), which every repo calls on `pull_request` with the `edited` type.
+- **One issue, one branch, one pull request.** Branch from `develop` as `<type>/<issue>-<kebab-slug>` (`feat/42-project-registration`). Never commit directly to `develop` or `main`.
+- Pull requests target `develop` and are **squash-merged**, so the PR title becomes the commit: make it a valid Conventional Commit. The body says what changed, why, and `Closes #<issue>`.
+- **Every issue and pull request gets its metadata when it is created:** assignee (the maintainer), labels from the repo's set, the milestone of the release it belongs to, and the repo's GitHub project when it has one.
+- **Branch protection** (every public repo): `develop` and `main` change only through a pull request with green required checks; admins are not exempt. When a PR is behind its base, update the branch (`gh pr update-branch`) and wait for the checks again. `main` takes **merge commits** only (a ruleset): release PRs, and the merge of `main` back into `develop` after a tag, which is a pull request too.
+- Never force-push a shared branch, never `--no-verify`, never `--admin` or any branch-protection bypass.
+- No attribution or `Co-authored-by` trailers for tools or agents.
+- Never commit `.env`, secrets, tokens, personal phone numbers or email addresses; only `.env.example`.
+- Nothing personal in tracked files: no absolute local paths (`/Users/…`), no one's own editor or agent configuration (keep it in `.gitignore`), and "the maintainer" instead of people's names in code, comments and docs. Describe what code does rather than which product it imitates; naming a product is fine where it is an integration (an importer, a compatible endpoint).
+- Ask the maintainer before: a new dependency, anything outside the issue's scope, repo settings (branch protection, required checks, secrets), paid services or accounts.
+
+## Self-hosted app distribution
+
+For apps a customer installs (not for Composer packages, which ship with plain `composer require` / `update`). externa-core is the reference implementation. In short: install with `composer create-project qiick/<app>` and `php artisan <app>:install`, update with `php artisan <app>:upgrade` (never `create-project`).
+
+1. **Install from Packagist:** `composer create-project qiick/<app>`. `create-project` only copies `.env` and runs `key:generate`: no migrate, seed or database assumption.
+2. **First run:** `php artisan <app>:install`, interactive (database, name / URL, stack profile, optional seed, frontend build), with a non-interactive mode for CI (`--no-interaction --force`).
+3. **Updates:** `php artisan <app>:upgrade` (migrate, permissions, caches, version-specific steps), plus opt-in `--sync-upstream=vX.Y.Z` with `--dry-run`. `create-project` is never the update channel, and the README says so.
+4. **Docker:** `ghcr.io/qiick-io/<repo>` (for example `ghcr.io/qiick-io/externa-core`), linux/amd64 and arm64, published by the release workflow on a `v*` tag only, tagged `X.Y.Z` and `latest` for a stable release, only `X.Y.Z-beta.N` / `X.Y.Z-rc.N` for a pre-release (externa-core `docker.yml`, job `ghcr-publish`); a Compose quick start; `GET /health/live` and `GET /health/ready`.
+5. **Docs:** a docs site (`docs.<app>.qiick.io`, or `docs/` in the repo until it exists) with installation (Composer, Docker), configuration, upgrade and backup pages, and an "Upgrade notes" section for every version in the `CHANGELOG`.
+6. **Packagist** (first release, by the maintainer): the package `qiick/<repo>` with the GitHub hook, `"type": "project"`, `license`, `support` (issues, source, docs) and keywords in `composer.json`; `composer create-project qiick/<repo>` tested from a clean machine before the release is announced.
+7. **CI smoke** (`qiick-io/app-ui/.github/workflows/app-distribution-smoke.yml`, check `distribution-smoke / smoke`): `create-project` from the current `develop`, non-interactive install, health endpoints, and an upgrade from the previous tag. An app whose install needs more than the workflow does (excubia-app: its core package and first-run wizard, `scripts/e2e/install-upgrade.sh`) may keep its own job, as long as it covers the same four steps; it says so in its own `AGENTS.md` section.
