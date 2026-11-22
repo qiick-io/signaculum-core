@@ -10,6 +10,7 @@ use App\Data\ApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Enums\InstanceAdminDemotionReasonEnum;
 use App\Enums\RoleEnum;
+use App\Events\ApiKeyCreatorDeletedEvent;
 use App\Events\InstanceAdminDemotedEvent;
 use App\Listeners\NotifyAdminsOfDemotedApiKeyCreatorListener;
 use App\Models\ApiKey;
@@ -278,6 +279,47 @@ describe('the other instance admins are told about the keys', function (): void 
         );
 
         expect($apiKey->fresh()?->isRevoked())->toBeFalse();
+    });
+
+    it('tells the admins about every key a deletion revokes, even when the creator was demoted earlier', function (): void {
+        [$firstKey, $secondKey] = keysCreatedBy($this->creator, 2);
+
+        app(SetInstanceAdminAction::class)->execute($this->creator, false, $this->actingSuperAdmin);
+
+        Notification::assertSentToTimes($this->actingSuperAdmin, ApiKeyCreatorDemotedNotification::class, 2);
+
+        app(DeleteUserAction::class)->execute($this->creator->fresh() ?? $this->creator);
+
+        Notification::assertSentToTimes($this->actingSuperAdmin, ApiKeyCreatorDemotedNotification::class, 4);
+
+        foreach ([$firstKey, $secondKey] as $revokedKey) {
+            Notification::assertSentTo(
+                $this->actingSuperAdmin,
+                ApiKeyCreatorDemotedNotification::class,
+                static fn (ApiKeyCreatorDemotedNotification $notification): bool => $notification->isRevoked
+                    && $notification->apiKey->is($revokedKey),
+            );
+
+            expect($revokedKey->fresh()?->isRevoked())->toBeTrue();
+        }
+    });
+
+    it('raises the deletion event for the revoked keys only, and not when nothing was revoked', function (): void {
+        Event::fake([ApiKeyCreatorDeletedEvent::class]);
+        [$activeKey] = keysCreatedBy($this->creator);
+        [$alreadyRevokedKey] = keysCreatedBy($this->creator);
+        $alreadyRevokedKey->forceFill(['revoked_at' => now()->subMinute()])->save();
+        $userWithoutKeys = User::factory()->create();
+
+        app(DeleteUserAction::class)->execute($this->creator);
+        app(DeleteUserAction::class)->execute($userWithoutKeys);
+
+        Event::assertDispatchedTimes(ApiKeyCreatorDeletedEvent::class, 1);
+        Event::assertDispatched(
+            ApiKeyCreatorDeletedEvent::class,
+            fn (ApiKeyCreatorDeletedEvent $event): bool => $event->creator->is($this->creator)
+                && $event->revokedApiKeyIds === [$activeKey->getKey()],
+        );
     });
 
     it('tells the admins which keys a deletion revoked', function (): void {

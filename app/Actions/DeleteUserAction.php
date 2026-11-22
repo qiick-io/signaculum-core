@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\InstanceAdminDemotionReasonEnum;
+use App\Events\ApiKeyCreatorDeletedEvent;
 use App\Models\ApiKey;
 use App\Models\User;
 use App\Services\InstanceAdminDemotionService;
@@ -28,9 +29,10 @@ final class DeleteUserAction
     ) {}
 
     /**
-     * Side effects: deactivation, API-key revocation, soft delete, and one
-     * InstanceAdminDemotedEvent (`deleted`, never also `deactivated`) when the user was an
-     * instance admin, so the other admins hear which keys the deletion revoked.
+     * Side effects: deactivation, API-key revocation, soft delete; one InstanceAdminDemotedEvent
+     * (`deleted`, never also `deactivated`) when the user was an instance admin; and
+     * ApiKeyCreatorDeletedEvent whenever a key was revoked, admin or not, so the other admins
+     * always hear which keys the deletion revoked.
      *
      * @throws ValidationException when the target is the last active super-admin
      */
@@ -47,7 +49,7 @@ final class DeleteUserAction
     {
         $this->deactivateUserAction->execute($user);
 
-        DB::transaction(function () use ($user): void {
+        $revokedApiKeyIds = DB::transaction(function () use ($user): array {
             $apiKeys = ApiKey::query()
                 ->where('created_by', $user->getKey())
                 ->whereNull('revoked_at')
@@ -69,6 +71,12 @@ final class DeleteUserAction
             }
 
             $user->delete();
+
+            return array_values(array_map(intval(...), $apiKeys->modelKeys()));
         });
+
+        if ($revokedApiKeyIds !== []) {
+            ApiKeyCreatorDeletedEvent::dispatch($user, $revokedApiKeyIds);
+        }
     }
 }

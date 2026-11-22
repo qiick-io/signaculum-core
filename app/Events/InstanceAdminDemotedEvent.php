@@ -16,8 +16,8 @@ use Illuminate\Foundation\Events\Dispatchable;
  * away (direct role, group, deactivation, deletion). {@see InstanceAdminDemotionService} raises
  * it once per demotion, after the change is committed.
  *
- * `demotedAt` is when the change started, so a listener can tell what that change did (for a
- * deletion: the API keys it revoked) from what happened before.
+ * `demotedAt` is when the change started, so a listener can tell what was still valid then.
+ * A deletion also raises {@see ApiKeyCreatorDeletedEvent} for the keys it revoked, admin or not.
  */
 final readonly class InstanceAdminDemotedEvent implements ShouldDispatchAfterCommit
 {

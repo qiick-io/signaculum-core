@@ -7,6 +7,7 @@ namespace App\Listeners;
 use App\Actions\DeleteUserAction;
 use App\Enums\InstanceAdminDemotionReasonEnum;
 use App\Enums\PrincipalTypeEnum;
+use App\Events\ApiKeyCreatorDeletedEvent;
 use App\Events\InstanceAdminDemotedEvent;
 use App\Models\ApiKey;
 use App\Models\User;
@@ -16,15 +17,17 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
- * Tells the remaining instance admins about the Admin API keys a demoted admin created, so a
- * key nobody answers for any more does not go unnoticed (decision 2026-11-22).
+ * Tells the remaining instance admins about the Admin API keys of a creator who no longer
+ * answers for them, so such a key does not go unnoticed (decision 2026-11-22).
  *
- * Demotion, a group change and deactivation leave the keys valid: the mail names each key that
- * still works and links to the console to revoke it. Deletion revokes the creator's keys
- * ({@see DeleteUserAction}); the mail then names the keys that deletion revoked.
+ * - Demotion, a group change and deactivation leave the keys valid: the mail names each key
+ *   that still works and links to the console to revoke it.
+ * - Deletion revokes the creator's keys ({@see DeleteUserAction}): the mail names every key the
+ *   deletion revoked, whether or not the creator was still an admin. The demotion a deletion
+ *   may also raise sends nothing, so no key is announced twice.
  *
  * Side effects: queues one ApiKeyCreatorDemotedNotification per key and per other active
- * instance admin. Nothing when the user created no affected key.
+ * instance admin. Nothing when no key is affected.
  */
 final class NotifyAdminsOfDemotedApiKeyCreatorListener
 {
@@ -32,45 +35,53 @@ final class NotifyAdminsOfDemotedApiKeyCreatorListener
         private readonly InstanceAdminPresenceService $instanceAdminPresenceService,
     ) {}
 
-    public function handle(InstanceAdminDemotedEvent $event): void
+    public function handle(InstanceAdminDemotedEvent|ApiKeyCreatorDeletedEvent $event): void
     {
-        $isRevokedByDeletion = $event->reason === InstanceAdminDemotionReasonEnum::Deleted;
-        $affectedApiKeys = $this->affectedApiKeys($event, $isRevokedByDeletion);
+        if ($event instanceof ApiKeyCreatorDeletedEvent) {
+            $this->notifyOtherAdmins($event->creator, ApiKey::query()->whereKey($event->revokedApiKeyIds)->orderBy('id')->get(), isRevoked: true);
 
-        if ($affectedApiKeys->isEmpty()) {
             return;
         }
 
-        $creatorLabel = "{$event->user->name} ({$event->user->email})";
-        $otherAdmins = $this->instanceAdminPresenceService->activeInstanceAdmins()
-            ->reject(static fn (User $admin): bool => $admin->is($event->user));
+        if ($event->reason === InstanceAdminDemotionReasonEnum::Deleted) {
+            return;
+        }
 
-        foreach ($affectedApiKeys as $apiKey) {
+        $this->notifyOtherAdmins($event->user, $this->stillValidApiKeys($event), isRevoked: false);
+    }
+
+    /**
+     * @param  Collection<int, ApiKey>  $apiKeys
+     */
+    private function notifyOtherAdmins(User $creator, Collection $apiKeys, bool $isRevoked): void
+    {
+        if ($apiKeys->isEmpty()) {
+            return;
+        }
+
+        $creatorLabel = "{$creator->name} ({$creator->email})";
+        $otherAdmins = $this->instanceAdminPresenceService->activeInstanceAdmins()
+            ->reject(static fn (User $admin): bool => $admin->is($creator));
+
+        foreach ($apiKeys as $apiKey) {
             foreach ($otherAdmins as $admin) {
-                $admin->notify(new ApiKeyCreatorDemotedNotification($apiKey, $creatorLabel, $isRevokedByDeletion));
+                $admin->notify(new ApiKeyCreatorDemotedNotification($apiKey, $creatorLabel, $isRevoked));
             }
         }
     }
 
     /**
-     * Instance keys of the creator that were valid when the demotion started: still valid now,
-     * or, after a deletion, revoked by it.
+     * Instance keys of the demoted creator that still work.
      *
      * @return Collection<int, ApiKey>
      */
-    private function affectedApiKeys(InstanceAdminDemotedEvent $event, bool $isRevokedByDeletion): Collection
+    private function stillValidApiKeys(InstanceAdminDemotedEvent $event): Collection
     {
         return ApiKey::query()
             ->where('created_by', $event->user->getKey())
             ->whereHas('ownerPrincipal', static fn (Builder $principals) => $principals->where('type', PrincipalTypeEnum::InstanceService))
-            ->where(static fn (Builder $apiKeys) => $apiKeys
-                ->where('expires_at', '>', $event->demotedAt)
-                ->orWhereNull('expires_at'))
-            ->when(
-                $isRevokedByDeletion,
-                static fn (Builder $apiKeys) => $apiKeys->where('revoked_at', '>=', $event->demotedAt),
-                static fn (Builder $apiKeys) => $apiKeys->whereNull('revoked_at'),
-            )
+            ->where('expires_at', '>', $event->demotedAt)
+            ->whereNull('revoked_at')
             ->orderBy('id')
             ->get();
     }
