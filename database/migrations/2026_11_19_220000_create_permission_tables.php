@@ -40,7 +40,7 @@ return new class extends Migration
         Schema::create($tableNames['roles'], static function (Blueprint $table) use ($teams, $columnNames) {
             $table->id(); // role id
             if ($teams || config('permission.testing')) { // permission.testing is a fix for sqlite testing
-                // Dormant while teams => false; UUID when teams turn on (core-hardening / C5).
+                // Created only when teams (or permission.testing) is on; named organisation_id via config (C4/C5).
                 $table->uuid($columnNames['team_foreign_key'])->nullable();
                 $table->index($columnNames['team_foreign_key'], 'roles_team_foreign_key_index');
             }

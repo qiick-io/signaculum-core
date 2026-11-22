@@ -52,6 +52,25 @@ test('PAR rows live in signaculum_pushed_authorization_requests not the oauth_ n
         ->and((new PushedAuthorizationRequest)->getTable())->toBe('signaculum_pushed_authorization_requests');
 });
 
+test('model:prune deletes spent and expired PAR rows and keeps live ones', function (): void {
+    $liveRequestUri = $this->post('/oauth/par', parPayload())->json('request_uri');
+    $expiredRequestUri = $this->post('/oauth/par', parPayload(['state' => 'state-expired']))->json('request_uri');
+    $spentRequestUri = $this->post('/oauth/par', parPayload(['state' => 'state-spent']))->json('request_uri');
+
+    PushedAuthorizationRequest::query()
+        ->where('request_uri', $expiredRequestUri)
+        ->update(['expires_at' => Date::now()->subMinute()]);
+
+    PushedAuthorizationRequest::query()
+        ->where('request_uri', $spentRequestUri)
+        ->update(['used_at' => Date::now()->subSecond()]);
+
+    $this->artisan('model:prune', ['--model' => PushedAuthorizationRequest::class])
+        ->assertSuccessful();
+
+    expect(PushedAuthorizationRequest::query()->pluck('request_uri')->all())->toBe([$liveRequestUri]);
+});
+
 test('discovery advertises the PAR endpoint and leaves require_pushed false', function () {
     config(['oidc.issuer' => 'https://id.example.test']);
 

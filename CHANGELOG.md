@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Renamed the PAR storage table from `oauth_pushed_authorization_requests` to `signaculum_pushed_authorization_requests` so the standard name stays free for `qiick/laravel-mcp-oauth` (#238). **Recreate beta.1 databases with `php artisan migrate:fresh --seed`** (the `create_` migration was edited in place).
+- Renamed the PAR storage table from `oauth_pushed_authorization_requests` to `signaculum_pushed_authorization_requests` so the standard name stays free for `qiick/laravel-mcp-oauth` (#238). **Recreate beta.1 databases with `php artisan migrate:fresh --seed`** (the `create_` migration was edited in place). Spent and expired PAR rows are pruned daily via `model:prune`.
+- Spatie `permission.column_names.team_foreign_key` is `organisation_id` while `teams` stays `false` (decision 2026-11-22). With teams off the Spatie team column is not created yet; recreate beta.1 databases with `php artisan migrate:fresh --seed` so config (and any atypical `permission.testing` schema) stays aligned.
 
 ## [1.0.0-beta.1] - 2026-11-22
 

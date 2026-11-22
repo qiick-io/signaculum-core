@@ -106,11 +106,12 @@ return [
         'model_morph_key' => 'model_id',
 
         /*
-         * Change this if you want to use the teams feature and your related model's
-         * foreign key is other than `team_id`.
+         * Fleet spelling: organisation_id (decision 2026-11-19 / 2026-11-22), not
+         * Spatie's default team_id. Teams stay off in Signaculum today; the create_
+         * migration reads this key when they turn on.
          */
 
-        'team_foreign_key' => 'team_id',
+        'team_foreign_key' => 'organisation_id',
     ],
 
     /*
