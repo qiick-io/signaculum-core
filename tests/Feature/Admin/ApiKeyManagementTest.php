@@ -26,7 +26,7 @@ it('shows the plain-text key once and stores only its hash', function (): void {
     $admin = apiKeyIssuingAdmin();
 
     $this->actingAs($admin)
-        ->post(route('admin.api-keys.store'), ['name' => 'CI key', 'scopes' => [ApiKeyScopeEnum::UsersRead->value]])
+        ->post(route('admin.api-keys.store'), ['name' => 'CI key', 'scopes' => [ApiKeyScopeEnum::UsersRead->value], 'expires_at' => apiKeyExpiryInput()])
         ->assertRedirect(route('admin.api-keys.index'));
 
     $plainTextToken = session('plain_text_api_key');
@@ -45,8 +45,8 @@ it('shows the plain-text key once and stores only its hash', function (): void {
 
 it('never writes the plain-text key to the key row, its attributes or the activity log', function (): void {
     $admin = apiKeyIssuingAdmin();
-    $created = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Leak check', [ApiKeyScopeEnum::UsersRead->value]));
-    $rotated = app(RotateApiKeyAction::class)->execute($created->apiKey, $admin);
+    $created = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Leak check', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry()));
+    $rotated = app(RotateApiKeyAction::class)->execute($created->apiKey, $admin, apiKeyExpiry());
     app(RevokeApiKeyAction::class)->execute($rotated->apiKey, $admin);
 
     $storedRow = json_encode(DB::table('api_keys')->where('id', $created->apiKey->getKey())->first(), JSON_THROW_ON_ERROR);
@@ -65,8 +65,8 @@ it('never writes the plain-text key to the key row, its attributes or the activi
 
 it('logs create, rotate and revoke in the api-keys log with the actor', function (): void {
     $admin = apiKeyIssuingAdmin();
-    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Audited', [ApiKeyScopeEnum::UsersWrite->value]));
-    app(RotateApiKeyAction::class)->execute($issuedApiKey->apiKey, $admin);
+    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Audited', [ApiKeyScopeEnum::UsersWrite->value], expiresAt: apiKeyExpiry()));
+    app(RotateApiKeyAction::class)->execute($issuedApiKey->apiKey, $admin, apiKeyExpiry());
     app(RevokeApiKeyAction::class)->execute($issuedApiKey->apiKey->fresh() ?? $issuedApiKey->apiKey, $admin);
 
     $entries = Activity::query()->with(['causer', 'subject'])->where('log_name', 'api-keys')->orderBy('id')->get();
@@ -83,11 +83,11 @@ it('logs create, rotate and revoke in the api-keys log with the actor', function
 
 it('rotates a key in place: same row, prefix, scopes and audit trail', function (): void {
     $admin = apiKeyIssuingAdmin();
-    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Rotating', [ApiKeyScopeEnum::UsersRead->value]));
+    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Rotating', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry()));
     $before = $issuedApiKey->apiKey->fresh();
     $this->freezeSecond();
 
-    $this->actingAs($admin)->put(route('admin.api-keys.secret.update', $issuedApiKey->apiKey->uuid))
+    $this->actingAs($admin)->put(route('admin.api-keys.secret.update', $issuedApiKey->apiKey->uuid), ['expires_at' => apiKeyExpiryInput()])
         ->assertRedirect(route('admin.api-keys.index'));
 
     $after = $issuedApiKey->apiKey->fresh();
@@ -104,11 +104,11 @@ it('rotates a key in place: same row, prefix, scopes and audit trail', function 
 
 it('refuses to rotate a revoked or expired key', function (array $keyState): void {
     $admin = apiKeyIssuingAdmin();
-    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Dead', [ApiKeyScopeEnum::UsersRead->value]));
+    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Dead', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry()));
     $issuedApiKey->apiKey->forceFill($keyState)->saveQuietly();
     $keyHashBefore = $issuedApiKey->apiKey->key_hash;
 
-    $this->actingAs($admin)->put(route('admin.api-keys.secret.update', $issuedApiKey->apiKey->uuid))->assertForbidden();
+    $this->actingAs($admin)->put(route('admin.api-keys.secret.update', $issuedApiKey->apiKey->uuid), ['expires_at' => apiKeyExpiryInput()])->assertForbidden();
 
     expect($issuedApiKey->apiKey->fresh()?->key_hash)->toBe($keyHashBefore);
 })->with([
@@ -119,9 +119,9 @@ it('refuses to rotate a revoked or expired key', function (array $keyState): voi
 it('lets any instance admin rotate or revoke an instance_service key', function (): void {
     $owner = apiKeyIssuingAdmin();
     $otherAdmin = apiKeyIssuingAdmin();
-    $issuedApiKey = app(CreateApiKeyAction::class)->execute($owner, new ApiKeyData('Mine', [ApiKeyScopeEnum::UsersRead->value]));
+    $issuedApiKey = app(CreateApiKeyAction::class)->execute($owner, new ApiKeyData('Mine', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry()));
 
-    $this->actingAs($otherAdmin)->put(route('admin.api-keys.secret.update', $issuedApiKey->apiKey->uuid))
+    $this->actingAs($otherAdmin)->put(route('admin.api-keys.secret.update', $issuedApiKey->apiKey->uuid), ['expires_at' => apiKeyExpiryInput()])
         ->assertRedirect(route('admin.api-keys.index'));
 
     expect($issuedApiKey->apiKey->fresh()?->isActive())->toBeTrue();
@@ -146,11 +146,11 @@ it('refuses key management to users who are not instance admins', function (): v
 it('never issues a key with a scope its issuer does not hold', function (): void {
     $user = User::factory()->create();
 
-    app(CreateApiKeyAction::class)->execute($user, new ApiKeyData('Escalation', [ApiKeyScopeEnum::UsersWrite->value]));
+    app(CreateApiKeyAction::class)->execute($user, new ApiKeyData('Escalation', [ApiKeyScopeEnum::UsersWrite->value], expiresAt: apiKeyExpiry()));
 })->throws(AuthorizationException::class);
 
 it('never issues a key with no scope or an unknown scope, even from code', function (array $scopes): void {
-    app(CreateApiKeyAction::class)->execute(apiKeyIssuingAdmin(), new ApiKeyData('Broken', $scopes));
+    app(CreateApiKeyAction::class)->execute(apiKeyIssuingAdmin(), new ApiKeyData('Broken', $scopes, expiresAt: apiKeyExpiry()));
 })->throws(InvalidArgumentException::class)->with([
     'no scope' => [[]],
     'unknown scope' => [['api-keys:write']],
@@ -158,7 +158,7 @@ it('never issues a key with no scope or an unknown scope, even from code', funct
 
 it('rejects invalid input at the trust boundary', function (array $payload, string $invalidField): void {
     $this->actingAs(apiKeyIssuingAdmin())
-        ->post(route('admin.api-keys.store'), [...['name' => 'Key', 'scopes' => [ApiKeyScopeEnum::UsersRead->value]], ...$payload])
+        ->post(route('admin.api-keys.store'), [...['name' => 'Key', 'scopes' => [ApiKeyScopeEnum::UsersRead->value], 'expires_at' => apiKeyExpiryInput()], ...$payload])
         ->assertSessionHasErrors($invalidField);
 
     expect(ApiKey::query()->count())->toBe(0);
@@ -186,12 +186,12 @@ it('stores one scope per resource and the optional restrictions', function (): v
     expect($apiKey->scopes)->toBe([ApiKeyScopeEnum::UsersWrite->value, ApiKeyScopeEnum::OrganizationsRead->value])
         ->and($apiKey->ip_allowlist)->toBe(['10.0.0.0/8', '2001:db8::/32'])
         ->and($apiKey->rate_limit_per_minute)->toBe(30)
-        ->and($apiKey->expires_at?->isFuture())->toBeTrue();
+        ->and($apiKey->expires_at->isFuture())->toBeTrue();
 });
 
 it('revokes a key and keeps the row', function (): void {
     $admin = apiKeyIssuingAdmin();
-    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Gone', [ApiKeyScopeEnum::UsersRead->value]));
+    $issuedApiKey = app(CreateApiKeyAction::class)->execute($admin, new ApiKeyData('Gone', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry()));
 
     $this->actingAs($admin)->delete(route('admin.api-keys.destroy', $issuedApiKey->apiKey->uuid))
         ->assertRedirect(route('admin.api-keys.index'));

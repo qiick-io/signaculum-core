@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\ActivityEventEnum;
+use App\Models\Principal;
 use App\Models\User;
 use App\Notifications\SecondFactorChangedNotification;
 use Illuminate\Support\Facades\Notification;
@@ -39,7 +40,7 @@ function storedPasskeyFor(User $user, string $name = 'Office key'): Passkey
     return $passkey;
 }
 
-function assertSecondFactorChangeRecorded(User $user, ActivityEventEnum $secondFactorChange, ?User $causer = null): Activity
+function assertSecondFactorChangeRecorded(User $user, ActivityEventEnum $secondFactorChange, User|Principal|null $causer = null): Activity
 {
     Notification::assertSentTo(
         $user,
@@ -122,15 +123,17 @@ test('an admin two-factor reset mails the owner and names the admin as the cause
     Notification::assertNotSentTo($admin, SecondFactorChangedNotification::class);
 });
 
-test('an admin API two-factor reset names the API key owner as the causer', function () {
+test('an admin API two-factor reset names the key service account as the causer and the key creator', function () {
     $user = User::factory()->withTwoFactor()->create();
-    ['admin' => $admin, 'plain' => $plainApiKey] = adminApiKey();
+    ['admin' => $admin, 'plain' => $plainApiKey, 'apiKey' => $apiKey] = adminApiKey();
 
     $this->withToken($plainApiKey)
         ->postJson('/api/v1/users/'.$user->subject.'/reset-two-factor')
         ->assertOk();
 
-    assertSecondFactorChangeRecorded($user, ActivityEventEnum::TwoFactorDisabled, causer: $admin);
+    $activity = assertSecondFactorChangeRecorded($user, ActivityEventEnum::TwoFactorDisabled, causer: $apiKey->ownerPrincipal);
+
+    expect($activity->properties?->get('api_key_created_by'))->toBe($admin->getKey());
 });
 
 test('the alert mail names the change and the account in the owner locale', function (string $locale, string $expectedChange) {

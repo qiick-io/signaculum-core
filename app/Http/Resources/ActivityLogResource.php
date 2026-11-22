@@ -8,6 +8,7 @@ use App\Models\Activity;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\Organization;
+use App\Models\Principal;
 use App\Models\User;
 use App\Models\UserGroup;
 use App\Models\Webhook;
@@ -48,11 +49,20 @@ final class ActivityLogResource extends JsonResource
             'description' => $activity->description,
             'log_name' => $activity->log_name,
             'created_at' => $activity->created_at?->toIso8601String(),
-            'causer' => $this->whenLoaded('causer', fn () => $activity->causer instanceof User ? [
-                'id' => $activity->causer->id,
-                'name' => $activity->causer->name,
-                'email' => $activity->causer->email,
-            ] : null),
+            'causer' => $this->whenLoaded('causer', fn () => match (true) {
+                $activity->causer instanceof User => [
+                    'id' => $activity->causer->id,
+                    'name' => $activity->causer->name,
+                    'email' => $activity->causer->email,
+                ],
+                // Admin API actions: the key's service account; the key is in properties.meta.
+                $activity->causer instanceof Principal => [
+                    'id' => $activity->causer->id,
+                    'name' => $activity->causer->name,
+                    'email' => null,
+                ],
+                default => null,
+            }),
             'subject' => $this->whenLoaded('subject', fn () => $activity->subject !== null ? [
                 'type' => class_basename((string) $activity->subject_type),
                 // The model's own key type (integer or UUID), not the string column.

@@ -142,7 +142,7 @@ it('stores and reads back the subject of every logged model, integer and UUID ke
         'user' => User::factory()->create(),
         'client' => createOidcClient(),
         'api key' => app(CreateApiKeyAction::class)
-            ->execute($admin, new ApiKeyData('Morph check', [ApiKeyScopeEnum::UsersRead->value]))
+            ->execute($admin, new ApiKeyData('Morph check', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry()))
             ->apiKey,
         'webhook' => Webhook::query()->create([
             'url' => 'https://hooks.example.com/signaculum',

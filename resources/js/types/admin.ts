@@ -36,7 +36,8 @@ export type AdminActivityLogRow = {
     description: string;
     log_name: string | null;
     created_at: string;
-    causer: { id: number; name: string; email: string } | null;
+    /** A user, or the Admin API service account (string id, no email). */
+    causer: { id: number | string; name: string; email: string | null } | null;
     subject: { type: string; id: number | string; label: string } | null;
     changes: Record<string, unknown>;
     properties: {

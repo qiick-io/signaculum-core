@@ -24,8 +24,10 @@ use App\Oidc\OidcDeviceCodeRepository;
 use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
 use App\Services\ActivityOrganisationResolverService;
+use App\Services\ApiKeyLifetimeService;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\EmailTemplateService;
+use App\Services\InstanceAdminDemotionService;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
 use App\Services\WebhookDispatcherService;
@@ -83,6 +85,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(DeviceCodeRepository::class, OidcDeviceCodeRepository::class);
         $this->app->singleton(SettingsRepositoryService::class);
         $this->app->singleton(EffectivePermissionResolverService::class);
+        // One instance per process, so a tracked change nested in another is reported once.
+        $this->app->singleton(InstanceAdminDemotionService::class);
     }
 
     /**
@@ -90,6 +94,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Fail closed: an API key lifetime configured past the 90-day ceiling refuses to boot.
+        app(ApiKeyLifetimeService::class)->maximumLifetimeDays();
+
         $this->configureDefaults();
         $this->configureAuthorization();
         $this->configureTrustedProxies();
@@ -613,10 +620,17 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(ActivityModel::class, ActivityPolicy::class);
 
-        // An entry written during an Admin API request names the key that authorised it.
-        // Organisation-scoped actions also stamp `organisation_id` (fleet baseline).
+        // An entry written during an Admin API request is caused by the key's service account
+        // (the instance_service principal) and names the key and the admin who created it, so
+        // every API action is attributable (decision 2026-11-22). Organisation-scoped actions
+        // also stamp `organisation_id` (fleet baseline).
         Activity::beforeLogging(function (ActivityModel $activity): void {
             $apiKey = request()->attributes->get('apiKey');
+
+            if ($apiKey instanceof ApiKey && $apiKey->ownerPrincipal !== null) {
+                $activity->causer()->associate($apiKey->ownerPrincipal);
+            }
+
             $properties = collect($activity->properties ?? []);
             $organisationId = app(ActivityOrganisationResolverService::class)->resolve(
                 $activity->subject,
@@ -630,7 +644,11 @@ class AppServiceProvider extends ServiceProvider
             $activity->properties = $properties->merge([
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent(),
-                ...($apiKey instanceof ApiKey ? ['api_key_id' => $apiKey->uuid] : []),
+                ...($apiKey instanceof ApiKey ? [
+                    'api_key_id' => $apiKey->uuid,
+                    'api_key_prefix' => $apiKey->key_prefix,
+                    'api_key_created_by' => $apiKey->created_by,
+                ] : []),
             ]);
         });
     }

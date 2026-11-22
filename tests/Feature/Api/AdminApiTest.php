@@ -79,6 +79,7 @@ it('lets an instance admin create and revoke an api key in the ui', function ():
         ->post(route('admin.api-keys.store'), [
             'name' => 'CI key',
             'scopes' => [ApiKeyScopeEnum::UsersRead->value],
+            'expires_at' => apiKeyExpiryInput(),
         ])
         ->assertRedirect(route('admin.api-keys.index'));
 

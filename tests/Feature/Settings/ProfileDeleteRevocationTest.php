@@ -52,7 +52,7 @@ test('self-deletion revokes refresh tokens, api keys and deactivates membership 
 
     $issued = app(CreateApiKeyAction::class)->execute(
         $user,
-        new ApiKeyData('Delete-me key', [ApiKeyScopeEnum::UsersRead->value]),
+        new ApiKeyData('Delete-me key', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry()),
     );
 
     $principal = Principal::query()

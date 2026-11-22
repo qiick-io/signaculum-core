@@ -645,7 +645,10 @@
             "scopes": "Scopes",
             "active": "Aktiv",
             "inactive": "Widerrufen oder abgelaufen",
-            "revoke": "Widerrufen"
+            "revoke": "Widerrufen",
+            "expiresAt": "Läuft ab am",
+            "expiresAtHint": "Jeder Schlüssel läuft ab. Das späteste erlaubte Datum ist {{date}}.",
+            "expiresOn": "Läuft ab am {{date}}"
         },
         "groups": {
             "head": "Gruppen",

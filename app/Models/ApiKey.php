@@ -33,7 +33,7 @@ use Symfony\Component\HttpFoundation\IpUtils;
  * @property list<string>|null $scopes
  * @property list<string>|null $ip_allowlist
  * @property int|null $rate_limit_per_minute
- * @property Carbon|null $expires_at
+ * @property Carbon $expires_at
  * @property Carbon|null $last_used_at
  * @property string|null $last_used_ip
  * @property Carbon|null $revoked_at
@@ -123,7 +123,7 @@ class ApiKey extends Model
 
     public function isExpired(): bool
     {
-        return $this->expires_at !== null && ! $this->expires_at->isFuture();
+        return ! $this->expires_at->isFuture();
     }
 
     public function isActive(): bool

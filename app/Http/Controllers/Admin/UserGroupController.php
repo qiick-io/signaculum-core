@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\InstanceAdminDemotionReasonEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserGroupRequest;
 use App\Http\Requests\Admin\UpdateUserGroupRequest;
@@ -15,6 +16,8 @@ use App\Models\User;
 use App\Models\UserGroup;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\Authorization\SuperAdminGuardService;
+use App\Services\InstanceAdminDemotionService;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +28,9 @@ use Inertia\Response;
 
 /**
  * Admin list, create, edit and soft-delete for user groups and their memberships.
+ *
+ * An edit or deletion can take the admin role away from the group's members, so both run
+ * through {@see InstanceAdminDemotionService} (`group_changed`).
  */
 class UserGroupController extends Controller
 {
@@ -149,22 +155,24 @@ class UserGroupController extends Controller
             ]);
         }
 
-        $group->getConnection()->transaction(function () use ($group, $validated, $nextUserIds, $nextRoleIds): void {
-            $group->fill([
-                'name' => $validated['name'],
-                'description' => $validated['description'] ?? null,
-            ])->save();
+        $this->groupMemberDemotions($group, function () use ($group, $validated, $nextUserIds, $nextRoleIds): void {
+            $group->getConnection()->transaction(function () use ($group, $validated, $nextUserIds, $nextRoleIds): void {
+                $group->fill([
+                    'name' => $validated['name'],
+                    'description' => $validated['description'] ?? null,
+                ])->save();
 
-            if ($nextUserIds !== null) {
-                $group->users()->sync($nextUserIds);
-            }
+                if ($nextUserIds !== null) {
+                    $group->users()->sync($nextUserIds);
+                }
 
-            if ($nextRoleIds !== null) {
-                $group->roles()->sync($nextRoleIds);
-            }
+                if ($nextRoleIds !== null) {
+                    $group->roles()->sync($nextRoleIds);
+                }
+            });
+
+            app(EffectivePermissionResolverService::class)->forget();
         });
-
-        app(EffectivePermissionResolverService::class)->forget();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group updated.')]);
 
@@ -181,11 +189,25 @@ class UserGroupController extends Controller
             ]);
         }
 
-        $group->delete();
-        app(EffectivePermissionResolverService::class)->forget();
+        $this->groupMemberDemotions($group, function () use ($group): void {
+            $group->delete();
+            app(EffectivePermissionResolverService::class)->forget();
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group deleted.')]);
 
         return to_route('admin.groups.index');
+    }
+
+    /**
+     * @param  Closure(): void  $change
+     */
+    private function groupMemberDemotions(UserGroup $group, Closure $change): void
+    {
+        app(InstanceAdminDemotionService::class)->track(
+            $group->users()->pluck('users.id'),
+            InstanceAdminDemotionReasonEnum::GroupChanged,
+            $change,
+        );
     }
 }

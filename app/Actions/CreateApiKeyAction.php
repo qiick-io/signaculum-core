@@ -10,7 +10,9 @@ use App\Data\IssuedApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Models\ApiKey;
 use App\Models\User;
+use App\Services\ApiKeyLifetimeService;
 use App\Services\ApiKeySecretService;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -21,7 +23,8 @@ use InvalidArgumentException;
  *
  * Only an active instance admin may create one, with this product's instance scopes
  * (`users`, `organizations`, `applications`). `created_by` is the issuing admin;
- * `owner_principal_id` is the instance service account (decision 2026-11-22 / #229).
+ * `owner_principal_id` is the instance service account (decision 2026-11-22 / #229). Every key
+ * expires within the maximum lifetime of {@see ApiKeyLifetimeService}, counted from now.
  *
  * Side effects: stores the row (SHA-256 of the full token only) and writes a `created` entry in the
  * `api-keys` activity log, caused by the issuer. The plain-text token is returned once, in
@@ -32,11 +35,13 @@ final class CreateApiKeyAction
     public function __construct(
         private readonly ApiKeySecretService $apiKeySecretService,
         private readonly EnsureInstanceServicePrincipalAction $ensureInstanceServicePrincipalAction,
+        private readonly ApiKeyLifetimeService $apiKeyLifetimeService,
     ) {}
 
     /**
      * @throws AuthorizationException when the issuer may not create keys
-     * @throws InvalidArgumentException when the scopes are empty or outside the vocabulary
+     * @throws InvalidArgumentException when the scopes are empty or outside the vocabulary, or the
+     *                                  expiry is not in the future or past the maximum lifetime
      */
     public function execute(User $issuer, ApiKeyData $apiKeyData): IssuedApiKeyData
     {
@@ -48,10 +53,12 @@ final class CreateApiKeyAction
             throw new InvalidArgumentException('An API key needs at least one known scope.');
         }
 
+        $expiresAt = $this->apiKeyLifetimeService->allowedExpiry($apiKeyData->expiresAt, CarbonImmutable::now());
+
         $secret = $this->apiKeySecretService->issue();
         $instancePrincipal = $this->ensureInstanceServicePrincipalAction->execute();
 
-        $apiKey = DB::transaction(function () use ($issuer, $apiKeyData, $grantedScopes, $secret, $instancePrincipal): ApiKey {
+        $apiKey = DB::transaction(function () use ($issuer, $apiKeyData, $grantedScopes, $secret, $instancePrincipal, $expiresAt): ApiKey {
             $apiKey = ApiKey::query()->create([
                 'name' => $apiKeyData->name,
                 'key_prefix' => $secret->keyPrefix,
@@ -63,7 +70,7 @@ final class CreateApiKeyAction
                 'scopes' => $grantedScopes->scopes,
                 'ip_allowlist' => $apiKeyData->ipAllowlist,
                 'rate_limit_per_minute' => $apiKeyData->rateLimitPerMinute,
-                'expires_at' => $apiKeyData->expiresAt,
+                'expires_at' => $expiresAt,
             ]);
 
             activity('api-keys')

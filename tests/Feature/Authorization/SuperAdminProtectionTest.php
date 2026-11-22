@@ -310,7 +310,7 @@ function adminApiKeyFor(User $owner, array $scopes): array
 {
     $issued = app(CreateApiKeyAction::class)->execute(
         $owner,
-        new ApiKeyData('Security review key', $scopes),
+        new ApiKeyData('Security review key', $scopes, expiresAt: apiKeyExpiry()),
     );
 
     return [

@@ -116,7 +116,7 @@ it('refuses a key when no active instance admin remains', function (): void {
 });
 
 it('refuses a request from outside the ip allowlist', function (): void {
-    ['plain' => $plain] = adminApiKey(apiKeyData: new ApiKeyData('Office only', [ApiKeyScopeEnum::UsersRead->value], ipAllowlist: ['10.0.0.0/8']));
+    ['plain' => $plain] = adminApiKey(apiKeyData: new ApiKeyData('Office only', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry(), ipAllowlist: ['10.0.0.0/8']));
 
     $this->withToken($plain)->getJson('/api/v1/users')
         ->assertForbidden()
@@ -152,7 +152,7 @@ it('refuses every address when the stored allowlist does not parse', function (s
 ]);
 
 it('enforces the per-key rate limit', function (): void {
-    ['plain' => $plain] = adminApiKey(apiKeyData: new ApiKeyData('Slow', [ApiKeyScopeEnum::UsersRead->value], rateLimitPerMinute: 2));
+    ['plain' => $plain] = adminApiKey(apiKeyData: new ApiKeyData('Slow', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry(), rateLimitPerMinute: 2));
 
     $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
     $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
@@ -185,7 +185,7 @@ it('lets write satisfy a read check on the same resource only', function (): voi
 it('keeps the old secret working through the grace window after a rotation, then refuses it', function (): void {
     ['plain' => $oldToken, 'apiKey' => $apiKey, 'admin' => $admin] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
 
-    $this->actingAs($admin, 'web')->put(route('admin.api-keys.secret.update', $apiKey->uuid))->assertRedirect();
+    $this->actingAs($admin, 'web')->put(route('admin.api-keys.secret.update', $apiKey->uuid), ['expires_at' => apiKeyExpiryInput()])->assertRedirect();
     $newToken = session('plain_text_api_key');
 
     expect($newToken)->toBeString()->toStartWith($apiKey->key_prefix)->not->toBe($oldToken);
@@ -202,7 +202,7 @@ it('keeps the old secret working through the grace window after a rotation, then
 it('ends the grace window when a rotated key is revoked', function (): void {
     ['plain' => $oldToken, 'apiKey' => $apiKey, 'admin' => $admin] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
 
-    $this->actingAs($admin, 'web')->put(route('admin.api-keys.secret.update', $apiKey->uuid));
+    $this->actingAs($admin, 'web')->put(route('admin.api-keys.secret.update', $apiKey->uuid), ['expires_at' => apiKeyExpiryInput()]);
     $this->actingAs($admin, 'web')->delete(route('admin.api-keys.destroy', $apiKey->uuid));
 
     // The replaced secret no longer matches anything, so it is simply an invalid key.

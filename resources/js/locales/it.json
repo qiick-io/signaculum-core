@@ -645,7 +645,10 @@
             "scopes": "Scope",
             "active": "Attiva",
             "inactive": "Revocata o scaduta",
-            "revoke": "Revoca"
+            "revoke": "Revoca",
+            "expiresAt": "Scade il",
+            "expiresAtHint": "Ogni chiave scade. La data più lontana consentita è {{date}}.",
+            "expiresOn": "Scade il {{date}}"
         },
         "groups": {
             "head": "Gruppi",

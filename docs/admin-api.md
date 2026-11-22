@@ -26,10 +26,37 @@ OpenAPI 3.1: `GET /api/v1/openapi.json` (hand-written; no generator package).
 6. **Rotation** issues a new secret for the same key (same prefix, scopes and audit trail). The
    old token keeps working for `api.key_rotation_grace_hours` (24 by default). Revoking ends both.
    Any instance admin with `can-manage-api-keys` may rotate or revoke any Admin API key.
+   A rotation sets a new `expires_at` (see 9), so it never extends a key past the maximum.
 7. Keys are managed in the signed-in admin UI only: no API key can create, rotate or widen a key,
    and an API key never establishes a web session (it has its own `api-key` guard).
-8. Creators (and, when the creator is gone, remaining instance admins) get a mail seven days
-   before a key expires (`signaculum:notify-expiring-api-keys`, scheduled daily).
+8. Creators get a mail seven days before a key expires (`signaculum:notify-expiring-api-keys`,
+   scheduled daily) while they are still active instance admins; when the creator is not, every
+   active instance admin gets it.
+9. **Every key expires.** `expires_at` is required at creation and at rotation, in the future and
+   at most `api.key_max_lifetime_days` (`API_KEY_MAX_LIFETIME_DAYS`, 90 by default) after the
+   creation or rotation; the limit itself is allowed. A request without an expiry or past the
+   limit is refused with `422` (the console form shows the error); the actions refuse it too.
+   The variable can only lower the 90-day ceiling: a value above 90 (or below 1) stops the
+   application at boot. An expiry sent with a timezone offset is converted to the application
+   timezone before it is checked and stored, and `api_keys.expires_at` is `NOT NULL`.
+10. **When the creator stops being an instance admin**, every other active instance admin gets
+    one mail per Admin API key the creator made that still works: "the key `name` was created
+    by `user`, who is no longer an instance admin", with a link to **Admin → API keys** to
+    revoke it. The paths differ in what happens to the key:
+
+    | Path                                                                           | Key         | Mail                                        |
+    | ------------------------------------------------------------------------------ | ----------- | ------------------------------------------- |
+    | Super-admin role revoked (console, `signaculum:make-admin --revoke`)           | stays valid | creator is no longer an instance admin      |
+    | Group edit or deletion removes the admin role they held through it             | stays valid | creator is no longer an instance admin      |
+    | Account deactivated (console, `POST /api/v1/users/{id}/deactivate`, LDAP sync) | stays valid | creator is no longer an instance admin      |
+    | Account deleted                                                                | **revoked** | key revoked because its creator was deleted |
+
+    Deletion revokes on purpose: it is deliberate and irreversible, and a key whose `created_by`
+    no longer names a person would weaken the audit trail. Every demotion path raises the domain
+    event `InstanceAdminDemotedEvent` once per demotion: a user demoted on one path and then
+    deactivated is reported once. A deletion always raises `ApiKeyCreatorDeletedEvent` for the
+    keys it revoked and the admins are told about each of them, even when the creator had
+    already been demoted (and told about) earlier.
 
 ## Scopes
 
@@ -61,8 +88,21 @@ divergence from the app-ui baseline: the identity provider gates its own resourc
 - `POST /api/v1/applications/{id}/rotate-secret`
 
 Lists accept `page`, `per_page` (max 100), and where noted `search` / `sort` / `direction`.
-Responses use snake_case JSON resources. Writes reuse the same `*Action` classes as the UI and appear in the activity log, with the
-`api_key_uuid` of the key that authorised them.
+Responses use snake_case JSON resources. Writes reuse the same `*Action` classes as the UI and appear in the activity log.
+
+## Audit
+
+Every activity entry an Admin API request writes is attributable to the key that authorised it:
+
+- **causer**: the key's service account, the `instance_service` principal ("Instance Admin API"
+  in **Admin → Activity log**), never the admin the request acts as;
+- `properties.api_key_id`: the key's public UUID, and `properties.api_key_prefix`: its public
+  prefix (`sig_<env>_<id>`, as the console lists it);
+- `properties.api_key_created_by`: the id of the admin who created the key.
+
+`tests/Feature/Api/AdminApiAuditTest.php` calls every write route of the Admin API and fails when
+one writes no entry, or an entry without these fields; a new write route fails it until it is
+listed there.
 
 Create payloads are built into the same `*Data` object as the admin UI's form requests —
 `ApplicationData::fromValidated()`, `OrganizationData::fromValidated()` — and those refuse to build a

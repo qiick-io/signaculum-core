@@ -8,6 +8,7 @@ use App\Data\IssuedApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Models\User;
 use App\Notifications\ApiKeyExpiringNotification;
+use App\Services\Authorization\EffectivePermissionResolverService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Notification;
 
@@ -52,12 +53,11 @@ it('also warns the issuer when someone else owns the key', function (): void {
     Notification::assertSentTo($issuer, ApiKeyExpiringNotification::class);
 });
 
-it('skips keys outside the window, revoked keys and keys that never expire', function (): void {
+it('skips keys outside the window and revoked keys', function (): void {
     $owner = User::factory()->instanceAdmin()->create();
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(3));
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(9));
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour())->apiKey->forceFill(['revoked_at' => now()])->save();
-    app(CreateApiKeyAction::class)->execute($owner, new ApiKeyData('Forever', [ApiKeyScopeEnum::UsersRead->value]));
 
     $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
 
@@ -90,3 +90,18 @@ it('writes the warning in the recipient\'s language', function (string $locale):
     expect($mail->subject)->toBe(trans('api_keys.expiring.subject', ['name' => 'Nightly sync'], $locale))
         ->and($mail->subject)->not->toContain('api_keys.');
 })->with(['en', 'it', 'de']);
+
+it('warns the other instance admins when the issuer is no longer one', function (): void {
+    $issuer = User::factory()->instanceAdmin()->create();
+    $otherAdmin = User::factory()->instanceAdmin()->create();
+    $inactiveAdmin = User::factory()->instanceAdmin()->create(['is_active' => false]);
+    $regularUser = User::factory()->create();
+    keyExpiringAt($issuer, CarbonImmutable::now()->addDays(7)->addHour());
+    $issuer->syncRoles([]);
+    app(EffectivePermissionResolverService::class)->forget();
+
+    $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
+
+    Notification::assertSentToTimes($otherAdmin, ApiKeyExpiringNotification::class, 1);
+    Notification::assertNotSentTo([$issuer, $inactiveAdmin, $regularUser], ApiKeyExpiringNotification::class);
+});

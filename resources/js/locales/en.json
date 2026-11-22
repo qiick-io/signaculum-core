@@ -645,7 +645,10 @@
             "scopes": "Scopes",
             "active": "Active",
             "inactive": "Revoked or expired",
-            "revoke": "Revoke"
+            "revoke": "Revoke",
+            "expiresAt": "Expires on",
+            "expiresAtHint": "Every key expires. The latest allowed date is {{date}}.",
+            "expiresOn": "Expires {{date}}"
         },
         "groups": {
             "head": "Groups",

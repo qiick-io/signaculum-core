@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import {
     Field,
+    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -38,7 +39,7 @@ type ApiKeyRow = {
     key_prefix: string;
     scopes: string[];
     is_active: boolean;
-    expires_at: string | null;
+    expires_at: string;
     last_used_at: string | null;
     revoked_at: string | null;
     created_at: string | null;
@@ -47,15 +48,18 @@ type ApiKeyRow = {
 type Props = {
     apiKeys: ApiKeyRow[];
     availableScopes: string[];
+    latestExpiryDate: string;
     plainTextSecret?: string | null;
 };
 
 /**
- * Admin → API keys: create and revoke Bearer keys for the Admin REST API.
+ * Admin → API keys: create and revoke Bearer keys for the Admin REST API. Every key expires,
+ * no later than `latestExpiryDate` (the server's maximum lifetime), which the form proposes.
  */
 export default function AdminApiKeysIndex({
     apiKeys,
     availableScopes,
+    latestExpiryDate,
     plainTextSecret = null,
 }: Props) {
     const { t } = useTranslation();
@@ -142,6 +146,13 @@ export default function AdminApiKeysIndex({
                                         </p>
                                         <p className="text-sm text-muted-foreground">
                                             {apiKey.key_prefix}…
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {t('admin.apiKeys.expiresOn', {
+                                                date: new Date(
+                                                    apiKey.expires_at,
+                                                ).toLocaleDateString(),
+                                            })}
                                         </p>
                                         <div className="flex flex-wrap gap-1">
                                             {apiKey.scopes.map((scope) => (
@@ -268,6 +279,28 @@ export default function AdminApiKeysIndex({
                                             </div>
                                             <FieldError>
                                                 {errors.scopes}
+                                            </FieldError>
+                                        </Field>
+                                        <Field>
+                                            <FieldLabel htmlFor="api-key-expires-at">
+                                                {t('admin.apiKeys.expiresAt')}
+                                            </FieldLabel>
+                                            <Input
+                                                id="api-key-expires-at"
+                                                name="expires_at"
+                                                type="date"
+                                                defaultValue={latestExpiryDate}
+                                                max={latestExpiryDate}
+                                                required
+                                            />
+                                            <FieldDescription>
+                                                {t(
+                                                    'admin.apiKeys.expiresAtHint',
+                                                    { date: latestExpiryDate },
+                                                )}
+                                            </FieldDescription>
+                                            <FieldError>
+                                                {errors.expires_at}
                                             </FieldError>
                                         </Field>
                                     </FieldGroup>
