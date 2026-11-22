@@ -667,7 +667,7 @@ test('a custom attribute map is what the sync reads from the directory', functio
         ->and(User::query()->where('email', 'wrong@example.com')->exists())->toBeFalse();
 });
 
-test('sync finds a soft-deleted ldap user by guid instead of violating unique ldap_guid', function (): void {
+test('sync does not restore a soft-deleted ldap user and skips with a warning', function (): void {
     enableLdapSettings();
 
     $guid = (string) Str::uuid();
@@ -683,22 +683,26 @@ test('sync finds a soft-deleted ldap user by guid instead of violating unique ld
     $softDeleted->delete();
 
     DirectoryUser::create([
-        'cn' => 'Restored Person',
-        'givenname' => 'Restored',
-        'sn' => 'Person',
+        'cn' => 'Should Stay Deleted',
+        'givenname' => 'Should',
+        'sn' => 'Stay',
         'mail' => 'soft@example.com',
         'uid' => 'soft',
         'objectguid' => $guid,
     ]);
 
+    $logger = Log::spy();
     $result = app(LdapUserSyncService::class)->sync();
 
-    $restored = User::query()->where('ldap_guid', Str::lower($guid))->first();
-
     expect($result->created)->toBe(0)
-        ->and($result->updated)->toBe(1)
-        ->and($restored)->not->toBeNull()
-        ->and($restored?->trashed())->toBeFalse()
-        ->and($restored?->first_name)->toBe('Restored')
-        ->and(User::withTrashed()->where('ldap_guid', Str::lower($guid))->count())->toBe(1);
+        ->and($result->updated)->toBe(0)
+        ->and($result->skipped)->toBe(1)
+        ->and(User::query()->where('ldap_guid', Str::lower($guid))->exists())->toBeFalse()
+        ->and(User::withTrashed()->where('ldap_guid', Str::lower($guid))->count())->toBe(1)
+        ->and(User::withTrashed()->whereKey($softDeleted->getKey())->first()?->trashed())->toBeTrue();
+
+    $logger->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => str_contains($message, 'soft-deleted user'))
+        ->atLeast()
+        ->once();
 });

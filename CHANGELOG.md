@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Migrate does not create roles.** A plain `php artisan migrate` (including `RUN_MIGRATIONS=true` in Docker) leaves Spatie roles empty until `signaculum:sync-permissions` runs. The Docker entrypoint now runs sync-permissions after migrate; Compose/manual installs that only migrate must run it themselves (or finish with `signaculum:install` / `signaculum:upgrade`).
 - **Soft-deleted emails stay taken** until the erasure job (#220 / C17). Do not expect to re-register the same address after self-deletion in this beta.
 - **Self-deletion revokes credentials.** Profile destroy deactivates the account (Passport tokens and sessions cleared, principal deactivated), revokes the user's API keys, then soft-deletes. A refresh token issued before deletion returns `invalid_grant`.
+- **LDAP-linked accounts cannot self-delete.** The directory owns their lifecycle: the profile delete control is hidden, `DELETE /settings/profile` returns 403, and LDAP sync never restores a soft-deleted user (decision 2026-11-22).
 
 ### Changed
 

@@ -334,7 +334,8 @@
             "warningTitle": "Warnung",
             "warningDescription": "Bitte gehen Sie vorsichtig vor, dies kann nicht rückgängig gemacht werden.",
             "confirmTitle": "Möchten Sie Ihr Konto wirklich löschen?",
-            "confirmDescription": "Wenn Ihr Konto gelöscht ist, werden auch alle zugehörigen Ressourcen und Daten endgültig gelöscht. Geben Sie Ihr Passwort ein, um zu bestätigen, dass Sie Ihr Konto endgültig löschen möchten."
+            "confirmDescription": "Wenn Ihr Konto gelöscht ist, werden auch alle zugehörigen Ressourcen und Daten endgültig gelöscht. Geben Sie Ihr Passwort ein, um zu bestätigen, dass Sie Ihr Konto endgültig löschen möchten.",
+            "directoryManagedDescription": "Dieses Konto wird vom Identitätsverzeichnis verwaltet. Bitten Sie einen Verzeichnisadministrator, es zu deaktivieren oder zu entfernen."
         },
         "twoFactor": {
             "title": "Zwei-Faktor-Authentifizierung",

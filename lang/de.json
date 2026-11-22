@@ -1,5 +1,6 @@
 {
     "An organisation you belong to requires a second factor. Sign in with your authenticator or a passkey.": "Eine Organisation, der Sie angehören, erfordert einen zweiten Faktor. Melden Sie sich mit Ihrem Authenticator oder einem Passkey an.",
+    "This account is managed by the identity directory. Ask a directory administrator to disable or remove it.": "Dieses Konto wird vom Identitätsverzeichnis verwaltet. Bitten Sie einen Verzeichnisadministrator, es zu deaktivieren oder zu entfernen.",
     "api_errors.bad_request": "Ungültige Anfrage.",
     "api_errors.forbidden": "Zugriff verweigert.",
     "api_errors.method_not_allowed": "Methode nicht erlaubt.",

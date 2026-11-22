@@ -93,9 +93,20 @@ final class LdapUserSyncService
                 : $this->isAccountControlDisabled($directoryUser);
 
             // Include soft-deleted rows: a recreated local user would violate unique ldap_guid.
+            // Soft-deleted LDAP accounts are never restored — the directory owns lifecycle (2026-11-22).
             $linkedUser = User::withTrashed()->where('ldap_guid', $guid)->first();
 
             if ($linkedUser !== null) {
+                if ($linkedUser->trashed()) {
+                    Log::warning('LDAP sync skipped soft-deleted user; directory owns lifecycle', [
+                        'user_subject' => $linkedUser->subject,
+                        'ldap_guid' => $guid,
+                    ]);
+                    $skipped++;
+
+                    continue;
+                }
+
                 if ($this->updateLinkedUser(
                     $linkedUser,
                     $firstName,
@@ -260,10 +271,6 @@ final class LdapUserSyncService
 
         if ($resolvedUsername !== null) {
             $attributes['username'] = $resolvedUsername;
-        }
-
-        if ($user->trashed()) {
-            $user->restore();
         }
 
         $user->forceFill($attributes)->save();

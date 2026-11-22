@@ -334,7 +334,8 @@
             "warningTitle": "Attenzione",
             "warningDescription": "Procedi con cautela: l’operazione non può essere annullata.",
             "confirmTitle": "Vuoi davvero eliminare il tuo account?",
-            "confirmDescription": "Una volta eliminato l’account, anche tutte le sue risorse e i suoi dati verranno eliminati definitivamente. Inserisci la password per confermare che vuoi eliminare definitivamente il tuo account."
+            "confirmDescription": "Una volta eliminato l’account, anche tutte le sue risorse e i suoi dati verranno eliminati definitivamente. Inserisci la password per confermare che vuoi eliminare definitivamente il tuo account.",
+            "directoryManagedDescription": "Questo account è gestito dalla directory delle identità. Chiedi a un amministratore della directory di disabilitarlo o rimuoverlo."
         },
         "twoFactor": {
             "title": "Autenticazione a due fattori",

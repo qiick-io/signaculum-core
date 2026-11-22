@@ -23,8 +23,8 @@
     },
     "divergences": {
         "C3": {
-            "reason": "Signaculum is the IdP: identities are local users; users.subject is the public UUID and there is no user_identities / oidc_sub table",
-            "decision": "knowledge/decisions/2026-11-19-fleet-core-schema",
+            "reason": "Signaculum is the IdP: identities are local users; users.subject is the public UUID and there is no user_identities / oidc_sub table (permanent exemption)",
+            "decision": "knowledge/decisions/2026-11-22-ldap-lifecycle-identities-and-key-rechecks",
             "review_by": "2027-05-01",
             "issue": "https://github.com/qiick-io/signaculum-core/issues/219"
         },
