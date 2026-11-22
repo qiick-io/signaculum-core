@@ -2,20 +2,25 @@
 
 declare(strict_types=1);
 
-use App\Actions\CreateApiKeyAction;
+use App\Actions\AddOrganizationMemberAction;
+use App\Actions\CreateOrganizationAction;
 use App\Actions\DeactivateUserAction;
 use App\Actions\ReactivateUserAction;
-use App\Data\ApiKeyData;
+use App\Actions\RemoveOrganizationMemberAction;
+use App\Data\OrganizationData;
 use App\Enums\ApiKeyScopeEnum;
+use App\Enums\OrganizationRoleEnum;
 use App\Enums\PrincipalTypeEnum;
 use App\Models\ApiKey;
+use App\Models\Organization;
 use App\Models\Principal;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
- * Fleet core schema: every user has a principal; API keys name their owner
- * principal; deactivating a user deactivates that principal (#192 / #211).
+ * Fleet principals: one human principal per organisation membership; Admin API
+ * keys belong to the singleton instance_service principal (#229).
  */
 test('principals table exists with the fleet shape', function (): void {
     expect(Schema::hasTable('principals'))->toBeTrue()
@@ -30,36 +35,118 @@ test('principals table exists with the fleet shape', function (): void {
         ->and(Schema::hasColumn('api_keys', 'owner_principal_id'))->toBeTrue();
 });
 
-test('creating a user automatically creates a user principal', function (): void {
-    $user = User::factory()->create(['first_name' => 'Auto', 'last_name' => 'Principal']);
+test('creating a user does not create a principal', function (): void {
+    $user = User::factory()->create(['first_name' => 'No', 'last_name' => 'Principal']);
 
-    $principal = Principal::query()->where('user_id', $user->getKey())->first();
-
-    expect($principal)->not->toBeNull()
-        ->and($principal?->type)->toBe(PrincipalTypeEnum::User)
-        ->and($principal?->name)->toBe('Auto Principal')
-        ->and($principal?->deactivated_at)->toBeNull();
+    expect(Principal::query()->where('user_id', $user->getKey())->exists())->toBeFalse();
 });
 
-test('creating an api key writes owner_principal_id from the owner user', function (): void {
-    $admin = User::factory()->instanceAdmin()->create();
+test('joining an organisation creates a user principal for that organisation', function (): void {
+    $owner = User::factory()->create();
+    $member = User::factory()->create(['first_name' => 'Org', 'last_name' => 'Member']);
 
-    $issued = app(CreateApiKeyAction::class)->execute(
-        $admin,
-        new ApiKeyData('Principal key', [ApiKeyScopeEnum::UsersRead->value]),
+    $organization = app(CreateOrganizationAction::class)->execute(
+        new OrganizationData('Acme', 'acme-'.Str::lower(Str::random(6))),
+        $owner,
     );
 
-    $principal = Principal::query()->where('user_id', $admin->getKey())->firstOrFail();
+    app(AddOrganizationMemberAction::class)->execute(
+        $organization,
+        $member,
+        [OrganizationRoleEnum::Member->value],
+    );
 
-    expect($issued->apiKey->owner_principal_id)->toBe($principal->id)
-        ->and(ApiKey::query()->whereKey($issued->apiKey->getKey())->value('owner_principal_id'))
-        ->toBe($principal->id);
+    $ownerPrincipal = Principal::query()
+        ->where('user_id', $owner->getKey())
+        ->where('organisation_id', $organization->getKey())
+        ->first();
+
+    $memberPrincipal = Principal::query()
+        ->where('user_id', $member->getKey())
+        ->where('organisation_id', $organization->getKey())
+        ->first();
+
+    expect($ownerPrincipal)->not->toBeNull()
+        ->and($ownerPrincipal?->type)->toBe(PrincipalTypeEnum::User)
+        ->and($ownerPrincipal?->organisation_id)->toBe($organization->getKey())
+        ->and($memberPrincipal)->not->toBeNull()
+        ->and($memberPrincipal?->deactivated_at)->toBeNull();
 });
 
-test('deactivating a user also sets principals.deactivated_at', function (): void {
+test('leaving an organisation deactivates that membership principal', function (): void {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+
+    $organization = app(CreateOrganizationAction::class)->execute(
+        new OrganizationData('Leave Co', 'leave-'.Str::lower(Str::random(6))),
+        $owner,
+    );
+
+    app(AddOrganizationMemberAction::class)->execute(
+        $organization,
+        $member,
+        [OrganizationRoleEnum::Member->value],
+    );
+
+    $principal = Principal::query()
+        ->where('user_id', $member->getKey())
+        ->where('organisation_id', $organization->getKey())
+        ->firstOrFail();
+
+    app(RemoveOrganizationMemberAction::class)->execute($organization, $member);
+
+    expect($principal->refresh()->deactivated_at)->not->toBeNull();
+});
+
+test('creating an api key writes owner_principal_id to the instance_service principal', function (): void {
+    ['admin' => $admin, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    $instancePrincipal = Principal::query()
+        ->where('type', PrincipalTypeEnum::InstanceService)
+        ->firstOrFail();
+
+    expect($apiKey->owner_principal_id)->toBe($instancePrincipal->id)
+        ->and($apiKey->created_by)->toBe($admin->getKey())
+        ->and(ApiKey::query()->whereKey($apiKey->getKey())->value('owner_principal_id'))
+        ->toBe($instancePrincipal->id)
+        ->and($instancePrincipal->organisation_id)->toBeNull()
+        ->and($instancePrincipal->user_id)->toBeNull();
+});
+
+test('Admin API keys only hold instance scopes and never an organisation-scoped scope', function (): void {
+    ['apiKey' => $apiKey] = adminApiKey([
+        ApiKeyScopeEnum::UsersWrite->value,
+        ApiKeyScopeEnum::OrganizationsWrite->value,
+        ApiKeyScopeEnum::ApplicationsWrite->value,
+    ]);
+
+    $allowedScopes = ApiKeyScopeEnum::values();
+    $storedScopes = $apiKey->scopes ?? [];
+
+    expect($storedScopes)->not->toBeEmpty();
+
+    foreach ($storedScopes as $scope) {
+        expect($allowedScopes)->toContain($scope)
+            ->and($scope)->not->toContain('organisation:')
+            ->and($scope)->not->toContain('organization:');
+    }
+});
+
+test('deactivating a user also sets membership principals.deactivated_at', function (): void {
     User::factory()->instanceAdmin()->create();
     $user = User::factory()->create();
-    $principal = Principal::query()->where('user_id', $user->getKey())->firstOrFail();
+    $organization = Organization::factory()->create();
+
+    app(AddOrganizationMemberAction::class)->execute(
+        $organization,
+        $user,
+        [OrganizationRoleEnum::Member->value],
+    );
+
+    $principal = Principal::query()
+        ->where('user_id', $user->getKey())
+        ->where('organisation_id', $organization->getKey())
+        ->firstOrFail();
 
     expect($principal->deactivated_at)->toBeNull();
 
@@ -69,10 +156,21 @@ test('deactivating a user also sets principals.deactivated_at', function (): voi
         ->and($principal->refresh()->deactivated_at)->not->toBeNull();
 });
 
-test('reactivating a user clears principals.deactivated_at', function (): void {
+test('reactivating a user clears principals.deactivated_at only for current memberships', function (): void {
     User::factory()->instanceAdmin()->create();
     $user = User::factory()->create();
-    $principal = Principal::query()->where('user_id', $user->getKey())->firstOrFail();
+    $organization = Organization::factory()->create();
+
+    app(AddOrganizationMemberAction::class)->execute(
+        $organization,
+        $user,
+        [OrganizationRoleEnum::Member->value],
+    );
+
+    $principal = Principal::query()
+        ->where('user_id', $user->getKey())
+        ->where('organisation_id', $organization->getKey())
+        ->firstOrFail();
 
     app(DeactivateUserAction::class)->execute($user);
 

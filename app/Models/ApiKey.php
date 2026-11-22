@@ -97,7 +97,7 @@ class ApiKey extends Model
     }
 
     /**
-     * Fleet principal that owns the key (additive; authorisation still uses {@see owner()}).
+     * Fleet principal that owns the key (the singleton `instance_service` for Admin API keys).
      *
      * @return BelongsTo<Principal, $this>
      */
@@ -107,7 +107,7 @@ class ApiKey extends Model
     }
 
     /**
-     * Who issued the key; kept apart from the owner the key acts as.
+     * Who issued the key; kept apart from {@see ownerPrincipal()}.
      *
      * @return BelongsTo<User, $this>
      */

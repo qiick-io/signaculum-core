@@ -89,17 +89,28 @@ it('refuses a key whose stored scopes no longer parse', function (string $stored
     'a map' => '{"users": "read"}',
 ]);
 
-it('refuses a key whose owner was deactivated', function (): void {
-    ['plain' => $plain, 'admin' => $admin] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
-    $admin->forceFill(['is_active' => false])->save();
+it('keeps a key valid when its creating admin is deactivated if another instance admin remains', function (): void {
+    ['plain' => $plain, 'admin' => $creator] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    instanceAdmin();
 
-    assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key owner may not use the API.');
+    $creator->forceFill(['is_active' => false])->save();
+
+    $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
 });
 
-it('refuses a key whose owner no longer has api-key permission', function (): void {
+it('keeps a key valid when its creating admin loses permission if another instance admin remains', function (): void {
+    ['plain' => $plain, 'admin' => $creator] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    instanceAdmin();
+
+    $creator->syncRoles([]);
+    app(EffectivePermissionResolverService::class)->forget($creator);
+
+    $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+});
+
+it('refuses a key when no active instance admin remains', function (): void {
     ['plain' => $plain, 'admin' => $admin] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
-    $admin->syncRoles([]);
-    app(EffectivePermissionResolverService::class)->forget($admin);
+    $admin->forceFill(['is_active' => false])->save();
 
     assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key owner may not use the API.');
 });

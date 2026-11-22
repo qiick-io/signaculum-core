@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Enums\PermissionEnum;
+use App\Enums\PrincipalTypeEnum;
 use App\Models\ApiKey;
 use App\Models\User;
 use App\Services\Authorization\EffectivePermissionResolverService;
 
 /**
- * Admin REST API keys act as the admin who owns them, so only an active admin with
- * can-manage-api-keys manages keys, and only their own: one admin cannot rotate or revoke
- * another admin's key. `update` is rotation, allowed on active keys only.
+ * Admin REST API keys belong to the instance_service principal. Any active admin with
+ * can-manage-api-keys may create, rotate or revoke them; can-show-api-keys lists them.
  */
 final class ApiKeyPolicy
 {
@@ -33,14 +33,22 @@ final class ApiKeyPolicy
     public function update(User $actor, ApiKey $apiKey): bool
     {
         return $this->isActiveWithPermission($actor, PermissionEnum::CanManageApiKeys->value)
-            && $apiKey->owner_id === $actor->getKey()
+            && $this->isInstanceServiceKey($apiKey)
             && $apiKey->isActive();
     }
 
     public function delete(User $actor, ApiKey $apiKey): bool
     {
         return $this->isActiveWithPermission($actor, PermissionEnum::CanManageApiKeys->value)
-            && $apiKey->owner_id === $actor->getKey();
+            && $this->isInstanceServiceKey($apiKey);
+    }
+
+    private function isInstanceServiceKey(ApiKey $apiKey): bool
+    {
+        $ownerPrincipal = $apiKey->ownerPrincipal;
+
+        return $ownerPrincipal !== null
+            && $ownerPrincipal->type === PrincipalTypeEnum::InstanceService;
     }
 
     private function isActiveWithPermission(User $actor, string $permission): bool

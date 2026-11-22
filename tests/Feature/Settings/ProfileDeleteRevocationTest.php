@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Actions\AddOrganizationMemberAction;
 use App\Actions\CreateApiKeyAction;
 use App\Data\ApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
+use App\Enums\OrganizationRoleEnum;
 use App\Models\ApiKey;
+use App\Models\Organization;
 use App\Models\Principal;
 use App\Models\User;
 use Laravel\Passport\Client;
@@ -36,8 +39,14 @@ function issueRefreshableGrant(User $user, Client $client): array
     ];
 }
 
-test('self-deletion revokes refresh tokens, api keys and deactivates the principal', function (): void {
+test('self-deletion revokes refresh tokens, api keys and deactivates membership principals', function (): void {
     $user = User::factory()->instanceAdmin()->create(['password' => 'password']);
+    $organization = Organization::factory()->create();
+    app(AddOrganizationMemberAction::class)->execute(
+        $organization,
+        $user,
+        [OrganizationRoleEnum::Member->value],
+    );
     $client = createOidcClient();
     $tokens = issueRefreshableGrant($user, $client);
 
@@ -46,7 +55,10 @@ test('self-deletion revokes refresh tokens, api keys and deactivates the princip
         new ApiKeyData('Delete-me key', [ApiKeyScopeEnum::UsersRead->value]),
     );
 
-    $principal = Principal::query()->where('user_id', $user->getKey())->firstOrFail();
+    $principal = Principal::query()
+        ->where('user_id', $user->getKey())
+        ->where('organisation_id', $organization->getKey())
+        ->firstOrFail();
 
     test()->actingAs($user)
         ->delete(route('profile.destroy'), ['password' => 'password'])

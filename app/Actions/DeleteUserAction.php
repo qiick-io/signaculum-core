@@ -12,10 +12,11 @@ use Illuminate\Validation\ValidationException;
 /**
  * Soft-delete an IdP account after tearing down its live credentials.
  *
- * Deactivates first (Passport tokens revoked, browser sessions cleared, principal
- * deactivated, back-channel logout), then revokes every API key the user owns, then
- * soft-deletes. Self-service profile destroy and any future admin delete share this path
- * so a refresh token cannot mint access after the account is gone.
+ * Deactivates first (Passport tokens revoked, browser sessions cleared, membership
+ * principals deactivated, back-channel logout), then revokes every Admin API key this
+ * user created (`created_by`), then soft-deletes. Self-service profile destroy and any
+ * future admin delete share this path so a refresh token cannot mint access after the
+ * account is gone.
  */
 final class DeleteUserAction
 {
@@ -34,7 +35,7 @@ final class DeleteUserAction
 
         DB::transaction(function () use ($user): void {
             $apiKeys = ApiKey::query()
-                ->where('owner_id', $user->getKey())
+                ->where('created_by', $user->getKey())
                 ->whereNull('revoked_at')
                 ->get();
 

@@ -6,10 +6,13 @@ namespace App\Http\Middleware;
 
 use App\Actions\RecordApiKeyUsageAction;
 use App\Enums\PermissionEnum;
+use App\Enums\PrincipalTypeEnum;
 use App\Http\Responses\BearerTokenErrorResponse;
 use App\Models\ApiKey;
+use App\Models\User;
 use App\Services\ApiKeySecretService;
 use App\Services\Authorization\EffectivePermissionResolverService;
+use App\Services\InstanceAdminPresenceService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,20 +22,21 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Authenticates Admin REST API requests with a Bearer API key, failing closed.
  *
- * Order matters: the token is verified before the key's state is reported, so knowing a public
- * `key_prefix` (shown in the UI and in logs) tells nothing about the key. An unknown key and a
- * wrong secret get the same answer. Lookups are never cached: a revoke applies to the next request.
+ * Keys are owned by the singleton `instance_service` principal. They remain valid while
+ * that principal is active and at least one active instance admin still exists; demoting
+ * the creating admin alone does not revoke them (decision 2026-11-22 / #229).
  *
- * Side effects: authenticates the key owner on the separate `api-key` guard (never the session
- * guard, so no web session can come of it), puts the key on the request as `apiKey`, records
- * `last_used_at` / `last_used_ip`, enforces the per-key rate limit and applies the owner's locale
- * when no supported `Accept-Language` was requested.
+ * Side effects: authenticates an acting admin on the separate `api-key` guard (never the
+ * session guard), puts the key on the request as `apiKey`, records `last_used_at` /
+ * `last_used_ip`, enforces the per-key rate limit and applies the actor's locale when no
+ * supported `Accept-Language` was requested.
  */
 final class AuthenticateApiKeyMiddleware
 {
     public function __construct(
         private readonly ApiKeySecretService $apiKeySecretService,
         private readonly RecordApiKeyUsageAction $recordApiKeyUsageAction,
+        private readonly InstanceAdminPresenceService $instanceAdminPresenceService,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -61,10 +65,23 @@ final class AuthenticateApiKeyMiddleware
             return BearerTokenErrorResponse::invalidToken(__('API key has no valid scopes.'));
         }
 
-        // A key never does more than its owner: a deactivated or demoted admin stops their keys.
-        $owner = $apiKey->owner;
+        $ownerPrincipal = $apiKey->ownerPrincipal;
 
-        if ($owner === null || ! $owner->is_active || ! app(EffectivePermissionResolverService::class)->hasPermission($owner, PermissionEnum::CanManageApiKeys->value)) {
+        if (
+            $ownerPrincipal === null
+            || $ownerPrincipal->type !== PrincipalTypeEnum::InstanceService
+            || $ownerPrincipal->deactivated_at !== null
+        ) {
+            return BearerTokenErrorResponse::invalidToken(__('API key owner may not use the API.'));
+        }
+
+        if (! $this->instanceAdminPresenceService->hasActiveInstanceAdmin()) {
+            return BearerTokenErrorResponse::invalidToken(__('API key owner may not use the API.'));
+        }
+
+        $actingAdmin = $this->resolveActingAdmin($apiKey);
+
+        if ($actingAdmin === null) {
             return BearerTokenErrorResponse::invalidToken(__('API key owner may not use the API.'));
         }
 
@@ -79,13 +96,32 @@ final class AuthenticateApiKeyMiddleware
         $this->recordApiKeyUsageAction->execute($apiKey, (string) $request->ip());
 
         $request->attributes->set('apiKey', $apiKey);
-        Auth::guard('api-key')->setUser($owner);
+        Auth::guard('api-key')->setUser($actingAdmin);
         Auth::shouldUse('api-key');
 
-        // The global locale middleware ran before key auth; apply the owner's locale here.
-        SetLocaleMiddleware::applyPrincipalLocale($request, is_string($owner->locale) ? $owner->locale : null);
+        // The global locale middleware ran before key auth; apply the actor's locale here.
+        SetLocaleMiddleware::applyPrincipalLocale($request, is_string($actingAdmin->locale) ? $actingAdmin->locale : null);
 
         return $next($request);
+    }
+
+    /**
+     * Prefer the creating admin while they stay an active instance admin; otherwise any other.
+     */
+    private function resolveActingAdmin(ApiKey $apiKey): ?User
+    {
+        $creator = $apiKey->creator;
+        $permissionResolver = app(EffectivePermissionResolverService::class);
+
+        if (
+            $creator instanceof User
+            && $creator->is_active
+            && $permissionResolver->hasPermission($creator, PermissionEnum::CanManageApiKeys->value)
+        ) {
+            return $creator;
+        }
+
+        return $this->instanceAdminPresenceService->firstActiveInstanceAdmin();
     }
 
     private function findMatchingApiKey(string $plainTextToken): ?ApiKey
@@ -96,7 +132,10 @@ final class AuthenticateApiKeyMiddleware
             return null;
         }
 
-        $apiKey = ApiKey::query()->with('owner')->where('key_prefix', $keyPrefix)->first();
+        $apiKey = ApiKey::query()
+            ->with(['ownerPrincipal', 'creator'])
+            ->where('key_prefix', $keyPrefix)
+            ->first();
 
         if ($apiKey === null) {
             return null;

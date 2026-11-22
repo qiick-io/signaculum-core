@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Actor that can own API keys: a person (`user`) or, later, a service account.
+ * Actor that can own API keys: a human membership (`user`), an org `service`
+ * account, or the singleton `instance_service` Admin API owner (#229).
  *
  * @property string $id
  * @property PrincipalTypeEnum|string $type

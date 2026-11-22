@@ -22,6 +22,7 @@ final class RemoveOrganizationMemberAction
 {
     public function __construct(
         private readonly WebhookDispatcherService $webhookDispatcher,
+        private readonly DeactivateOrganizationMembershipPrincipalAction $deactivateOrganizationMembershipPrincipalAction,
     ) {}
 
     public function execute(Organization $organization, User $member): void
@@ -45,6 +46,7 @@ final class RemoveOrganizationMemberAction
             }
 
             $membership->delete();
+            $this->deactivateOrganizationMembershipPrincipalAction->execute($organization, $member);
         });
 
         activity()
