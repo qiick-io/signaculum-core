@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Jobs\SyncLdapUsersJob;
 use App\Models\EmailLoginCode;
+use App\Models\PushedAuthorizationRequest;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -23,7 +24,7 @@ Schedule::call(fn () => Artisan::call('activitylog:clean', [
 ]))->name('activitylog:clean')->daily();
 
 Schedule::command('model:prune', [
-    '--model' => [EmailLoginCode::class],
+    '--model' => [EmailLoginCode::class, PushedAuthorizationRequest::class],
 ])->daily();
 
 // API keys expiring in seven days: one warning per key (app-ui docs/api-keys.md, behaviour 5).
