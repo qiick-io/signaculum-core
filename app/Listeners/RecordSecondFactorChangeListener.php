@@ -23,7 +23,8 @@ use Laravel\Passkeys\Events\PasskeyRegistered;
  * Managing factors needs only the password (`password.confirm`), so someone who knows it can
  * enrol their own factor and then satisfy organisation MFA. This does not stop that; it makes
  * sure the owner hears about it. The admin TOTP reset goes through Fortify's disable action
- * (UI or admin API) and is covered too, with the admin as the causer.
+ * (UI or admin API) and is covered too: the console admin is the causer, and on the Admin API
+ * the key's service account, set by the activity hook in AppServiceProvider.
  *
  * Side effects: writes an activity entry (passkey id and name only, never secrets) and queues
  * SecondFactorChangedNotification.
@@ -48,7 +49,8 @@ final class RecordSecondFactorChangeListener
             $event instanceof PasskeyDeleted => ActivityEventEnum::PasskeyDeleted,
         };
 
-        // The default guard: the web user, or the API key owner on /api/v1 (shouldUse('api-key')).
+        // The default guard: the web user, or on /api/v1 the admin the key acts as; the activity
+        // hook then replaces that causer with the key's service account.
         $signedInUser = Auth::user();
 
         activity()

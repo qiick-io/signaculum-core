@@ -5,12 +5,14 @@ declare(strict_types=1);
 use App\Actions\AddOrganizationMemberAction;
 use App\Enums\ApiKeyScopeEnum;
 use App\Enums\OrganizationRoleEnum;
-use App\Http\Middleware\AuthenticateApiKeyMiddleware;
 use App\Models\ApiKey;
 use App\Models\Principal;
 use App\Models\User;
+use Illuminate\Routing\Events\RouteMatched;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route as Router;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Passport\ClientRepository;
@@ -21,9 +23,9 @@ use Spatie\Activitylog\Models\Activity;
  * caused by the key's service account (the instance_service principal) and names the key's
  * public id and prefix and the admin who created the key.
  *
- * {@see adminApiWriteCalls()} must list every write route of the Admin API: a new route that is
- * not listed fails 'covers every Admin API write route', and a listed one that writes no entry,
- * or an entry without the three fields, fails its own case.
+ * The write routes are read from the route table (every non-GET route under `/api/v1`), never
+ * from a list: a new route fails until {@see adminApiWriteCalls()} can call it, and each call
+ * must reach its own route, write at least one entry, and give every entry the three fields.
  */
 
 /**
@@ -37,7 +39,7 @@ function adminApiWriteCalls(string $plainTextToken): array
 {
     $withKey = static fn () => test()->withToken($plainTextToken);
     $organizationWithMember = static function (): array {
-        $organization = createOrganizationWithOwner(User::factory()->create(), ['slug' => 'audited-org']);
+        $organization = createOrganizationWithOwner(User::factory()->create(), ['slug' => 'audited-org-'.Str::lower(Str::random(8))]);
         $member = User::factory()->create();
         app(AddOrganizationMemberAction::class)->execute($organization, $member, [OrganizationRoleEnum::Member->value]);
 
@@ -72,7 +74,7 @@ function adminApiWriteCalls(string $plainTextToken): array
             'name' => 'Audited organisation',
         ]),
         'api.v1.organizations.memberships.store' => static function () use ($withKey): Closure {
-            $organization = createOrganizationWithOwner(User::factory()->create(), ['slug' => 'audited-org']);
+            $organization = createOrganizationWithOwner(User::factory()->create(), ['slug' => 'audited-org-'.Str::lower(Str::random(8))]);
             $newMember = User::factory()->create();
 
             return static fn () => $withKey()->postJson(
@@ -113,12 +115,15 @@ function adminApiWriteCalls(string $plainTextToken): array
 }
 
 /**
+ * Every write route under `/api/v1`, found in the route table (not in a list), whatever
+ * middleware or alias guards it.
+ *
  * @return list<string>
  */
 function adminApiWriteRouteNames(): array
 {
     return collect(Router::getRoutes()->getRoutes())
-        ->filter(static fn (Route $route): bool => in_array(AuthenticateApiKeyMiddleware::class, $route->gatherMiddleware(), true)
+        ->filter(static fn (Route $route): bool => str_starts_with($route->uri(), 'api/v1/')
             && array_diff($route->methods(), ['GET', 'HEAD']) !== [])
         ->map(static fn (Route $route): string => (string) $route->getName())
         ->sort()
@@ -126,6 +131,9 @@ function adminApiWriteRouteNames(): array
         ->all();
 }
 
+/**
+ * @return array{admin: User, plain: string, apiKey: ApiKey}
+ */
 function adminApiAuditKey(): array
 {
     return adminApiKey([
@@ -135,49 +143,45 @@ function adminApiAuditKey(): array
     ]);
 }
 
-it('covers every Admin API write route', function (): void {
-    ['plain' => $plainTextToken] = adminApiAuditKey();
-    $listedRouteNames = array_keys(adminApiWriteCalls($plainTextToken));
-    sort($listedRouteNames);
-
-    expect(adminApiWriteRouteNames())->not->toBeEmpty()->toBe($listedRouteNames);
-});
-
-it('records the service account, the key and its creator for every entry an Admin API write logs', function (string $routeName): void {
-    /** @var array{admin: User, plain: string, apiKey: ApiKey} $issued */
+it('records the service account, the key and its creator for every entry every Admin API write logs', function (): void {
     $issued = adminApiAuditKey();
-    $call = adminApiWriteCalls($issued['plain'])[$routeName]();
-    $lastActivityIdBefore = (int) Activity::query()->max('id');
-
-    $call()->assertSuccessful();
-
-    $entries = Activity::query()->where('id', '>', $lastActivityIdBefore)->orderBy('id')->get();
     $servicePrincipal = $issued['apiKey']->ownerPrincipal;
+    $callsByRouteName = adminApiWriteCalls($issued['plain']);
+    $writeRouteNames = adminApiWriteRouteNames();
+    $matchedRouteNames = [];
+    Event::listen(RouteMatched::class, static function (RouteMatched $event) use (&$matchedRouteNames): void {
+        $matchedRouteNames[] = $event->route->getName();
+    });
 
-    expect($entries)->not->toBeEmpty("{$routeName} wrote no activity entry")
+    expect($writeRouteNames)->not->toBeEmpty()
         ->and($servicePrincipal)->toBeInstanceOf(Principal::class);
 
-    foreach ($entries as $entry) {
-        $context = "{$routeName}: entry '{$entry->description}'";
+    foreach ($writeRouteNames as $routeName) {
+        expect(array_key_exists($routeName, $callsByRouteName))
+            ->toBeTrue("{$routeName} is an Admin API write route: add a call for it to adminApiWriteCalls()");
 
-        expect($entry->causer_type)->toBe($servicePrincipal->getMorphClass(), $context)
-            ->and((string) $entry->causer_id)->toBe((string) $servicePrincipal->getKey(), $context)
-            ->and($entry->properties?->get('api_key_id'))->toBe($issued['apiKey']->uuid, $context)
-            ->and($entry->properties?->get('api_key_prefix'))->toBe($issued['apiKey']->key_prefix, $context)
-            ->and($entry->properties?->get('api_key_created_by'))->toBe($issued['admin']->getKey(), $context);
+        $call = $callsByRouteName[$routeName]();
+        $lastActivityIdBefore = (int) Activity::query()->max('id');
+        $matchedRouteNames = [];
+
+        $call()->assertSuccessful();
+
+        $entries = Activity::query()->where('id', '>', $lastActivityIdBefore)->orderBy('id')->get();
+
+        expect($matchedRouteNames)->toBe([$routeName], "the call for {$routeName} must request that route")
+            ->and($entries)->not->toBeEmpty("{$routeName} wrote no activity entry");
+
+        foreach ($entries as $entry) {
+            $context = "{$routeName}: entry '{$entry->description}'";
+
+            expect($entry->causer_type)->toBe($servicePrincipal->getMorphClass(), $context)
+                ->and((string) $entry->causer_id)->toBe((string) $servicePrincipal->getKey(), $context)
+                ->and($entry->properties?->get('api_key_id'))->toBe($issued['apiKey']->uuid, $context)
+                ->and($entry->properties?->get('api_key_prefix'))->toBe($issued['apiKey']->key_prefix, $context)
+                ->and($entry->properties?->get('api_key_created_by'))->toBe($issued['admin']->getKey(), $context);
+        }
     }
-})->with([
-    'create a user' => 'api.v1.users.store',
-    'update a user' => 'api.v1.users.update',
-    'deactivate a user' => 'api.v1.users.deactivate',
-    'reset a user\'s two-factor' => 'api.v1.users.reset-two-factor',
-    'create an organisation' => 'api.v1.organizations.store',
-    'add a membership' => 'api.v1.organizations.memberships.store',
-    'change a membership' => 'api.v1.organizations.memberships.update',
-    'remove a membership' => 'api.v1.organizations.memberships.destroy',
-    'create an application' => 'api.v1.applications.store',
-    'rotate an application secret' => 'api.v1.applications.rotate-secret',
-]);
+});
 
 it('keeps the signed-in admin as the causer outside the Admin API', function (): void {
     ['admin' => $admin] = adminApiAuditKey();
@@ -208,4 +212,21 @@ it('shows the service account as the causer in the activity log', function (): v
                 'email' => null,
             ])
             ->where('activityLogs.data.0.properties.meta.api_key_prefix', $apiKey->key_prefix));
+});
+
+it('lists the Admin API actions of a key when the activity log is filtered by its creator', function (): void {
+    ['admin' => $creator, 'plain' => $plainTextToken] = adminApiAuditKey();
+    $otherAdmin = User::factory()->instanceAdmin()->create();
+    adminApiWriteCalls($plainTextToken)['api.v1.organizations.store']()()->assertCreated();
+    $apiEntryIds = Activity::query()->where('causer_type', (new Principal)->getMorphClass())->pluck('id')->all();
+
+    $filteredEntryIds = static fn (User $filterUser): array => collect(
+        test()->actingAs($creator)->get(route('admin.activity-logs.index', ['user_ids' => [$filterUser->id]]))
+            ->assertOk()
+            ->viewData('page')['props']['activityLogs']['data'],
+    )->pluck('id')->all();
+
+    expect($apiEntryIds)->not->toBeEmpty()
+        ->and(array_intersect($apiEntryIds, $filteredEntryIds($creator)))->toEqualCanonicalizing($apiEntryIds)
+        ->and(array_intersect($apiEntryIds, $filteredEntryIds($otherAdmin)))->toBe([]);
 });

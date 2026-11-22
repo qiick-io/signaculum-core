@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Activity;
+use App\Models\ApiKey;
+use App\Models\Principal;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -24,10 +26,24 @@ final class ActivityLogService
             ->latest('id');
 
         if ($filters['user_ids'] !== []) {
-            // causer_id is a string column (UUID and integer keys share it); PostgreSQL
-            // refuses to compare it with integer bindings.
-            $query->where('causer_type', (new User)->getMorphClass())
-                ->whereIn('causer_id', array_map(strval(...), $filters['user_ids']));
+            // Admin API actions are caused by the key's service account; filtering by a user also
+            // shows those of the keys they created (`properties.api_key_id`, a UUID string, so
+            // the JSON comparison behaves the same on every driver).
+            $apiKeyIds = ApiKey::query()->whereIn('created_by', $filters['user_ids'])->pluck('uuid')->all();
+
+            $query->where(function (Builder $causers) use ($filters, $apiKeyIds): void {
+                // causer_id is a string column (UUID and integer keys share it); PostgreSQL
+                // refuses to compare it with integer bindings.
+                $causers->where(static fn (Builder $users) => $users
+                    ->where('causer_type', (new User)->getMorphClass())
+                    ->whereIn('causer_id', array_map(strval(...), $filters['user_ids'])));
+
+                if ($apiKeyIds !== []) {
+                    $causers->orWhere(static fn (Builder $servicePrincipal) => $servicePrincipal
+                        ->where('causer_type', (new Principal)->getMorphClass())
+                        ->whereIn('properties->api_key_id', $apiKeyIds));
+                }
+            });
         }
 
         if ($filters['event'] !== '') {
