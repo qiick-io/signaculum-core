@@ -10,7 +10,6 @@ use App\Models\Principal;
 use App\Models\User;
 use App\Services\Authorization\SuperAdminGuardService;
 use App\Services\InstanceAdminDemotionService;
-use App\Services\OidcSessionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -24,7 +23,6 @@ final class DeactivateUserAction
 {
     public function __construct(
         private readonly DispatchBackChannelLogoutAction $dispatchBackChannelLogoutAction,
-        private readonly OidcSessionService $oidcSessionService,
         private readonly SuperAdminGuardService $superAdminGuard,
         private readonly InstanceAdminDemotionService $instanceAdminDemotionService,
     ) {}
@@ -69,7 +67,7 @@ final class DeactivateUserAction
             Passport::refreshToken()->newQuery()->whereIn('access_token_id', $accessTokenIds)->update(['revoked' => true]);
 
             DB::connection(config('session.connection'))
-                ->table((string) config('session.table'))
+                ->table(config()->string('session.table'))
                 ->where('user_id', $user->getKey())
                 ->delete();
 
@@ -77,21 +75,13 @@ final class DeactivateUserAction
             $user->save();
         });
 
-        $openOidcSessions = OidcSession::query()
+        // Every open client session gets its logout token, each with its own `sid`
+        // (Back-Channel Logout 1.0 §2.4), including those that never wrote an OidcSession row.
+        $this->dispatchBackChannelLogoutAction->execute($user);
+
+        OidcSession::query()
             ->where('user_id', $user->getKey())
             ->whereNull('ended_at')
-            ->pluck('oidc_session_id');
-
-        foreach ($openOidcSessions as $oidcSessionId) {
-            if (! is_string($oidcSessionId) || $oidcSessionId === '') {
-                continue;
-            }
-
-            $this->dispatchBackChannelLogoutAction->execute($user, $oidcSessionId);
-            $this->oidcSessionService->markEnded($oidcSessionId);
-        }
-
-        // Catch client sessions that never wrote an OidcSession row.
-        $this->dispatchBackChannelLogoutAction->execute($user);
+            ->update(['ended_at' => now()]);
     }
 }

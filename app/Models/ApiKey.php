@@ -9,6 +9,7 @@ use App\Enums\ApiKeyScopeEnum;
 use App\Services\ApiKeySecretService;
 use App\Traits\LogsApplicationActivityTrait;
 use App\Traits\RejectsInvalidUuidRouteKeysTrait;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,9 @@ use Symfony\Component\HttpFoundation\IpUtils;
  * public `key_prefix`, the full token stored only as a SHA-256 hash, and the secret replaced by the
  * last rotation kept in `previous_key_hash` until `previous_key_valid_until`. Token handling
  * lives in {@see ApiKeySecretService}; the plain-text token is never an attribute.
+ *
+ * Nothing is mass assignable: every write names its columns through `forceFill()` in an action,
+ * so a request payload can never reach a hash, an owner or an expiry by accident.
  *
  * @property int $id
  * @property string $uuid
@@ -42,38 +46,10 @@ use Symfony\Component\HttpFoundation\IpUtils;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
+#[Hidden(['key_hash', 'previous_key_hash'])]
 class ApiKey extends Model
 {
     use HasUuids, LogsApplicationActivityTrait, RejectsInvalidUuidRouteKeysTrait;
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'key_prefix',
-        'key_hash',
-        'owner_id',
-        'owner_principal_id',
-        'created_by',
-        'scopes',
-        'ip_allowlist',
-        'rate_limit_per_minute',
-        'expires_at',
-        'last_used_at',
-        'last_used_ip',
-        'revoked_at',
-        'previous_key_hash',
-        'previous_key_valid_until',
-    ];
-
-    /**
-     * @var list<string>
-     */
-    protected $hidden = [
-        'key_hash',
-        'previous_key_hash',
-    ];
 
     /**
      * @return list<string>

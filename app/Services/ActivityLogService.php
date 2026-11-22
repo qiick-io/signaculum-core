@@ -46,23 +46,23 @@ final class ActivityLogService
             });
         }
 
-        if ($filters['event'] !== '') {
+        if (filled($filters['event'])) {
             $query->forEvent($filters['event']);
         }
 
-        if ($filters['log_name'] !== '') {
+        if (filled($filters['log_name'])) {
             $query->inLog($filters['log_name']);
         }
 
-        if ($filters['date_from'] !== '') {
+        if (filled($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        if ($filters['date_to'] !== '') {
+        if (filled($filters['date_to'])) {
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
-        if ($filters['search'] !== '') {
+        if (filled($filters['search'])) {
             $operator = $query->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
             $term = '%'.$filters['search'].'%';
 

@@ -42,15 +42,17 @@ it('warns the owner of a key that expires in seven days, once', function (): voi
     Notification::assertSentToTimes($owner, ApiKeyExpiringNotification::class, 1);
 });
 
-it('also warns the issuer when someone else owns the key', function (): void {
+it('also warns the issuer when someone else owns the key, and no other admin', function (): void {
     $owner = User::factory()->instanceAdmin()->create();
     $issuer = User::factory()->instanceAdmin()->create();
+    $otherAdmin = User::factory()->instanceAdmin()->create();
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour())->apiKey->forceFill(['created_by' => $issuer->getKey()])->save();
 
     $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
 
     Notification::assertSentTo($owner, ApiKeyExpiringNotification::class);
     Notification::assertSentTo($issuer, ApiKeyExpiringNotification::class);
+    Notification::assertNotSentTo($otherAdmin, ApiKeyExpiringNotification::class);
 });
 
 it('skips keys outside the window and revoked keys', function (): void {
@@ -105,3 +107,31 @@ it('warns the other instance admins when the issuer is no longer one', function 
     Notification::assertSentToTimes($otherAdmin, ApiKeyExpiringNotification::class, 1);
     Notification::assertNotSentTo([$issuer, $inactiveAdmin, $regularUser], ApiKeyExpiringNotification::class);
 });
+
+it('counts the keys it warned about', function (): void {
+    $owner = User::factory()->instanceAdmin()->create();
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour());
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHours(2));
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(20));
+
+    $this->artisan('signaculum:notify-expiring-api-keys')
+        ->expectsOutputToContain('Notified about 2 expiring API key(s).')
+        ->assertSuccessful();
+});
+
+it('warns at least one day ahead whatever the configured warning', function (int $configuredDays): void {
+    config(['api.key_expiry_warning_days' => $configuredDays]);
+    $owner = User::factory()->instanceAdmin()->create();
+    $tomorrowsKey = keyExpiringAt($owner, CarbonImmutable::now()->addDay()->addHour())->apiKey;
+    keyExpiringAt($owner, CarbonImmutable::now()->addHour());
+
+    $this->artisan('signaculum:notify-expiring-api-keys')
+        ->expectsOutputToContain('Notified about 1 expiring API key(s).')
+        ->assertSuccessful();
+
+    Notification::assertSentTo(
+        $owner,
+        ApiKeyExpiringNotification::class,
+        static fn (ApiKeyExpiringNotification $notification): bool => $notification->apiKey->is($tomorrowsKey),
+    );
+})->with(['zero' => 0, 'one' => 1]);

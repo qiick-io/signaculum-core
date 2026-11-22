@@ -319,6 +319,7 @@ it('filters the activity log by user, action, log, date and search', function ()
         [['log_name' => 'auth', 'date_from' => now()->subDay()->toDateString()], ['User logged in']],
         [['log_name' => 'auth', 'date_to' => now()->subDays(5)->toDateString()], ['User logged out']],
         [['search' => 'logged out'], ['User logged out']],
+        [['search' => 'logged'], ['User logged in', 'User logged out']],
     ];
 
     foreach ($cases as [$filters, $expected]) {

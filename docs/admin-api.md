@@ -55,8 +55,9 @@ OpenAPI 3.1: `GET /api/v1/openapi.json` (hand-written; no generator package).
     no longer names a person would weaken the audit trail. Every demotion path raises the domain
     event `InstanceAdminDemotedEvent` once per demotion: a user demoted on one path and then
     deactivated is reported once. A deletion always raises `ApiKeyCreatorDeletedEvent` for the
-    keys it revoked and the admins are told about each of them, even when the creator had
-    already been demoted (and told about) earlier.
+    working keys it revoked and the admins are told about each of them, even when the creator
+    had already been demoted (and told about) earlier. Keys that had already expired are
+    revoked too, without a mail: no integration loses access.
 
 ## Scopes
 

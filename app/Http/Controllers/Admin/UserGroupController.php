@@ -37,23 +37,18 @@ class UserGroupController extends Controller
     use ValidatesListPerPageTrait;
     use ValidatesSearchQueryTrait;
 
-    /**
-     * @var list<string>
-     */
-    private const SORTABLE_COLUMNS = ['name', 'created_at', 'updated_at'];
-
     public function index(Request $request): Response|JsonResponse
     {
         abort_unless(Gate::allows('viewAny', UserGroup::class), 403);
 
         $search = $this->validatedSearch($request);
-        $sort = $request->string('sort')->toString();
+        $sort = match ($request->string('sort')->toString()) {
+            'created_at' => 'created_at',
+            'updated_at' => 'updated_at',
+            default => 'name',
+        };
         $direction = strtolower($request->string('direction')->toString()) === 'desc' ? 'desc' : 'asc';
         $wantsJson = $request->expectsJson();
-
-        if (! in_array($sort, self::SORTABLE_COLUMNS, true)) {
-            $sort = 'name';
-        }
 
         $query = UserGroup::query()->withCount(['users', 'roles']);
 
@@ -68,7 +63,7 @@ class UserGroupController extends Controller
             $query->onlyTrashed();
         }
 
-        if ($search !== '') {
+        if (filled($search)) {
             $like = $query->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
             $query->where(function ($builder) use ($search, $like): void {
                 $builder->where('name', $like, "%{$search}%")
@@ -124,8 +119,9 @@ class UserGroupController extends Controller
             'description' => $validated['description'] ?? null,
         ]);
 
-        $group->users()->sync(array_values(array_map('intval', $validated['user_ids'] ?? [])));
-        $group->roles()->sync(array_values(array_map('intval', $validated['role_ids'] ?? [])));
+        // sync() takes the ids as values, whatever the keys or their string form.
+        $group->users()->sync($validated['user_ids'] ?? []);
+        $group->roles()->sync($validated['role_ids'] ?? []);
         app(EffectivePermissionResolverService::class)->forget();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group created.')]);
@@ -170,8 +166,6 @@ class UserGroupController extends Controller
                     $group->roles()->sync($nextRoleIds);
                 }
             });
-
-            app(EffectivePermissionResolverService::class)->forget();
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group updated.')]);
@@ -191,7 +185,6 @@ class UserGroupController extends Controller
 
         $this->groupMemberDemotions($group, function () use ($group): void {
             $group->delete();
-            app(EffectivePermissionResolverService::class)->forget();
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group deleted.')]);

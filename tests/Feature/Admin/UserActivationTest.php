@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Actions\DeactivateUserAction;
 use App\Jobs\SendBackChannelLogoutJob;
+use App\Models\ClientSession;
+use App\Models\OidcSession;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -150,4 +153,63 @@ test('the last instance admin flag cannot be revoked', function () {
         ->assertSessionHasErrors('user');
 
     expect($admin->refresh()->isSuperAdmin())->toBeTrue();
+});
+
+test('deactivation ends every browser session, remember token and OIDC session of the user', function () {
+    $this->freezeSecond();
+    $admin = activationAdmin();
+    $target = User::factory()->create(['remember_token' => 'remembered-token']);
+    $bystander = User::factory()->create();
+
+    foreach ([[$target, 'target-session'], [$bystander, 'bystander-session']] as [$owner, $sessionId]) {
+        DB::table(config('session.table'))->insert([
+            'id' => $sessionId,
+            'user_id' => $owner->getKey(),
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'Pest',
+            'payload' => '',
+            'last_activity' => now()->getTimestamp(),
+        ]);
+    }
+
+    foreach (['sid-open' => null, 'sid-ended' => now()->subHour()] as $oidcSessionId => $endedAt) {
+        OidcSession::query()->create([
+            'user_id' => $target->getKey(),
+            'laravel_session_id' => "laravel-{$oidcSessionId}",
+            'oidc_session_id' => $oidcSessionId,
+            'ended_at' => $endedAt,
+        ]);
+    }
+
+    Queue::fake();
+    $client = createOidcClient();
+    $client->forceFill(['backchannel_logout_uri' => 'https://rp.example.test/backchannel-logout'])->save();
+
+    // One client session with an OidcSession row, one without (it never wrote one).
+    foreach (['sid-open', 'sid-orphan'] as $oidcSessionId) {
+        ClientSession::query()->create([
+            'user_id' => $target->getKey(),
+            'client_id' => $client->getKey(),
+            'oidc_session_id' => $oidcSessionId,
+        ]);
+    }
+
+    app(DeactivateUserAction::class)->execute($target);
+
+    $rememberToken = DB::table('users')->where('id', $target->getKey())->value('remember_token');
+
+    expect(DB::table(config('session.table'))->pluck('id')->all())->toBe(['bystander-session'])
+        ->and($rememberToken)->toBeString()->toHaveLength(60)->not->toBe('remembered-token')
+        ->and(OidcSession::query()->where('user_id', $target->getKey())->whereNull('ended_at')->exists())->toBeFalse()
+        ->and(OidcSession::query()->where('oidc_session_id', 'sid-ended')->sole()->ended_at?->equalTo(now()->subHour()))->toBeTrue()
+        ->and($admin->fresh()?->is_active)->toBeTrue();
+
+    foreach (['sid-open', 'sid-orphan'] as $oidcSessionId) {
+        Queue::assertPushed(
+            SendBackChannelLogoutJob::class,
+            fn (SendBackChannelLogoutJob $job): bool => $job->oidcSessionId === $oidcSessionId && $job->subject === $target->subject,
+        );
+    }
+
+    Queue::assertPushed(SendBackChannelLogoutJob::class, 2);
 });

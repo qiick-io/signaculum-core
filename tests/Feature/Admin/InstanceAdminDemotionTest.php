@@ -304,15 +304,23 @@ describe('the other instance admins are told about the keys', function (): void 
         }
     });
 
-    it('raises the deletion event for the revoked keys only, and not when nothing was revoked', function (): void {
+    it('raises the deletion event for the working keys it revoked only, and not when there were none', function (): void {
         Event::fake([ApiKeyCreatorDeletedEvent::class]);
         [$activeKey] = keysCreatedBy($this->creator);
-        [$alreadyRevokedKey] = keysCreatedBy($this->creator);
+        [$alreadyRevokedKey, $expiredKey] = keysCreatedBy($this->creator, 2);
         $alreadyRevokedKey->forceFill(['revoked_at' => now()->subMinute()])->save();
+        $expiredKey->forceFill(['expires_at' => now()->subDays(2)])->save();
         $userWithoutKeys = User::factory()->create();
+        $userWithOnlyExpiredKeys = User::factory()->instanceAdmin()->create();
+        [$onlyKey] = keysCreatedBy($userWithOnlyExpiredKeys);
+        $onlyKey->forceFill(['expires_at' => now()])->save();
 
         app(DeleteUserAction::class)->execute($this->creator);
         app(DeleteUserAction::class)->execute($userWithoutKeys);
+        app(DeleteUserAction::class)->execute($userWithOnlyExpiredKeys);
+
+        expect($expiredKey->fresh()?->isRevoked())->toBeTrue()
+            ->and($onlyKey->fresh()?->isRevoked())->toBeTrue();
 
         Event::assertDispatchedTimes(ApiKeyCreatorDeletedEvent::class, 1);
         Event::assertDispatched(

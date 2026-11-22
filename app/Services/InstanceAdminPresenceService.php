@@ -44,7 +44,7 @@ final class InstanceAdminPresenceService
 
     public function isActiveInstanceAdmin(User $user): bool
     {
-        return (bool) $user->is_active
+        return $user->is_active
             && ! $user->trashed()
             && $this->permissionResolver->hasPermission($user, PermissionEnum::CanManageApiKeys->value);
     }

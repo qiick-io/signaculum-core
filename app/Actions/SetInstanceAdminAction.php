@@ -12,7 +12,6 @@ use App\Services\Authorization\SuperAdminGuardService;
 use App\Services\InstanceAdminDemotionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Grants or revokes the `super-admin` role (replaces the former `is_instance_admin` flag).
@@ -55,9 +54,7 @@ final class SetInstanceAdminAction
             } else {
                 $user->removeRole(RoleEnum::SuperAdmin->value);
             }
-
-            app(PermissionRegistrar::class)->forgetCachedPermissions();
-            $this->permissionResolver->forget($user);
+            // Spatie forgets its permission cache itself; the tracker refreshes the resolver.
         });
     }
 }
