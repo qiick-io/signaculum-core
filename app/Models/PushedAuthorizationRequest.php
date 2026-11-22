@@ -25,7 +25,7 @@ class PushedAuthorizationRequest extends Model
 {
     use HasUuids;
 
-    protected $table = 'oauth_pushed_authorization_requests';
+    protected $table = 'signaculum_pushed_authorization_requests';
 
     /**
      * @var list<string>

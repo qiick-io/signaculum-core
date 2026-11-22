@@ -51,7 +51,7 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 
 ## Pushed Authorization Requests (RFC 9126)
 
-`POST /oauth/par` (`application/x-www-form-urlencoded`) accepts the full authorization request (PKCE S256, `nonce` for `openid`, exact `redirect_uri`, scopes) with the same client authentication as `/oauth/token`. Validation happens **before** storage. Success is HTTP 201 with `request_uri` (`urn:ietf:params:oauth:request_uri:…`) and short `expires_in` (`OIDC_PAR_EXPIRES_IN`, default 60s). The URI is single-use and bound to the pushing `client_id`.
+`POST /oauth/par` (`application/x-www-form-urlencoded`) accepts the full authorization request (PKCE S256, `nonce` for `openid`, exact `redirect_uri`, scopes) with the same client authentication as `/oauth/token`. Validation happens **before** storage (table `signaculum_pushed_authorization_requests`; the standard `oauth_pushed_authorization_requests` name is reserved for `qiick/laravel-mcp-oauth`, #238). Success is HTTP 201 with `request_uri` (`urn:ietf:params:oauth:request_uri:…`) and short `expires_in` (`OIDC_PAR_EXPIRES_IN`, default 60s). The URI is single-use and bound to the pushing `client_id`.
 
 `/oauth/authorize` then accepts `client_id` + that `request_uri`; other authorize parameters are ignored (RFC 9126 §4). Mismatched client, expired or reused URIs → HTTP 400 `invalid_request`. A non-PAR `request_uri` (for example a remote JAR URL) still yields `request_uri_not_supported` (#113). The OIDC `request` parameter stays `request_not_supported`. Rate limit: same named limiter as the token endpoint (`oidc-token`).
 

@@ -9,6 +9,7 @@ use App\Models\OrganizationMembership;
 use App\Models\PushedAuthorizationRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * RFC 9126 Pushed Authorization Requests (PAR).
@@ -44,6 +45,12 @@ function parPayload(array $overrides = []): array
     /** @var array<string, string> $parameters */
     return $parameters;
 }
+
+test('PAR rows live in signaculum_pushed_authorization_requests not the oauth_ name', function (): void {
+    expect(Schema::hasTable('signaculum_pushed_authorization_requests'))->toBeTrue()
+        ->and(Schema::hasTable('oauth_pushed_authorization_requests'))->toBeFalse()
+        ->and((new PushedAuthorizationRequest)->getTable())->toBe('signaculum_pushed_authorization_requests');
+});
 
 test('discovery advertises the PAR endpoint and leaves require_pushed false', function () {
     config(['oidc.issuer' => 'https://id.example.test']);
