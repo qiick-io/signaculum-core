@@ -98,6 +98,40 @@ test('leaving an organisation deactivates that membership principal', function (
     expect($principal->refresh()->deactivated_at)->not->toBeNull();
 });
 
+test('rejoining an organisation reactivates the same membership principal', function (): void {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+
+    $organization = app(CreateOrganizationAction::class)->execute(
+        new OrganizationData('Rejoin Co', 'rejoin-'.Str::lower(Str::random(6))),
+        $owner,
+    );
+
+    app(AddOrganizationMemberAction::class)->execute(
+        $organization,
+        $member,
+        [OrganizationRoleEnum::Member->value],
+    );
+
+    $principal = Principal::query()
+        ->where('user_id', $member->getKey())
+        ->where('organisation_id', $organization->getKey())
+        ->firstOrFail();
+
+    app(RemoveOrganizationMemberAction::class)->execute($organization, $member);
+
+    expect($principal->refresh()->deactivated_at)->not->toBeNull();
+
+    app(AddOrganizationMemberAction::class)->execute(
+        $organization,
+        $member,
+        [OrganizationRoleEnum::Member->value],
+    );
+
+    expect(Principal::query()->where('user_id', $member->getKey())->where('organisation_id', $organization->getKey())->count())->toBe(1)
+        ->and($principal->refresh()->deactivated_at)->toBeNull();
+});
+
 test('creating an api key writes owner_principal_id to the instance_service principal', function (): void {
     ['admin' => $admin, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
 
