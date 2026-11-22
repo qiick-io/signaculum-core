@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed the PAR storage table from `oauth_pushed_authorization_requests` to `signaculum_pushed_authorization_requests` so the standard name stays free for `qiick/laravel-mcp-oauth` (#238). **Recreate beta.1 databases with `php artisan migrate:fresh --seed`** (the `create_` migration was edited in place).
+
 ## [1.0.0-beta.1] - 2026-11-22
 
 This is a **beta** of Signaculum, the self-hosted OpenID Connect IdP for the qiick suite (Passport 13 + in-house OIDC layer, admin UI, organisations, distribution). Wire contracts may still change before 1.0.0; pin clients to this tag and read [docs/oidc-profile.md](./docs/oidc-profile.md).
