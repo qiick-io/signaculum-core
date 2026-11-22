@@ -83,8 +83,21 @@ divergence from the app-ui baseline: the identity provider gates its own resourc
 - `POST /api/v1/applications/{id}/rotate-secret`
 
 Lists accept `page`, `per_page` (max 100), and where noted `search` / `sort` / `direction`.
-Responses use snake_case JSON resources. Writes reuse the same `*Action` classes as the UI and appear in the activity log, with the
-`api_key_uuid` of the key that authorised them.
+Responses use snake_case JSON resources. Writes reuse the same `*Action` classes as the UI and appear in the activity log.
+
+## Audit
+
+Every activity entry an Admin API request writes is attributable to the key that authorised it:
+
+- **causer**: the key's service account, the `instance_service` principal ("Instance Admin API"
+  in **Admin → Activity log**), never the admin the request acts as;
+- `properties.api_key_id`: the key's public UUID, and `properties.api_key_prefix`: its public
+  prefix (`sig_<env>_<id>`, as the console lists it);
+- `properties.api_key_created_by`: the id of the admin who created the key.
+
+`tests/Feature/Api/AdminApiAuditTest.php` calls every write route of the Admin API and fails when
+one writes no entry, or an entry without these fields; a new write route fails it until it is
+listed there.
 
 Create payloads are built into the same `*Data` object as the admin UI's form requests —
 `ApplicationData::fromValidated()`, `OrganizationData::fromValidated()` — and those refuse to build a

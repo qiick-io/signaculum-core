@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Principals are one per organisation membership (`organisation_id` required) with a bidirectional CHECK and a DB singleton for `instance_service` (NULL org only for that type) (#229). **Recreate beta.1 databases with `php artisan migrate:fresh --seed`**. Admin API keys belong to that service principal; they stay valid while any active instance admin remains.
 - Every Admin API key expires: `expires_at` is required at creation and at rotation, at most `api.key_max_lifetime_days` (`API_KEY_MAX_LIFETIME_DAYS`, default 90) from then; requests without one or past it get `422`. Expiry warnings go to every active instance admin when the creator no longer is one.
 - When an Admin API key's creator stops being an instance admin (role revoked, group change, deactivation), the other active instance admins get one mail per key that still works, with a link to revoke it; the key stays valid. Deleting the creator still revokes their keys, and the mail says so. All paths raise the domain event `InstanceAdminDemotedEvent` once per demotion.
+- Admin API audit: every activity entry an Admin API request writes is now caused by the key's `instance_service` service account (no longer the admin it acts as) and records `api_key_id`, `api_key_prefix` and `api_key_created_by` in its properties. The activity log shows the service account as "Instance Admin API".
 
 ## [1.0.0-beta.1] - 2026-11-22
 

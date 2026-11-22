@@ -616,10 +616,17 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(ActivityModel::class, ActivityPolicy::class);
 
-        // An entry written during an Admin API request names the key that authorised it.
-        // Organisation-scoped actions also stamp `organisation_id` (fleet baseline).
+        // An entry written during an Admin API request is caused by the key's service account
+        // (the instance_service principal) and names the key and the admin who created it, so
+        // every API action is attributable (decision 2026-11-22). Organisation-scoped actions
+        // also stamp `organisation_id` (fleet baseline).
         Activity::beforeLogging(function (ActivityModel $activity): void {
             $apiKey = request()->attributes->get('apiKey');
+
+            if ($apiKey instanceof ApiKey && $apiKey->ownerPrincipal !== null) {
+                $activity->causer()->associate($apiKey->ownerPrincipal);
+            }
+
             $properties = collect($activity->properties ?? []);
             $organisationId = app(ActivityOrganisationResolverService::class)->resolve(
                 $activity->subject,
@@ -633,7 +640,11 @@ class AppServiceProvider extends ServiceProvider
             $activity->properties = $properties->merge([
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent(),
-                ...($apiKey instanceof ApiKey ? ['api_key_id' => $apiKey->uuid] : []),
+                ...($apiKey instanceof ApiKey ? [
+                    'api_key_id' => $apiKey->uuid,
+                    'api_key_prefix' => $apiKey->key_prefix,
+                    'api_key_created_by' => $apiKey->created_by,
+                ] : []),
             ]);
         });
     }
