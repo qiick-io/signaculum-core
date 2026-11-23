@@ -367,3 +367,35 @@ it('authorizes every group of a bulk action before touching any', function (): v
 
     expect(UserGroup::onlyTrashed()->whereKey([$plain->getKey(), $owners->getKey()])->count())->toBe(2);
 });
+
+it('force-deletes in bulk with the force-delete permission alone', function (): void {
+    $actor = User::factory()->create();
+    grantGroupPermissions($actor, [PermissionEnum::CanShowGroups, PermissionEnum::CanForceDeleteGroups]);
+    $groups = UserGroup::factory()->count(2)->create();
+    $groups->each(fn (UserGroup $group) => $group->delete());
+
+    $this->actingAs($actor)
+        ->post(route('admin.groups.bulk'), ['action' => 'force_delete', 'ids' => $groups->modelKeys()])
+        ->assertRedirect(route('admin.groups.index', ['trashed' => 1]));
+
+    expect(UserGroup::withTrashed()->whereKey($groups->modelKeys())->exists())->toBeFalse();
+});
+
+it('rolls a bulk action back when one group fails half way', function (): void {
+    $this->withoutExceptionHandling();
+    $this->actingAs(instanceAdmin());
+    [$first, $second] = UserGroup::factory()->count(2)->create()->all();
+    $first->delete();
+    $second->delete();
+
+    UserGroup::forceDeleting(function (UserGroup $group) use ($second): void {
+        if ($group->is($second)) {
+            throw new RuntimeException('Simulated failure on the second group.');
+        }
+    });
+
+    expect(fn () => $this->post(route('admin.groups.bulk'), ['action' => 'force_delete', 'ids' => [$first->getKey(), $second->getKey()]]))
+        ->toThrow(RuntimeException::class);
+
+    expect(UserGroup::onlyTrashed()->whereKey([$first->getKey(), $second->getKey()])->count())->toBe(2);
+});
