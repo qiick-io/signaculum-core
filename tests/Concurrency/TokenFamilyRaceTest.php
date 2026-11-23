@@ -28,6 +28,13 @@ beforeEach(function () {
     $this->authCodeId = Passport::authCode()->newQuery()->sole()->getKey();
 });
 
+// DatabaseTruncation empties the tables before each test only: leave no committed rows to the suites after this one.
+afterEach(function () {
+    if (in_array(DB::getDriverName(), ['pgsql', 'mysql', 'mariadb'], true)) {
+        $this->truncateDatabaseTables();
+    }
+});
+
 /**
  * Refresh the issued refresh token and, as soon as that refresh runs a query starting
  * with `$pauseAtQuery` on `$pauseAtTable`, run `$parallelRequest` in a forked process
@@ -65,12 +72,7 @@ function raceWhileRefreshing(object $testCase, string $pauseAtQuery, string $pau
         sleep(3);
     });
 
-    $testCase->post('/oauth/token', [
-        'grant_type' => 'refresh_token',
-        'client_id' => $testCase->client->getKey(),
-        'client_secret' => $testCase->client->plainSecret,
-        'refresh_token' => $testCase->issuedTokens['refresh_token'],
-    ]);
+    refreshTokens($testCase, $testCase->issuedTokens['refresh_token']);
 
     expect($forkedProcessId)->toBeInt()->toBeGreaterThan(0);
 
@@ -90,17 +92,32 @@ test('a code replayed while its family refreshes also revokes the refreshed toke
         ->and(Passport::refreshToken()->newQuery()->where('revoked', false)->count())->toBe(0);
 });
 
-// Both refreshes have read the refresh token as valid before either one revokes it.
-test('two parallel refreshes of one refresh token yield one new token', function () {
+// Both refreshes have read the refresh token as valid before either one revokes it. The
+// loser presents a refresh token the winner just rotated, which is a reuse: the family
+// is revoked, including the winner's new tokens (RFC 9700 §4.14.2).
+test('two parallel refreshes of one refresh token yield one new token, then revoke the family', function () {
     raceWhileRefreshing($this, 'select', 'oauth_refresh_tokens', function (): void {
-        $this->post('/oauth/token', [
-            'grant_type' => 'refresh_token',
-            'client_id' => $this->client->getKey(),
-            'client_secret' => $this->client->plainSecret,
-            'refresh_token' => $this->issuedTokens['refresh_token'],
-        ]);
+        refreshTokens($this, $this->issuedTokens['refresh_token']);
     });
 
     expect(Passport::token()->newQuery()->where('auth_code_id', $this->authCodeId)->count())->toBe(2)
-        ->and(Passport::refreshToken()->newQuery()->where('revoked', false)->count())->toBe(1);
+        ->and(Passport::refreshToken()->newQuery()->count())->toBe(2)
+        ->and(Passport::refreshToken()->newQuery()->where('revoked', false)->count())->toBe(0);
+});
+
+// The refresh of the rotated token is past its locks and inserting the new access token
+// when the old, already rotated refresh token is presented again.
+test('a rotated refresh token reused while its family refreshes also revokes the refreshed tokens', function () {
+    $rotatedRefreshToken = $this->issuedTokens['refresh_token'];
+    $this->issuedTokens = refreshTokens($this, $rotatedRefreshToken)->assertOk()->json();
+
+    raceWhileRefreshing($this, 'insert into', 'oauth_access_tokens', function () use ($rotatedRefreshToken): void {
+        refreshTokens($this, $rotatedRefreshToken);
+    });
+
+    $familyAccessTokens = Passport::token()->newQuery()->where('auth_code_id', $this->authCodeId)->get();
+
+    expect($familyAccessTokens)->toHaveCount(3)
+        ->and($familyAccessTokens->every(fn ($accessToken): bool => (bool) $accessToken->revoked))->toBeTrue()
+        ->and(Passport::refreshToken()->newQuery()->where('revoked', false)->count())->toBe(0);
 });

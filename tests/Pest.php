@@ -173,6 +173,19 @@ function redeemCode(Client $client, string $code, string $codeVerifier): TestRes
 }
 
 /**
+ * Refresh the given refresh token for the test case's client and return the response.
+ */
+function refreshTokens(object $testCase, string $refreshToken): TestResponse
+{
+    return $testCase->post('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $testCase->client->getKey(),
+        'client_secret' => $testCase->client->plainSecret,
+        'refresh_token' => $refreshToken,
+    ]);
+}
+
+/**
  * Parse an id_token and check its RS256 signature with the stored key of its `kid`.
  */
 function verifiedIdToken(string $idToken): UnencryptedToken

@@ -34,12 +34,14 @@ final class AcceptFormBodyAccessTokenMiddleware
         // all(): InputBag::get() throws on `access_token[]` before we could answer it.
         $accessToken = $request->request->all()['access_token'];
 
-        if (! is_string($accessToken) || $request->headers->has('Authorization')) {
-            return $this->invalidRequest();
+        // An empty parameter carries no token. ConvertEmptyStringsToNull has already
+        // turned `access_token=` into null, so the request is judged by its header alone.
+        if ($accessToken === null || $accessToken === '') {
+            return $next($request);
         }
 
-        if ($accessToken === '') {
-            return $next($request);
+        if (! is_string($accessToken) || $request->headers->has('Authorization')) {
+            return $this->invalidRequest();
         }
 
         $request->headers->set('Authorization', 'Bearer '.$accessToken);

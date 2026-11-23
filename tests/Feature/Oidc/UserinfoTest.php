@@ -153,3 +153,20 @@ test('userinfo refuses a body access token that is not a single value', function
         ->assertJsonPath('error', 'invalid_request')
         ->assertHeader('WWW-Authenticate', 'Bearer error="invalid_request"');
 });
+
+// An empty `access_token` body parameter carries no token: the request is judged by its header alone.
+test('userinfo ignores an empty body access token', function () {
+    $accessToken = accessTokenFor($this, 'openid profile');
+    app('auth')->forgetGuards();
+
+    $this->call('POST', '/oauth/userinfo', ['access_token' => ''], server: [
+        'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+        'HTTP_AUTHORIZATION' => 'Bearer '.$accessToken,
+    ])->assertOk();
+
+    app('auth')->forgetGuards();
+
+    $this->call('POST', '/oauth/userinfo', ['access_token' => ''], server: [
+        'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+    ])->assertUnauthorized();
+});

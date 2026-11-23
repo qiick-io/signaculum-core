@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 
 beforeEach(function () {
@@ -256,19 +255,6 @@ test('a code redeemed once leaves its access token valid', function () {
     $this->withToken($accessToken)->getJson('/oauth/userinfo')->assertOk();
 });
 
-/**
- * Refresh the given refresh token for the test client and return the response.
- */
-function refreshTokens(object $testCase, string $refreshToken): TestResponse
-{
-    return $testCase->post('/oauth/token', [
-        'grant_type' => 'refresh_token',
-        'client_id' => $testCase->client->getKey(),
-        'client_secret' => $testCase->client->plainSecret,
-        'refresh_token' => $refreshToken,
-    ]);
-}
-
 // RFC 9700 §4.5: refresh tokens rotate, so the revocation follows the whole token family of the code.
 test('redeeming a code again revokes the tokens refreshed from it', function () {
     $this->actingAs($this->user);
@@ -337,4 +323,40 @@ test('a code claimed by a parallel exchange issues no tokens', function () {
 
     expect($hasParallelExchangeWon)->toBeTrue()
         ->and(Passport::token()->newQuery()->count())->toBe(0);
+});
+
+// RFC 9700 §4.14.2: a rotated refresh token presented again has leaked, so its whole token family is revoked.
+test('reusing a rotated refresh token revokes its token family', function () {
+    $this->actingAs($this->user);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    $issuedTokens = redeemCode($this->client, $code, $this->pkce['verifier'])->json();
+    $refreshedTokens = refreshTokens($this, $issuedTokens['refresh_token'])->assertOk()->json();
+
+    refreshTokens($this, $issuedTokens['refresh_token'])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_grant');
+
+    app('auth')->forgetGuards();
+
+    $this->withToken($refreshedTokens['access_token'])->getJson('/oauth/userinfo')->assertUnauthorized();
+    refreshTokens($this, $refreshedTokens['refresh_token'])->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
+});
+
+test('a refresh rejected for another reason than reuse leaves its token family valid', function () {
+    $this->actingAs($this->user);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    $issuedTokens = redeemCode($this->client, $code, $this->pkce['verifier'])->json();
+
+    $this->post('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $this->client->getKey(),
+        'client_secret' => $this->client->plainSecret,
+        'refresh_token' => $issuedTokens['refresh_token'],
+        'scope' => 'openid qiick.orgs',
+    ])->assertStatus(400)->assertJsonPath('error', 'invalid_scope');
+
+    app('auth')->forgetGuards();
+
+    $this->withToken($issuedTokens['access_token'])->getJson('/oauth/userinfo')->assertOk();
+    refreshTokens($this, $issuedTokens['refresh_token'])->assertOk();
 });

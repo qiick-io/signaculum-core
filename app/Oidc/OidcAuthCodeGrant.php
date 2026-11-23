@@ -8,6 +8,7 @@ use App\Data\AuthorizationContextData;
 use App\Data\ClaimsRequestData;
 use App\Enums\OidcScopeEnum;
 use App\Services\PendingAuthorizationService;
+use App\Services\TokenFamilyService;
 use DateInterval;
 use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Passport;
@@ -59,6 +60,7 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
         RefreshTokenRepositoryInterface $refreshTokenRepository,
         DateInterval $authCodeTTL,
         private readonly PendingAuthorizationService $pendingAuthorizationService,
+        private readonly TokenFamilyService $tokenFamilyService,
     ) {
         parent::__construct($authCodeRepository, $refreshTokenRepository, $authCodeTTL);
     }
@@ -184,34 +186,22 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
     }
 
     /**
-     * A redeemed code is revoked; the tokens descending from it carry its id.
+     * A redeemed code is revoked; the tokens descending from it carry its id. The check
+     * runs under the family lock, so a refresh in flight finishes first and the tokens
+     * it mints are revoked with the family.
      */
     private function revokeTokenFamilyOfRedeemedCode(): void
     {
-        if ($this->redeemingAuthCodeId === null) {
+        $authCodeId = $this->redeemingAuthCodeId;
+
+        if ($authCodeId === null) {
             return;
         }
 
-        // The same lock OidcRefreshTokenGrant takes: a refresh in flight finishes first, so
-        // the tokens it mints are part of the family revoked here.
-        DB::transaction(function (): void {
-            $isRedeemed = (bool) Passport::authCode()->newQuery()
-                ->whereKey($this->redeemingAuthCodeId)
-                ->lockForUpdate()
-                ->value('revoked');
-
-            if (! $isRedeemed) {
-                return;
-            }
-
-            $familyAccessTokenIds = Passport::token()->newQuery()
-                ->where('auth_code_id', $this->redeemingAuthCodeId)
-                ->lockForUpdate()
-                ->pluck('id');
-
-            Passport::token()->newQuery()->whereKey($familyAccessTokenIds)->update(['revoked' => true]);
-            Passport::refreshToken()->newQuery()->whereIn('access_token_id', $familyAccessTokenIds)->update(['revoked' => true]);
-        });
+        $this->tokenFamilyService->revokeWhenReused(
+            $authCodeId,
+            fn (): bool => (bool) Passport::authCode()->newQuery()->whereKey($authCodeId)->value('revoked'),
+        );
     }
 
     private function storedContext(string $authCodeId): AuthorizationContextData
