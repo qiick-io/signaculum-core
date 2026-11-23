@@ -80,7 +80,10 @@ final class ApiKeyController extends Controller
 
     public function destroy(Request $request, ApiKey $apiKey, RevokeApiKeyAction $revokeApiKeyAction): RedirectResponse
     {
-        // RevokeApiKeyAction authorises the actor itself (every surface goes through it).
+        // Checked here like every other admin route; RevokeApiKeyAction checks it again for the
+        // surfaces that call it without a controller.
+        Gate::authorize('delete', $apiKey);
+
         /** @var User $user */
         $user = $request->user();
 
