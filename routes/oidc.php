@@ -8,6 +8,7 @@ use App\Http\Controllers\Oidc\JwksController;
 use App\Http\Controllers\Oidc\PushedAuthorizationRequestController;
 use App\Http\Controllers\Oidc\RevokeTokenController;
 use App\Http\Controllers\Oidc\UserinfoController;
+use App\Http\Middleware\AcceptFormBodyAccessTokenMiddleware;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,7 +19,7 @@ Route::get('.well-known/openid-configuration', DiscoveryController::class)->name
 Route::get('.well-known/jwks.json', JwksController::class)->name('oidc.jwks');
 
 Route::match(['get', 'post'], 'oauth/userinfo', UserinfoController::class)
-    ->middleware('auth:api')
+    ->middleware([AcceptFormBodyAccessTokenMiddleware::class, 'auth:api'])
     ->name('oidc.userinfo');
 
 Route::post('oauth/introspect', IntrospectionController::class)
