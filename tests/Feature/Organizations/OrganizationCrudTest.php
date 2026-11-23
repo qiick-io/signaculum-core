@@ -126,3 +126,21 @@ test('a member without manage rights cannot update the organisation', function (
         ])
         ->assertForbidden();
 });
+
+test('creating organisations is throttled per user', function () {
+    config(['oidc.rate_limits.organization_creations_per_hour' => 2]);
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    foreach (['First', 'Second'] as $name) {
+        $this->post(route('organizations.store'), ['name' => $name])->assertRedirect();
+    }
+
+    $this->post(route('organizations.store'), ['name' => 'Third'])->assertTooManyRequests();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('organizations.store'), ['name' => 'Someone else'])
+        ->assertRedirect();
+
+    expect(Organization::query()->count())->toBe(3);
+});
