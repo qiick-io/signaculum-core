@@ -87,6 +87,7 @@ return [
         'introspect_per_minute' => (int) env('OIDC_RATE_LIMIT_INTROSPECT', 60),
         'device_per_minute' => (int) env('OIDC_RATE_LIMIT_DEVICE', 60),
         'organization_invitations_per_minute' => (int) env('OIDC_RATE_LIMIT_ORG_INVITATIONS', 10),
+        'organization_creations_per_hour' => (int) env('OIDC_RATE_LIMIT_ORG_CREATIONS', 10),
         'password_reset_per_minute' => (int) env('OIDC_RATE_LIMIT_PASSWORD_RESET', 5),
     ],
 

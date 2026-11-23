@@ -271,6 +271,15 @@ class AppServiceProvider extends ServiceProvider
                 ->by((string) $identifier);
         });
 
+        // Any verified user may create organisations (OrganizationPolicy::create), so a cap per
+        // user keeps one account from filling the table or squatting slugs in bulk.
+        RateLimiter::for('organization-creations', function (Request $request) {
+            $identifier = $request->user()?->getAuthIdentifier() ?? $request->ip();
+
+            return Limit::perHour((int) config('oidc.rate_limits.organization_creations_per_hour', 10))
+                ->by((string) $identifier);
+        });
+
         RateLimiter::for('account-export', function (Request $request) {
             $identifier = $request->user()?->getAuthIdentifier() ?? $request->ip();
 
