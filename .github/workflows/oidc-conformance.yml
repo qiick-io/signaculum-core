@@ -1,13 +1,15 @@
 # OpenID Foundation conformance suite (S7 / #33).
 # Own commit on purpose: workflow changes stay reviewable alone.
-# Required-check name for Luca to add (do not change branch protection from this PR):
-#   oidc-conformance
+# The suite takes several minutes of three containers and a browser, so it runs
+# on every push to develop and once a night (the nightly run also catches drift
+# in the pinned suite's dependencies), not on every pull request.
 name: oidc-conformance
 
 on:
   push:
-    branches: [develop, main]
-  pull_request:
+    branches: [develop]
+  schedule:
+    - cron: '17 2 * * *'
   workflow_dispatch:
 
 permissions:
@@ -39,7 +41,9 @@ jobs:
   oidc-conformance:
     name: oidc-conformance
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # A healthy run takes well under this; a broken login used to retry until
+    # a 90-minute timeout and report only "cancelled".
+    timeout-minutes: 45
 
     steps:
       - name: Checkout Signaculum
@@ -53,8 +57,7 @@ jobs:
       # The suite is the most expensive job in the repository, and a
       # documentation commit cannot change OIDC behaviour. The steps below are
       # gated on this classification instead of a workflow-level "paths:"
-      # filter, so the "oidc-conformance" check always reports: a required
-      # check that never runs stays pending forever and blocks the merge.
+      # filter, so every push to develop reports an oidc-conformance result.
       # The classification is deliberately one-sided. Only a diff that is
       # documentation from end to end skips the suite, and anything unexpected
       # (a new branch, a force push, a base commit that is not in the
@@ -211,6 +214,22 @@ jobs:
             logs server nginx chrome signaculum-proxy
           exit 1
 
+      # Fail in seconds, not after every module has timed out, when the TLS
+      # proxy cannot serve Signaculum's login page (it answered 502 once,
+      # because Laravel's response headers outgrew nginx's buffer).
+      - name: Check the Signaculum proxy
+        if: steps.classify.outputs.code == 'true'
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --insecure --fail --silent --show-error --output /dev/null \
+              --header 'Host: signaculum-proxy:8443' https://127.0.0.1:9443/login; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs "$(docker ps --quiet --filter name=signaculum-proxy)" 2>&1 | tail -n 50
+          exit 1
+
       - name: Trust suite TLS certificate for back-channel logout
         if: steps.classify.outputs.code == 'true'
         working-directory: signaculum-core
@@ -270,6 +289,7 @@ jobs:
 
       - name: Run OIDC conformance plans
         if: steps.classify.outputs.code == 'true'
+        timeout-minutes: 35
         env:
           CONFORMANCE_DEV_MODE: 1
           CONFORMANCE_SERVER: https://nginx:8443/
@@ -277,6 +297,10 @@ jobs:
           SELENIUM_REMOTE_URL: http://127.0.0.1:4444/wd/hub
           CONFORMANCE_BROWSER_VISIT_TIMEOUT: 90
           CONFORMANCE_BROWSER_LOGIN_REDIRECT_TIMEOUT: 60
+          # On the host, port 8443 of 127.0.0.1 is the suite's nginx; the
+          # Signaculum proxy is published on 9443 (docker-compose.ci.yml).
+          SIGNACULUM_CONNECT_URL: https://127.0.0.1:9443
+          CONFORMANCE_BROWSER_MAX_FAILURES: 5
           SIGNACULUM_CONFORMANCE_DIR: ${{ github.workspace }}/signaculum-core/conformance
         run: |
           cd conformance-suite
@@ -291,15 +315,38 @@ jobs:
             local plan_status=0
 
             echo "::group::Run ${plan_invocation}"
+            (
+              set -o pipefail
+              python3 scripts/run-test-plan.py \
+                --export-dir ../conformance-results \
+                --verbose \
+                "${plan_invocation}" \
+                "${config_path}" 2>&1 | tee -a ../conformance-runner.log
+            ) &
+            local plan_pid=$!
+
+            # The browser runner exits after repeated failed visits. Every
+            # module would then wait for a browser that never comes, so stop
+            # the plan at once instead of letting each module time out.
+            while kill -0 "${plan_pid}" 2>/dev/null; do
+              if ! kill -0 "${browser_runner_pid}" 2>/dev/null; then
+                echo "::error::The browser runner stopped; see conformance-browser.log"
+                pkill -P "${plan_pid}" 2>/dev/null || true
+                kill "${plan_pid}" 2>/dev/null || true
+                break
+              fi
+              sleep 5
+            done
+
             set +e
-            python3 scripts/run-test-plan.py \
-              --export-dir ../conformance-results \
-              --verbose \
-              "${plan_invocation}" \
-              "${config_path}" 2>&1 | tee -a ../conformance-runner.log
-            plan_status=${PIPESTATUS[0]}
+            wait "${plan_pid}"
+            plan_status=$?
             set -e
             echo "::endgroup::"
+
+            if ! kill -0 "${browser_runner_pid}" 2>/dev/null; then
+              exit 1
+            fi
 
             if [ "${plan_status}" -ne 0 ]; then
               test_plan_status="${plan_status}"
