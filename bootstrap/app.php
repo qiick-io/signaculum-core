@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ApiErrorCodeEnum;
+use App\Http\Middleware\AcceptFormBodyAccessTokenMiddleware;
 use App\Http\Middleware\BlockAdminWritesWhileImpersonatingMiddleware;
 use App\Http\Middleware\CaptureOrganizationBrandingMiddleware;
 use App\Http\Middleware\EnsureOrganizationMfaIsSatisfiedMiddleware;
@@ -15,6 +16,7 @@ use App\Http\Middleware\SetSecurityHeadersMiddleware;
 use App\Http\Middleware\VerifyCsrfTokenMiddleware;
 use App\Http\Responses\RenderHttpErrorResponse;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -48,6 +50,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Before route-model binding: a user without the permission learns nothing about which
         // records exist (403 for a missing id as for an existing one).
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureUserHasPermissionMiddleware::class);
+
+        // The UserInfo body token (RFC 6750 §2.2) must reach the header before Passport's guard reads it.
+        $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: AcceptFormBodyAccessTokenMiddleware::class);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'locale', 'accessibility_high_contrast', 'accessibility_reduce_motion']);
 

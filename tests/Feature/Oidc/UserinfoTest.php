@@ -63,6 +63,25 @@ test('userinfo also accepts POST', function () {
         ->assertExactJson(['sub' => $this->user->subject]);
 });
 
+// RFC 6750 §2.2 and OIDC Core §5.3.1: the access token may come in a form-encoded POST body.
+test('userinfo accepts the access token in a form body', function () {
+    $accessToken = accessTokenFor($this, 'openid');
+    app('auth')->forgetGuards();
+
+    $this->call('POST', '/oauth/userinfo', ['access_token' => $accessToken], server: [
+        'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+    ])
+        ->assertOk()
+        ->assertExactJson(['sub' => $this->user->subject]);
+});
+
+test('userinfo ignores an access token in the query string', function () {
+    $accessToken = accessTokenFor($this, 'openid');
+    app('auth')->forgetGuards();
+
+    $this->get('/oauth/userinfo?access_token='.$accessToken)->assertUnauthorized();
+});
+
 test('userinfo without a token is a bearer challenge', function () {
     $this->get('/oauth/userinfo')
         ->assertUnauthorized()
