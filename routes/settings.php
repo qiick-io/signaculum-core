@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\PermissionEnum;
 use App\Http\Controllers\Settings\AccountExportController;
 use App\Http\Controllers\Settings\AppearanceSettingsController;
 use App\Http\Controllers\Settings\BrowserSessionController;
@@ -55,7 +56,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/connected-applications/{clientId}', [ConnectedApplicationController::class, 'destroy'])->name('connected-applications.destroy');
 
     // Instance settings, as Excubia's project settings, for instance admins (SettingPolicy).
-    Route::middleware('can:update,'.Setting::class)->group(function () {
+    // `can` runs after route-model binding; `permission` checks the same permission before it,
+    // so a missing webhook answers 403 like an existing one.
+    Route::middleware(['permission:'.PermissionEnum::CanManageSettings->value, 'can:update,'.Setting::class])->group(function () {
         Route::get('settings/instance', [InstanceSettingsController::class, 'edit'])->name('instance.edit');
         Route::put('settings/instance', [InstanceSettingsController::class, 'update'])->name('instance.update');
 

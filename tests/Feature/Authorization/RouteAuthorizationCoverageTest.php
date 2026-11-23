@@ -9,6 +9,7 @@ use App\Models\UserGroup;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 /**
  * Every route of the app, with every method it answers, is either refused to a signed-in user
@@ -180,10 +181,11 @@ beforeEach(function (): void {
 
 /**
  * The route's URI with every parameter replaced by its fixture, or null when one has none.
+ * With `$isMissingRecord`, every bound record is replaced by a key that matches no row.
  *
  * @param  array<string, Closure(RoutingRoute): (Model|int|string)>  $fixturesByParameter
  */
-function routeUrl(RoutingRoute $route, array $fixturesByParameter): ?string
+function routeUrl(RoutingRoute $route, array $fixturesByParameter, bool $isMissingRecord = false): ?string
 {
     $uri = $route->uri();
 
@@ -196,6 +198,10 @@ function routeUrl(RoutingRoute $route, array $fixturesByParameter): ?string
         $value = $fixture instanceof Model
             ? $fixture->getAttribute($route->bindingFieldFor($parameterName) ?? $fixture->getRouteKeyName())
             : $fixture;
+
+        if ($isMissingRecord && $fixture instanceof Model) {
+            $value = is_int($value) ? 2_000_000_000 : (Str::isUuid($value) ? Str::uuid()->toString() : 'missing-record');
+        }
 
         $uri = preg_replace('/\{'.$parameterName.'(:[^}]+)?\}/', (string) $value, $uri);
     }
@@ -235,6 +241,36 @@ it('refuses every session route, on every method, to a user without permissions'
         ->and($testedCount)->toBeGreaterThan(50)
         ->and($this->group->fresh())->not->toBeNull()
         ->and($this->trashedGroup->fresh()?->trashed())->toBeTrue();
+});
+
+it('refuses a permission-gated route the same way whether its record exists or not', function (): void {
+    // Admin permissions do not depend on the record, so they are checked before route-model
+    // binding: a 404 for a missing id next to a 403 for an existing one would tell a user without
+    // the permission which records exist. Organisation routes authorize on membership of the
+    // organisation itself, so they need the record and are not part of this rule.
+    $nobody = User::factory()->create();
+    $unexpectedResponses = [];
+
+    foreach (everyRouteMethod() as ['method' => $method, 'route' => $route]) {
+        $hasBoundRecord = collect($route->parameterNames())
+            ->contains(fn (string $parameterName): bool => ($this->fixturesByParameter[$parameterName] ?? null) !== null
+                && $this->fixturesByParameter[$parameterName]($route) instanceof Model);
+
+        if (! isBehindSession($route) || ! $hasBoundRecord || str_starts_with($route->uri(), 'organizations/')
+            || array_key_exists(routeMethodKey($method, $route), SESSION_ROUTES_ANY_USER_MAY_USE)) {
+            continue;
+        }
+
+        $status = $this->actingAs($nobody)
+            ->call($method, (string) routeUrl($route, $this->fixturesByParameter, isMissingRecord: true))
+            ->getStatusCode();
+
+        if ($status !== 403) {
+            $unexpectedResponses[] = routeMethodKey($method, $route).": {$status}";
+        }
+    }
+
+    expect($unexpectedResponses)->toBe([]);
 });
 
 it('classifies every write route outside the session, and refuses API routes without a key', function (): void {
