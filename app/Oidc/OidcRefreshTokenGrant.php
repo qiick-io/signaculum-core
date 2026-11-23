@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Oidc;
 
+use App\Services\TokenFamilyService;
 use DateInterval;
 use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Passport;
@@ -12,8 +13,10 @@ use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Entities\ScopeEntityInterface;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\Grant\RefreshTokenGrant;
+use League\OAuth2\Server\Repositories\RefreshTokenRepositoryInterface;
 use League\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
 
 /**
  * Passport's refresh token grant, keeping each refreshed access token in the token
@@ -27,8 +30,15 @@ use Psr\Http\Message\ServerRequestInterface;
  * the same lock the replay revocation takes: a refresh in flight while a replay
  * revokes the family either finishes first (and its new tokens are revoked with the
  * family) or starts after (and finds its refresh token revoked). The refresh token is
- * then claimed atomically, so two parallel refreshes of one token yield one winner
- * (RFC 9700 §4.14.2: refresh tokens are single use when they rotate).
+ * then claimed atomically, so two parallel refreshes of one token yield one winner.
+ *
+ * Refresh token reuse (RFC 9700 §4.14.2): a rotated refresh token is single use, so
+ * presenting one that is already revoked means it leaked, and the authorization server
+ * cannot tell the attacker from the legitimate client. The whole family is revoked
+ * before league answers `invalid_grant`, which forces both back to a new authorization.
+ * That includes the loser of two parallel refreshes of one token, and a presenter that
+ * fails client authentication: holding the token is enough, as for a replayed code.
+ * Tokens from other grants (device code, client credentials) have no family to revoke.
  */
 final class OidcRefreshTokenGrant extends RefreshTokenGrant
 {
@@ -38,6 +48,17 @@ final class OidcRefreshTokenGrant extends RefreshTokenGrant
      */
     private ?string $familyAuthCodeId = null;
 
+    public function __construct(
+        RefreshTokenRepositoryInterface $refreshTokenRepository,
+        private readonly TokenFamilyService $tokenFamilyService,
+    ) {
+        parent::__construct($refreshTokenRepository);
+    }
+
+    /**
+     * @throws OAuthServerException `invalid_grant` for a reused refresh token, after its
+     *                              token family has been revoked
+     */
     public function respondToAccessTokenRequest(
         ServerRequestInterface $request,
         ResponseTypeInterface $responseType,
@@ -45,9 +66,15 @@ final class OidcRefreshTokenGrant extends RefreshTokenGrant
     ): ResponseTypeInterface {
         $this->familyAuthCodeId = null;
 
-        return DB::transaction(
-            fn (): ResponseTypeInterface => parent::respondToAccessTokenRequest($request, $responseType, $accessTokenTTL),
-        );
+        try {
+            return DB::transaction(
+                fn (): ResponseTypeInterface => parent::respondToAccessTokenRequest($request, $responseType, $accessTokenTTL),
+            );
+        } catch (OAuthServerException $exception) {
+            $this->revokeTokenFamilyOfReusedRefreshToken($request);
+
+            throw $exception;
+        }
     }
 
     /**
@@ -59,13 +86,10 @@ final class OidcRefreshTokenGrant extends RefreshTokenGrant
     protected function validateOldRefreshToken(ServerRequestInterface $request, string $clientId): array
     {
         $refreshTokenData = parent::validateOldRefreshToken($request, $clientId);
-        $previousAccessTokenId = $refreshTokenData['access_token_id'] ?? null;
-        $authCodeId = is_string($previousAccessTokenId)
-            ? Passport::token()->newQuery()->whereKey($previousAccessTokenId)->value('auth_code_id')
-            : null;
+        $authCodeId = $this->tokenFamilyService->authCodeIdOfAccessToken($refreshTokenData['access_token_id'] ?? null);
 
-        if (is_string($authCodeId)) {
-            Passport::authCode()->newQuery()->whereKey($authCodeId)->lockForUpdate()->value('id');
+        if ($authCodeId !== null) {
+            $this->tokenFamilyService->lock($authCodeId);
             $this->familyAuthCodeId = $authCodeId;
         }
 
@@ -99,5 +123,66 @@ final class OidcRefreshTokenGrant extends RefreshTokenGrant
         }
 
         return $accessToken;
+    }
+
+    /**
+     * A refresh token that is revoked once the failed refresh rolled back was used
+     * before (or revoked with its family): revoke what is left of the family. A refresh
+     * that failed for another reason (expired, wrong scope) left its token unrevoked.
+     */
+    private function revokeTokenFamilyOfReusedRefreshToken(ServerRequestInterface $request): void
+    {
+        $presentedRefreshToken = $this->presentedRefreshTokenFrom($request);
+
+        if ($presentedRefreshToken === null) {
+            return;
+        }
+
+        $authCodeId = $this->tokenFamilyService->authCodeIdOfAccessToken($presentedRefreshToken['access_token_id']);
+
+        if ($authCodeId === null) {
+            return;
+        }
+
+        $this->tokenFamilyService->revokeWhenReused(
+            $authCodeId,
+            fn (): bool => (bool) Passport::refreshToken()->newQuery()
+                ->whereKey($presentedRefreshToken['refresh_token_id'])
+                ->value('revoked'),
+        );
+    }
+
+    /**
+     * The ids in the presented refresh token. Only tokens this server encrypted decrypt,
+     * so the payload can be trusted; anything else yields null.
+     *
+     * @return array{refresh_token_id: string, access_token_id: string}|null
+     */
+    private function presentedRefreshTokenFrom(ServerRequestInterface $request): ?array
+    {
+        $encryptedRefreshToken = $this->getRequestParameter('refresh_token', $request);
+
+        if (! is_string($encryptedRefreshToken)) {
+            return null;
+        }
+
+        try {
+            $refreshTokenData = json_decode($this->decrypt($encryptedRefreshToken), true);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! is_array($refreshTokenData)) {
+            return null;
+        }
+
+        $refreshTokenId = $refreshTokenData['refresh_token_id'] ?? null;
+        $accessTokenId = $refreshTokenData['access_token_id'] ?? null;
+
+        if (! is_string($refreshTokenId) || ! is_string($accessTokenId)) {
+            return null;
+        }
+
+        return ['refresh_token_id' => $refreshTokenId, 'access_token_id' => $accessTokenId];
     }
 }

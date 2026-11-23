@@ -172,13 +172,27 @@ Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_nam
 
 ## Token lifetimes
 
-| Token           | Config / env                                        | Default          | Notes                                                                                             |
-| --------------- | --------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
-| Access token    | `oidc.access_token_ttl` / `OIDC_ACCESS_TOKEN_TTL`   | `PT1H` (1 hour)  | ISO 8601 duration → Passport `tokensExpireIn`; token response `expires_in` matches (3600).        |
-| Refresh token   | `oidc.refresh_token_ttl` / `OIDC_REFRESH_TOKEN_TTL` | `P30D` (30 days) | Sliding on each successful refresh; Passport rotates the refresh token (reuse → `invalid_grant`). |
-| Personal access | Passport default                                    | unchanged        | Signaculum does not issue PATs; `personalAccessTokensExpireIn` is not set.                        |
+| Token           | Config / env                                        | Default          | Notes                                                                                                             |
+| --------------- | --------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Access token    | `oidc.access_token_ttl` / `OIDC_ACCESS_TOKEN_TTL`   | `PT1H` (1 hour)  | ISO 8601 duration → Passport `tokensExpireIn`; token response `expires_in` matches (3600).                        |
+| Refresh token   | `oidc.refresh_token_ttl` / `OIDC_REFRESH_TOKEN_TTL` | `P30D` (30 days) | Sliding on each successful refresh; Passport rotates the refresh token (reuse → `invalid_grant`, family revoked). |
+| Personal access | Passport default                                    | unchanged        | Signaculum does not issue PATs; `personalAccessTokensExpireIn` is not set.                                        |
 
 RFC 9700 §2.2.1 / §2.2.2: short-lived access tokens, refresh rotation with reuse detection.
+
+### Token families and reuse detection
+
+Every access and refresh token issued from an authorization code, or refreshed from one of its tokens, belongs to the token family of that code.
+
+- **Replayed code** (RFC 6749 §4.1.2, RFC 9700 §4.5): presenting a redeemed code again revokes the whole family, then answers `invalid_grant`.
+- **Reused refresh token** (RFC 9700 §4.14.2): presenting a refresh token that was already rotated or revoked revokes the whole family, then answers `invalid_grant`. The server cannot tell the attacker from the legitimate client, so both have to authorize again. This also applies to a client that refreshes the same token twice in parallel: send one refresh at a time.
+- Tokens from the device code and client credentials grants have no code family: a reused refresh token there only gets `invalid_grant`.
+- **`passport:purge`** (any options) keeps what reuse detection needs, and no more:
+    - a live family keeps its code row and every rotated access / refresh pair whose refresh token is not yet past its expiry plus the retention (`--hours`, 7 days by default). An older rotated refresh token is refused as expired anyway, so its pair is deleted; an active session keeps the refreshes of about 37 days;
+    - a family with no usable token left (revoked, or expired past the retention, whatever the options) is deleted whole;
+    - rows outside a family are purged as Passport does.
+
+    Scheduling it (for example `Schedule::command('passport:purge')->hourly()`) is safe.
 
 ## Token response
 

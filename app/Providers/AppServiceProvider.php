@@ -31,6 +31,7 @@ use App\Services\EmailTemplateService;
 use App\Services\InstanceAdminDemotionService;
 use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
+use App\Services\TokenFamilyService;
 use App\Services\WebhookDispatcherService;
 use Carbon\CarbonImmutable;
 use DateInterval;
@@ -557,12 +558,16 @@ class AppServiceProvider extends ServiceProvider
                 $this->app->make(RefreshTokenRepository::class),
                 new DateInterval('PT10M'),
                 $this->app->make(PendingAuthorizationService::class),
+                $this->app->make(TokenFamilyService::class),
             );
             $authCodeGrant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
 
             $authorizationServer->enableGrantType($authCodeGrant, Passport::tokensExpireIn());
 
-            $refreshTokenGrant = new OidcRefreshTokenGrant($this->app->make(RefreshTokenRepository::class));
+            $refreshTokenGrant = new OidcRefreshTokenGrant(
+                $this->app->make(RefreshTokenRepository::class),
+                $this->app->make(TokenFamilyService::class),
+            );
             $refreshTokenGrant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
 
             $authorizationServer->enableGrantType($refreshTokenGrant, Passport::tokensExpireIn());
