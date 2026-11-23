@@ -21,6 +21,7 @@ use App\Oidc\OidcAuthCodeGrant;
 use App\Oidc\OidcAuthCodeRepository;
 use App\Oidc\OidcDeviceCodeGrant;
 use App\Oidc\OidcDeviceCodeRepository;
+use App\Oidc\OidcRefreshTokenGrant;
 use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
 use App\Services\ActivityOrganisationResolverService;
@@ -549,7 +550,7 @@ class AppServiceProvider extends ServiceProvider
         Passport::tokensCan(OidcScopeEnum::descriptions());
         Passport::useAuthorizationServerResponseType(new IdTokenResponse);
 
-        // Replaces Passport's own authorization_code and device_code grants (same identifiers).
+        // Replaces Passport's own authorization_code, refresh_token and device_code grants (same identifiers).
         $this->app->extend(AuthorizationServer::class, function (AuthorizationServer $authorizationServer): AuthorizationServer {
             $authCodeGrant = new OidcAuthCodeGrant(
                 $this->app->make(AuthCodeRepository::class),
@@ -560,6 +561,11 @@ class AppServiceProvider extends ServiceProvider
             $authCodeGrant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
 
             $authorizationServer->enableGrantType($authCodeGrant, Passport::tokensExpireIn());
+
+            $refreshTokenGrant = new OidcRefreshTokenGrant($this->app->make(RefreshTokenRepository::class));
+            $refreshTokenGrant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
+
+            $authorizationServer->enableGrantType($refreshTokenGrant, Passport::tokensExpireIn());
 
             if (Passport::$deviceCodeGrantEnabled && Route::has('passport.device')) {
                 $deviceCodeGrant = new OidcDeviceCodeGrant(

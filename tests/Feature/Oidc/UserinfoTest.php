@@ -143,3 +143,13 @@ test('userinfo needs the openid scope', function () {
         ->assertForbidden()
         ->assertJson(['error' => 'insufficient_scope']);
 });
+
+// RFC 6750 §3.1: a malformed body token is an invalid request, answered with the bearer challenge.
+test('userinfo refuses a body access token that is not a single value', function () {
+    $this->call('POST', '/oauth/userinfo', ['access_token' => ['first-token', 'second-token']], server: [
+        'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+    ])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_request')
+        ->assertHeader('WWW-Authenticate', 'Bearer error="invalid_request"');
+});

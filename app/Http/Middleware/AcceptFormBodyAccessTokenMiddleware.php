@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -17,7 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
  * honoured only where RFC 6750 allows it: a POST with an
  * `application/x-www-form-urlencoded` body. A client that sends the token both in
  * the header and in the body used more than one method, which RFC 6750 §2 forbids:
- * it gets `invalid_request` (§3.1).
+ * it gets `invalid_request` (§3.1), as does a body token that is not a single value.
  */
 final class AcceptFormBodyAccessTokenMiddleware
 {
@@ -26,21 +27,34 @@ final class AcceptFormBodyAccessTokenMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $accessToken = $request->request->get('access_token');
-
-        if (! $this->isFormPost($request) || ! is_string($accessToken) || $accessToken === '') {
+        if (! $this->isFormPost($request) || ! $request->request->has('access_token')) {
             return $next($request);
         }
 
-        if ($request->headers->has('Authorization')) {
-            return response()
-                ->json(['error' => 'invalid_request'], 400)
-                ->header('WWW-Authenticate', 'Bearer error="invalid_request"');
+        // all(): InputBag::get() throws on `access_token[]` before we could answer it.
+        $accessToken = $request->request->all()['access_token'];
+
+        if (! is_string($accessToken) || $request->headers->has('Authorization')) {
+            return $this->invalidRequest();
+        }
+
+        if ($accessToken === '') {
+            return $next($request);
         }
 
         $request->headers->set('Authorization', 'Bearer '.$accessToken);
 
         return $next($request);
+    }
+
+    /**
+     * RFC 6750 §3.1: more than one token method, or a malformed token parameter.
+     */
+    private function invalidRequest(): JsonResponse
+    {
+        return response()
+            ->json(['error' => 'invalid_request'], 400)
+            ->header('WWW-Authenticate', 'Bearer error="invalid_request"');
     }
 
     /**

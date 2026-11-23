@@ -40,10 +40,14 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
+            // Wait for a concurrent writer instead of failing at once (milliseconds).
+            'busy_timeout' => 5000,
             'journal_mode' => null,
             'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
+            // Take the write lock when a transaction begins: the token grants read, then write,
+            // in one transaction (code and refresh token claims), and a DEFERRED transaction
+            // that upgrades to a writer can fail with SQLITE_BUSY instead of waiting.
+            'transaction_mode' => 'IMMEDIATE',
         ],
 
         'mysql' => [
