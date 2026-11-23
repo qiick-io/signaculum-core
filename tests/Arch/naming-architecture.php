@@ -17,6 +17,7 @@ declare(strict_types=1);
  *
  * OpenID Connect Passport extension points live under `App\Oidc` (not a single shared suffix):
  * - `OidcAuthCodeGrant` (`*Grant`): replaces Passport's authorization_code grant (PKCE S256, nonce).
+ * - `OidcRefreshTokenGrant` (`*Grant`): replaces Passport's refresh_token grant (keeps the code's token family).
  * - `OidcAuthCodeRepository` (`*Repository`): persists `nonce` / `auth_time` / `sid` / `amr` with the auth code.
  * - `OidcDeviceCodeGrant` (`*Grant`): replaces Passport's device_code grant (RFC 8628 + id_token context).
  * - `OidcDeviceCodeRepository` (`*Repository`): persists `auth_time` / `sid` / `amr` with the device code.

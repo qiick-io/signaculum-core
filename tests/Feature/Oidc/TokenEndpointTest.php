@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 use App\Models\SigningKey;
 use App\Models\User;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
+use Laravel\Passport\Passport;
 
 beforeEach(function () {
     config(['oidc.issuer' => 'https://id.example.test']);
@@ -218,4 +222,119 @@ test('the id_token is signed with the newest key after a rotation', function () 
     $idToken = verifiedIdToken(redeemCode($this->client, $code, $this->pkce['verifier'])->json('id_token'));
 
     expect($idToken->headers()->get('kid'))->toBe(SigningKey::query()->active()->sole()->kid);
+});
+
+// RFC 6749 §4.1.2 and RFC 9700 §4.5: a code redeemed twice has leaked, so the tokens it issued are revoked.
+test('redeeming a code a second time revokes the tokens it issued', function () {
+    $this->actingAs($this->user);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    $tokens = redeemCode($this->client, $code, $this->pkce['verifier'])->assertOk()->json();
+
+    redeemCode($this->client, $code, $this->pkce['verifier'])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_grant');
+
+    app('auth')->forgetGuards();
+
+    $this->withToken($tokens['access_token'])->getJson('/oauth/userinfo')->assertUnauthorized();
+
+    $this->post('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $this->client->getKey(),
+        'client_secret' => $this->client->plainSecret,
+        'refresh_token' => $tokens['refresh_token'],
+    ])->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
+});
+
+test('a code redeemed once leaves its access token valid', function () {
+    $this->actingAs($this->user);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    $accessToken = redeemCode($this->client, $code, $this->pkce['verifier'])->json('access_token');
+
+    app('auth')->forgetGuards();
+
+    $this->withToken($accessToken)->getJson('/oauth/userinfo')->assertOk();
+});
+
+/**
+ * Refresh the given refresh token for the test client and return the response.
+ */
+function refreshTokens(object $testCase, string $refreshToken): TestResponse
+{
+    return $testCase->post('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $testCase->client->getKey(),
+        'client_secret' => $testCase->client->plainSecret,
+        'refresh_token' => $refreshToken,
+    ]);
+}
+
+// RFC 9700 §4.5: refresh tokens rotate, so the revocation follows the whole token family of the code.
+test('redeeming a code again revokes the tokens refreshed from it', function () {
+    $this->actingAs($this->user);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    $issuedTokens = redeemCode($this->client, $code, $this->pkce['verifier'])->json();
+    $refreshedTokens = refreshTokens($this, $issuedTokens['refresh_token'])->assertOk()->json();
+
+    redeemCode($this->client, $code, $this->pkce['verifier'])->assertStatus(400);
+
+    app('auth')->forgetGuards();
+
+    $this->withToken($refreshedTokens['access_token'])->getJson('/oauth/userinfo')->assertUnauthorized();
+    refreshTokens($this, $refreshedTokens['refresh_token'])->assertStatus(400);
+});
+
+test('a replayed code leaves the tokens of other codes valid', function () {
+    $this->actingAs($this->user);
+    $replayedCode = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    redeemCode($this->client, $replayedCode, $this->pkce['verifier'])->assertOk();
+
+    $otherPkce = pkcePair();
+    $otherCode = approveAuthorization($this->client, $otherPkce['challenge'])['code'];
+    $otherAccessToken = redeemCode($this->client, $otherCode, $otherPkce['verifier'])->json('access_token');
+
+    redeemCode($this->client, $replayedCode, $this->pkce['verifier'])->assertStatus(400);
+
+    app('auth')->forgetGuards();
+
+    $this->withToken($otherAccessToken)->getJson('/oauth/userinfo')->assertOk();
+});
+
+test('a code replayed after it expired still revokes its tokens', function () {
+    $this->actingAs($this->user);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    $accessToken = redeemCode($this->client, $code, $this->pkce['verifier'])->json('access_token');
+
+    $this->travel(11)->minutes();
+
+    redeemCode($this->client, $code, $this->pkce['verifier'])->assertStatus(400);
+
+    app('auth')->forgetGuards();
+
+    $this->withToken($accessToken)->getJson('/oauth/userinfo')->assertUnauthorized();
+});
+
+// Two parallel exchanges of one code: the second one validates before the first one finishes.
+test('a code claimed by a parallel exchange issues no tokens', function () {
+    $this->actingAs($this->user);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
+    $authCodeId = Passport::authCode()->newQuery()->sole()->getKey();
+    $hasParallelExchangeWon = false;
+
+    // Right after league's "is the code revoked?" check, a parallel exchange redeems the code.
+    DB::listen(function (QueryExecuted $query) use ($authCodeId, &$hasParallelExchangeWon): void {
+        if ($hasParallelExchangeWon || ! str_contains($query->sql, 'oauth_auth_codes') || ! str_starts_with($query->sql, 'select exists')) {
+            return;
+        }
+
+        $hasParallelExchangeWon = true;
+        DB::table('oauth_auth_codes')->where('id', $authCodeId)->update(['revoked' => true]);
+    });
+
+    redeemCode($this->client, $code, $this->pkce['verifier'])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_grant');
+
+    expect($hasParallelExchangeWon)->toBeTrue()
+        ->and(Passport::token()->newQuery()->count())->toBe(0);
 });

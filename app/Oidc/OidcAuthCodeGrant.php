@@ -9,7 +9,10 @@ use App\Data\ClaimsRequestData;
 use App\Enums\OidcScopeEnum;
 use App\Services\PendingAuthorizationService;
 use DateInterval;
+use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Passport;
+use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
+use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Entities\ScopeEntityInterface;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\Grant\AuthCodeGrant;
@@ -18,6 +21,7 @@ use League\OAuth2\Server\Repositories\RefreshTokenRepositoryInterface;
 use League\OAuth2\Server\RequestTypes\AuthorizationRequestInterface;
 use League\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
 
 /**
  * Passport's authorization code grant with the qiick OpenID Connect profile on top.
@@ -30,10 +34,26 @@ use Psr\Http\Message\ServerRequestInterface;
  * releases it; the claims asked for in the id_token are kept with the code.
  *
  * Token request: after league has validated the code and its verifier, the stored
- * context of that code is handed to the IdTokenResponse.
+ * context of that code is handed to the IdTokenResponse. Codes are single use (RFC 6749
+ * §4.1.2, RFC 9700 §4.5):
+ *
+ * - The code is claimed atomically right before the access token is issued, inside one
+ *   transaction with the whole issuance, so of two parallel exchanges exactly one wins.
+ * - Every access token issued from the code carries its id (`auth_code_id`), and
+ *   OidcRefreshTokenGrant passes it on to refreshed tokens.
+ * - Presenting a redeemed code again means it leaked: the whole token family of that
+ *   code (access tokens and their refresh tokens) is revoked before league answers
+ *   `invalid_grant`. This also happens when the presenter fails client authentication
+ *   or is another client: holding the code is enough, by design, since the code leaked.
  */
 final class OidcAuthCodeGrant extends AuthCodeGrant
 {
+    /**
+     * The code of the current token request; the grant handles one request at a time,
+     * and respondToAccessTokenRequest() resets it.
+     */
+    private ?string $redeemingAuthCodeId = null;
+
     public function __construct(
         AuthCodeRepositoryInterface $authCodeRepository,
         RefreshTokenRepositoryInterface $refreshTokenRepository,
@@ -82,21 +102,111 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
         return $authorizationRequest;
     }
 
+    /**
+     * @throws OAuthServerException `invalid_grant` for a replayed code, after the tokens
+     *                              that code issued have been revoked
+     */
     public function respondToAccessTokenRequest(
         ServerRequestInterface $request,
         ResponseTypeInterface $responseType,
         DateInterval $accessTokenTTL,
     ): ResponseTypeInterface {
-        $responseType = parent::respondToAccessTokenRequest($request, $responseType, $accessTokenTTL);
+        $this->redeemingAuthCodeId = $this->authCodeIdFrom($request);
 
-        if ($responseType instanceof IdTokenResponse) {
-            // The code was decrypted and validated by the parent call, so this cannot fail.
-            $authCodePayload = json_decode($this->decrypt((string) $this->getRequestParameter('code', $request)));
+        try {
+            $responseType = DB::transaction(
+                fn (): ResponseTypeInterface => parent::respondToAccessTokenRequest($request, $responseType, $accessTokenTTL),
+            );
+        } catch (OAuthServerException $exception) {
+            $this->revokeTokenFamilyOfRedeemedCode();
 
-            $responseType->setAuthorizationContext($this->storedContext((string) $authCodePayload->auth_code_id));
+            throw $exception;
+        }
+
+        if ($responseType instanceof IdTokenResponse && $this->redeemingAuthCodeId !== null) {
+            $responseType->setAuthorizationContext($this->storedContext($this->redeemingAuthCodeId));
         }
 
         return $responseType;
+    }
+
+    /**
+     * Claims the code, then issues the access token tied to it. Runs after league has
+     * validated the client, the code, the redirect URI and the PKCE verifier.
+     *
+     * @param  array<ScopeEntityInterface>  $scopes
+     *
+     * @throws OAuthServerException `invalid_grant` when another exchange claimed the code first
+     */
+    protected function issueAccessToken(
+        DateInterval $accessTokenTTL,
+        ClientEntityInterface $client,
+        ?string $userIdentifier,
+        array $scopes = [],
+    ): AccessTokenEntityInterface {
+        $claimedCodeCount = Passport::authCode()->newQuery()
+            ->whereKey($this->redeemingAuthCodeId)
+            ->where('revoked', false)
+            ->update(['revoked' => true]);
+
+        if ($claimedCodeCount !== 1) {
+            throw OAuthServerException::invalidGrant('Authorization code has been revoked');
+        }
+
+        $accessToken = parent::issueAccessToken($accessTokenTTL, $client, $userIdentifier, $scopes);
+
+        Passport::token()->newQuery()
+            ->whereKey($accessToken->getIdentifier())
+            ->update(['auth_code_id' => $this->redeemingAuthCodeId]);
+
+        return $accessToken;
+    }
+
+    /**
+     * The id of the code in the request. Only codes this server encrypted decrypt, so the
+     * payload can be trusted; anything else yields null and league rejects it.
+     */
+    private function authCodeIdFrom(ServerRequestInterface $request): ?string
+    {
+        $encryptedAuthCode = $this->getRequestParameter('code', $request);
+
+        if (! is_string($encryptedAuthCode)) {
+            return null;
+        }
+
+        try {
+            $authCodeId = json_decode($this->decrypt($encryptedAuthCode))->auth_code_id ?? null;
+        } catch (Throwable) {
+            return null;
+        }
+
+        return is_string($authCodeId) ? $authCodeId : null;
+    }
+
+    /**
+     * A redeemed code is revoked; the tokens descending from it carry its id.
+     */
+    private function revokeTokenFamilyOfRedeemedCode(): void
+    {
+        if ($this->redeemingAuthCodeId === null) {
+            return;
+        }
+
+        $isRedeemed = Passport::authCode()->newQuery()
+            ->whereKey($this->redeemingAuthCodeId)
+            ->where('revoked', true)
+            ->exists();
+
+        if (! $isRedeemed) {
+            return;
+        }
+
+        $familyAccessTokenIds = Passport::token()->newQuery()
+            ->where('auth_code_id', $this->redeemingAuthCodeId)
+            ->pluck('id');
+
+        Passport::token()->newQuery()->whereKey($familyAccessTokenIds)->update(['revoked' => true]);
+        Passport::refreshToken()->newQuery()->whereIn('access_token_id', $familyAccessTokenIds)->update(['revoked' => true]);
     }
 
     private function storedContext(string $authCodeId): AuthorizationContextData
