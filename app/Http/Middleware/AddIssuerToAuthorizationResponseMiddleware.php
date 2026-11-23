@@ -17,6 +17,11 @@ use Symfony\Component\HttpFoundation\Response;
  * (RFC 9207 §2). Discovery advertises the same value via
  * `authorization_response_iss_parameter_supported` (RFC 9207 §3).
  *
+ * league/oauth2-server also puts its own `hint` parameter on error redirects. RFC 6749
+ * §4.1.2.1 defines only `error`, `error_description`, `error_uri` and `state`, and
+ * conformant clients flag anything else, so the hint is folded into
+ * `error_description` instead.
+ *
  * Registered only on `passport.authorizations.authorize|approve|deny` so other
  * `web` redirects that happen to carry `code` or `error` are left alone.
  */
@@ -68,6 +73,17 @@ final class AddIssuerToAuthorizationResponseMiddleware
 
         if (! array_key_exists('code', $query) && ! array_key_exists('error', $query)) {
             return $location;
+        }
+
+        $hint = $query['hint'] ?? null;
+
+        if (array_key_exists('error', $query) && is_string($hint)) {
+            unset($query['hint']);
+
+            $description = $query['error_description'] ?? null;
+            $query['error_description'] = is_string($description) && $description !== ''
+                ? $description.' '.$hint
+                : $hint;
         }
 
         $query['iss'] = $issuer;
