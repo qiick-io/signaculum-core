@@ -10,6 +10,8 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Queue\Jobs\SyncJob;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -57,6 +59,16 @@ final class SendBackChannelLogoutJob implements ShouldBeUnique, ShouldQueueAfter
         return $this->clientId.'|'.($this->oidcSessionId ?? 'sub:'.$this->subject);
     }
 
+    /**
+     * On an asynchronous queue a failed delivery throws, and the worker retries it with backoff.
+     *
+     * The sync queue runs the job inline, in the request that dispatched it (after the commit),
+     * with no retry: a throw there would stop the logouts of every other relying party still
+     * waiting in the same commit callbacks. Inline, the delivery is retried at once and a final
+     * failure is logged without throwing.
+     *
+     * Side effect: an HTTP POST to the client's back-channel logout URI.
+     */
     public function handle(LogoutTokenService $logoutTokenService): void
     {
         $logoutToken = $logoutTokenService->issue(new LogoutTokenRequestData(
@@ -65,18 +77,34 @@ final class SendBackChannelLogoutJob implements ShouldBeUnique, ShouldQueueAfter
             oidcSessionId: $this->oidcSessionId,
         ));
 
-        $timeout = (int) config('oidc.backchannel_logout_timeout', 5);
+        if (! $this->job instanceof SyncJob) {
+            $this->deliver($logoutToken, attempts: 1);
+
+            return;
+        }
 
         try {
-            $response = Http::asForm()
-                ->timeout($timeout)
-                ->connectTimeout($timeout)
-                ->post($this->backchannelLogoutUri, [
-                    'logout_token' => $logoutToken,
-                ]);
-        } catch (ConnectionException $exception) {
-            throw $exception;
+            $this->deliver($logoutToken, attempts: $this->tries);
+        } catch (ConnectionException|RequestException $exception) {
+            $this->failed($exception);
         }
+    }
+
+    /**
+     * @throws ConnectionException when the client cannot be reached on the last attempt
+     * @throws RequestException when the client answers with an error on the last attempt
+     */
+    private function deliver(string $logoutToken, int $attempts): void
+    {
+        $timeout = (int) config('oidc.backchannel_logout_timeout', 5);
+
+        $response = Http::asForm()
+            ->timeout($timeout)
+            ->connectTimeout($timeout)
+            ->retry($attempts, 100, throw: false)
+            ->post($this->backchannelLogoutUri, [
+                'logout_token' => $logoutToken,
+            ]);
 
         if ($response->failed()) {
             Log::warning('Back-channel logout delivery failed.', [

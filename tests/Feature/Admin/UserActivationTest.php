@@ -273,3 +273,25 @@ test('a deactivation that fails half way changes nothing and notifies no relying
         ->and(ClientSession::query()->whereNull('ended_at')->count())->toBe(0)
         ->and(OidcSession::query()->whereNull('ended_at')->count())->toBe(0);
 });
+
+test('on the sync queue a relying party that fails its logout does not keep the others from theirs', function (Closure $failingResponse) {
+    syncPermissions();
+    config(['queue.default' => 'sync', 'oidc.backchannel_logout_tries' => 3]);
+    Http::fake([
+        'rp-a.example.test/*' => $failingResponse,
+        'rp-b.example.test/*' => Http::response('', 200),
+    ]);
+    $target = deactivationTargetWithTwoBrowsers();
+
+    app(DeactivateUserAction::class)->execute($target);
+
+    $sentHosts = Http::recorded()->map(fn (array $exchange): string => parse_url($exchange[0]->url(), PHP_URL_HOST))->countBy()->all();
+
+    // Two browser sessions on each relying party; the failing one is tried three times each.
+    expect($sentHosts)->toBe(['rp-a.example.test' => 6, 'rp-b.example.test' => 2])
+        ->and($target->fresh()?->is_active)->toBeFalse()
+        ->and(ClientSession::query()->whereNull('ended_at')->count())->toBe(0);
+})->with([
+    'an error status' => fn () => fn () => Http::response('', 500),
+    'an unreachable host' => fn () => fn () => Http::failedConnection(),
+]);

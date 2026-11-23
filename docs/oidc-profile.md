@@ -239,7 +239,8 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 - Triggers: Signaculum logout, end-session, sign out of other browsers, single-browser sign-out (that `sid` only), remove access for a client, account deactivation (console, Admin API, LDAP sync)
 - One failing client never blocks the others (separate jobs); each job retries with backoff (`OIDC_BACKCHANNEL_LOGOUT_TRIES`, default 3)
 - Jobs are queued only after the database transaction that ends the session commits. An account deactivation closes the sessions and queues the logouts in one transaction: if any step fails, nothing is deactivated, no client is notified, and the admin can deactivate again
-- One job per client and `sid` (or `sub` without `sid`) while it is queued: the same logout dispatched twice is sent once. Clients still treat a repeated `logout_token` as a no-op (unique `jti`)
+- One job per client and `sid` (or `sub` without `sid`) while it is queued: the same logout dispatched twice is sent once. Clients still treat a repeated `logout_token` as a no-op (unique `jti`). The uniqueness lock is taken when the job is dispatched, inside the transaction: in the few milliseconds before that transaction commits or rolls back, a second dispatch of the same logout from another request is dropped, so if the first transaction then rolls back that logout is not sent. A lock whose job vanished without failing (`queue:clear`) expires after one hour
+- With `QUEUE_CONNECTION=sync` (conformance runs, small installs without a worker) each logout runs inline in the request, after the commit: a failing client is tried `OIDC_BACKCHANNEL_LOGOUT_TRIES` times at once, then the failure is logged and the next client is notified. There is no backoff, and each attempt can wait `OIDC_BACKCHANNEL_LOGOUT_TIMEOUT` seconds, so production should run a queue worker
 
 ## Signing keys / JWKS
 
