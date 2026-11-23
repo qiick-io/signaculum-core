@@ -57,7 +57,7 @@ final class DiscoveryDocumentService
                 'urn:qiick:loa:pwd',
                 'urn:qiick:loa:mfa',
             ],
-            'claims_parameter_supported' => false,
+            'claims_parameter_supported' => true,
             'request_parameter_supported' => false,
             'request_uri_parameter_supported' => false,
             // RFC 9126 §5: the server as a whole does not require PAR. Requiring it is

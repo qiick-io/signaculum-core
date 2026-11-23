@@ -9,8 +9,9 @@ use App\Models\OrganizationMembership;
 use App\Models\User;
 
 /**
- * The user claims released for a set of granted scopes (OIDC Core §5.4). Shared by the
- * id_token and the userinfo endpoint, so both always return the same values.
+ * The user claims released for a set of granted scopes (OIDC Core §5.4). Userinfo returns
+ * them all; the id_token only those the request asked for there (see IdTokenService), so
+ * both always carry the same values.
  *
  * Claims the user has no value for (`picture`, an unset `locale`) are omitted, never sent empty.
  * The `orgs` claim is always an array when `qiick.orgs` is granted (empty when the user has
@@ -34,6 +35,23 @@ final class OidcClaimsService
         'email',
         'email_verified',
         'orgs',
+    ];
+
+    /**
+     * The scope that releases each user claim (`sub` is always released).
+     *
+     * @var array<string, OidcScopeEnum>
+     */
+    public const array SCOPE_OF_USER_CLAIM = [
+        'name' => OidcScopeEnum::Profile,
+        'given_name' => OidcScopeEnum::Profile,
+        'family_name' => OidcScopeEnum::Profile,
+        'preferred_username' => OidcScopeEnum::Profile,
+        'locale' => OidcScopeEnum::Profile,
+        'updated_at' => OidcScopeEnum::Profile,
+        'email' => OidcScopeEnum::Email,
+        'email_verified' => OidcScopeEnum::Email,
+        'orgs' => OidcScopeEnum::QiickOrgs,
     ];
 
     /**

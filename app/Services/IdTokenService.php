@@ -24,6 +24,11 @@ use LogicException;
  * `amr` is always present (RFC 8176) from the recorded authentication methods.
  * `acr` is present only when the authorization request asked for it (`acr_values`
  * or `claims`), as `urn:qiick:loa:pwd` or `urn:qiick:loa:mfa`.
+ *
+ * User claims: an access token is always issued with the id_token, so the claims of the
+ * `profile` and `email` scopes are released at userinfo only (OIDC Core §5.4). The
+ * id_token carries the ones the `claims` parameter asked for there (§5.5), plus `orgs`
+ * when `qiick.orgs` is granted: a qiick scope outside §5.4 that clients map roles from.
  */
 final class IdTokenService
 {
@@ -91,7 +96,13 @@ final class IdTokenService
 
         unset($userClaims['sub']);
 
+        $idTokenClaimNames = [...$idTokenRequest->context->idTokenClaims, 'orgs'];
+
         foreach ($userClaims as $claimName => $claimValue) {
+            if (! in_array($claimName, $idTokenClaimNames, true)) {
+                continue;
+            }
+
             $tokenBuilder = $tokenBuilder->withClaim($this->nonEmpty($claimName), $claimValue);
         }
 

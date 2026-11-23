@@ -63,6 +63,23 @@ test('userinfo also accepts POST', function () {
         ->assertExactJson(['sub' => $this->user->subject]);
 });
 
+// OIDC Core §5.5: a claim asked for at userinfo is released even without its scope in `scope`.
+test('userinfo releases an essential claim requested with the claims parameter', function () {
+    $this->actingAs($this->user);
+    $code = approveAuthorization($this->client, $this->pkce['challenge'], [
+        'scope' => 'openid',
+        'claims' => json_encode(['userinfo' => ['name' => ['essential' => true]]]),
+    ])['code'];
+    $accessToken = redeemCode($this->client, $code, $this->pkce['verifier'])->json('access_token');
+    app('auth')->forgetGuards();
+
+    $this->withToken($accessToken)
+        ->get('/oauth/userinfo')
+        ->assertOk()
+        ->assertJsonPath('name', 'Ada Lovelace')
+        ->assertJsonMissingPath('email');
+});
+
 test('userinfo without a token is a bearer challenge', function () {
     $this->get('/oauth/userinfo')
         ->assertUnauthorized()
