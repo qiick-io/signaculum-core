@@ -88,6 +88,17 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $isJsonDoor($request) || $request->expectsJson(),
         );
 
+        // A POSTed authorization request that needs a login (guest, prompt=login, max_age) has
+        // already stored its GET form as the intended URL. Laravel's default redirect()->guest()
+        // would overwrite it with the Referer for any non-GET request: an open redirect after login.
+        $exceptions->render(function (AuthenticationException $exception, Request $request) {
+            if (! $request->isMethod('POST') || ! $request->is('oauth/authorize') || $request->expectsJson()) {
+                return null;
+            }
+
+            return redirect()->route('login');
+        });
+
         // RFC 6750 §3: a protected resource answers a missing or bad token with a challenge.
         $exceptions->render(function (AuthenticationException $exception, Request $request) {
             if (! $request->is('oauth/userinfo')) {

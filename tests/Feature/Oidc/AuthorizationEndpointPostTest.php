@@ -121,3 +121,58 @@ test('request on a form post authorization request is rejected as unsupported', 
     expect($query['error'])->toBe('request_not_supported')
         ->and($query)->not->toHaveKey('code');
 });
+
+// OIDC Core §3.1.2.1: after login, a POSTed authorization request resumes like a GET one.
+test('a guest form post authorization request resumes after login', function () {
+    $user = User::factory()->create();
+
+    $this->post('/oauth/authorize', authorizeFormParameters(
+        (string) $this->client->getKey(),
+        $this->pkce['challenge'],
+    ))->assertRedirect('/login');
+
+    $intendedUrl = session('url.intended');
+    parse_str((string) parse_url($intendedUrl, PHP_URL_QUERY), $intendedQuery);
+
+    expect($intendedUrl)->toStartWith(url('/oauth/authorize').'?')
+        ->and($intendedQuery)->toMatchArray([
+            'client_id' => (string) $this->client->getKey(),
+            'state' => 'state-123',
+            'nonce' => 'nonce-456',
+        ]);
+
+    $this->actingAs($user)
+        ->get($intendedUrl)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('oauth/authorize'));
+});
+
+// A re-authentication started by a POSTed request resumes that request, never the Referer (open redirect).
+test('a posted re-authentication resumes the authorization request, not the referer', function (array $reauthenticationParameter) {
+    $this->actingAs(User::factory()->create());
+
+    $this->withHeader('Referer', 'https://attacker.example.test/phishing')
+        ->post('/oauth/authorize', authorizeFormParameters(
+            (string) $this->client->getKey(),
+            $this->pkce['challenge'],
+            $reauthenticationParameter,
+        ))
+        ->assertRedirect('/login');
+
+    expect(session('url.intended'))->toStartWith(url('/oauth/authorize').'?')
+        ->and(session('url.intended'))->toContain('state=state-123');
+})->with([
+    'prompt=login' => [['prompt' => 'login']],
+    'max_age=0' => [['max_age' => '0']],
+]);
+
+test('a guest posted authorization request ignores the referer', function () {
+    $this->withHeader('Referer', 'https://attacker.example.test/phishing')
+        ->post('/oauth/authorize', authorizeFormParameters(
+            (string) $this->client->getKey(),
+            $this->pkce['challenge'],
+        ))
+        ->assertRedirect('/login');
+
+    expect(session('url.intended'))->toStartWith(url('/oauth/authorize').'?');
+});

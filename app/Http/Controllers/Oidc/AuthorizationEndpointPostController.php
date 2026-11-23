@@ -30,7 +30,9 @@ use Symfony\Component\HttpFoundation\Response;
  *   {@see ApproveAuthorizationController::approve()}.
  *
  * Replaces Passport's `passport.authorizations.approve` action so guests can start
- * an authorization request over POST (redirect to login), matching GET.
+ * an authorization request over POST (redirect to login), matching GET. Laravel only
+ * remembers the intended URL of a GET request, so the login redirect stores the GET
+ * form of the promoted request itself: after login the user resumes the authorization.
  */
 final class AuthorizationEndpointPostController extends Controller
 {
@@ -63,12 +65,18 @@ final class AuthorizationEndpointPostController extends Controller
 
         $psrRequest = (new PsrHttpFactory)->createRequest($request);
 
-        return $this->authorizationController->authorize(
-            $psrRequest,
-            $request,
-            $psrResponse,
-            $viewResponse,
-        );
+        try {
+            return $this->authorizationController->authorize(
+                $psrRequest,
+                $request,
+                $psrResponse,
+                $viewResponse,
+            );
+        } catch (AuthenticationException) {
+            redirect()->setIntendedUrl($request->fullUrl());
+
+            return redirect()->route('login');
+        }
     }
 
     /**
