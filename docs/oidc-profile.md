@@ -172,11 +172,11 @@ Person names follow OIDC Core 5.1 (approved 2026-11-06). Clients with `first_nam
 
 ## Token lifetimes
 
-| Token           | Config / env                                        | Default          | Notes                                                                                             |
-| --------------- | --------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
-| Access token    | `oidc.access_token_ttl` / `OIDC_ACCESS_TOKEN_TTL`   | `PT1H` (1 hour)  | ISO 8601 duration → Passport `tokensExpireIn`; token response `expires_in` matches (3600).        |
+| Token           | Config / env                                        | Default          | Notes                                                                                                             |
+| --------------- | --------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Access token    | `oidc.access_token_ttl` / `OIDC_ACCESS_TOKEN_TTL`   | `PT1H` (1 hour)  | ISO 8601 duration → Passport `tokensExpireIn`; token response `expires_in` matches (3600).                        |
 | Refresh token   | `oidc.refresh_token_ttl` / `OIDC_REFRESH_TOKEN_TTL` | `P30D` (30 days) | Sliding on each successful refresh; Passport rotates the refresh token (reuse → `invalid_grant`, family revoked). |
-| Personal access | Passport default                                    | unchanged        | Signaculum does not issue PATs; `personalAccessTokensExpireIn` is not set.                        |
+| Personal access | Passport default                                    | unchanged        | Signaculum does not issue PATs; `personalAccessTokensExpireIn` is not set.                                        |
 
 RFC 9700 §2.2.1 / §2.2.2: short-lived access tokens, refresh rotation with reuse detection.
 
