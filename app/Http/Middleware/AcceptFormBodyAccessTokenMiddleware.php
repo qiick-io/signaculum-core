@@ -15,7 +15,9 @@ use Symfony\Component\HttpFoundation\Response;
  * RFC 6750: the `Authorization` header and the form body. Passport's guard reads only
  * the header, so the body token is moved there before authentication. The body form is
  * honoured only where RFC 6750 allows it: a POST with an
- * `application/x-www-form-urlencoded` body and no `Authorization` header.
+ * `application/x-www-form-urlencoded` body. A client that sends the token both in
+ * the header and in the body used more than one method, which RFC 6750 §2 forbids:
+ * it gets `invalid_request` (§3.1).
  */
 final class AcceptFormBodyAccessTokenMiddleware
 {
@@ -25,13 +27,29 @@ final class AcceptFormBodyAccessTokenMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $accessToken = $request->request->get('access_token');
-        $isFormPost = $request->isMethod('POST')
-            && str_starts_with((string) $request->headers->get('Content-Type'), 'application/x-www-form-urlencoded');
 
-        if ($isFormPost && is_string($accessToken) && $accessToken !== '' && ! $request->headers->has('Authorization')) {
-            $request->headers->set('Authorization', 'Bearer '.$accessToken);
+        if (! $this->isFormPost($request) || ! is_string($accessToken) || $accessToken === '') {
+            return $next($request);
         }
 
+        if ($request->headers->has('Authorization')) {
+            return response()
+                ->json(['error' => 'invalid_request'], 400)
+                ->header('WWW-Authenticate', 'Bearer error="invalid_request"');
+        }
+
+        $request->headers->set('Authorization', 'Bearer '.$accessToken);
+
         return $next($request);
+    }
+
+    /**
+     * Media types are case-insensitive and may carry parameters (`; charset=UTF-8`).
+     */
+    private function isFormPost(Request $request): bool
+    {
+        $mediaType = strtolower(trim(explode(';', (string) $request->headers->get('Content-Type'))[0]));
+
+        return $request->isMethod('POST') && $mediaType === 'application/x-www-form-urlencoded';
     }
 }

@@ -75,6 +75,29 @@ test('userinfo accepts the access token in a form body', function () {
         ->assertExactJson(['sub' => $this->user->subject]);
 });
 
+// RFC 6750 §2 and §3.1: a token sent with more than one method is an invalid request.
+test('userinfo refuses an access token in both the header and the body', function () {
+    $accessToken = accessTokenFor($this, 'openid');
+    app('auth')->forgetGuards();
+
+    $this->call('POST', '/oauth/userinfo', ['access_token' => 'other-token'], server: [
+        'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+        'HTTP_AUTHORIZATION' => 'Bearer '.$accessToken,
+    ])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_request')
+        ->assertHeader('WWW-Authenticate', 'Bearer error="invalid_request"');
+});
+
+test('userinfo reads the form content type case-insensitively', function () {
+    $accessToken = accessTokenFor($this, 'openid');
+    app('auth')->forgetGuards();
+
+    $this->call('POST', '/oauth/userinfo', ['access_token' => $accessToken], server: [
+        'CONTENT_TYPE' => 'Application/X-WWW-Form-Urlencoded; charset=UTF-8',
+    ])->assertOk();
+});
+
 test('userinfo ignores an access token in the query string', function () {
     $accessToken = accessTokenFor($this, 'openid');
     app('auth')->forgetGuards();
