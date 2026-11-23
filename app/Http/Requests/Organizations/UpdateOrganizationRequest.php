@@ -6,6 +6,7 @@ namespace App\Http\Requests\Organizations;
 
 use App\Data\OrganizationData;
 use App\Models\Organization;
+use App\Rules\ReservedOrganizationSlugRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -38,6 +39,7 @@ final class UpdateOrganizationRequest extends FormRequest
                 'max:255',
                 'alpha_dash',
                 Rule::unique('organizations', 'slug')->ignore($organization->getKey()),
+                new ReservedOrganizationSlugRule(currentSlug: $organization->slug),
             ],
             'is_mfa_required' => ['required', 'boolean'],
         ];
