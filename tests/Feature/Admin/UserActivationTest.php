@@ -8,6 +8,7 @@ use App\Models\ClientSession;
 use App\Models\OidcSession;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 
 /**
@@ -212,4 +213,63 @@ test('deactivation ends every browser session, remember token and OIDC session o
     }
 
     Queue::assertPushed(SendBackChannelLogoutJob::class, 2);
+});
+
+/**
+ * Two browsers (`sid-1`, `sid-2`), each signed in to two relying parties with a back-channel URI.
+ */
+function deactivationTargetWithTwoBrowsers(): User
+{
+    $target = User::factory()->create();
+
+    foreach (['a', 'b'] as $name) {
+        $client = createOidcClient();
+        $client->forceFill(['backchannel_logout_uri' => "https://rp-{$name}.example.test/backchannel-logout"])->save();
+
+        foreach (['sid-1', 'sid-2'] as $oidcSessionId) {
+            ClientSession::query()->create([
+                'user_id' => $target->getKey(),
+                'client_id' => $client->getKey(),
+                'oidc_session_id' => $oidcSessionId,
+            ]);
+        }
+    }
+
+    foreach (['sid-1', 'sid-2'] as $oidcSessionId) {
+        OidcSession::query()->create([
+            'user_id' => $target->getKey(),
+            'laravel_session_id' => "laravel-{$oidcSessionId}",
+            'oidc_session_id' => $oidcSessionId,
+        ]);
+    }
+
+    return $target;
+}
+
+test('a deactivation that fails half way changes nothing and notifies no relying party, so it can be retried', function () {
+    syncPermissions();
+    Http::fake(['*.example.test/*' => Http::response('', 200)]);
+    $target = deactivationTargetWithTwoBrowsers();
+    $isFailing = true;
+
+    ClientSession::saving(function (ClientSession $clientSession) use (&$isFailing): void {
+        if ($isFailing && $clientSession->oidc_session_id === 'sid-2' && $clientSession->ended_at !== null) {
+            throw new RuntimeException('Simulated failure while closing a client session.');
+        }
+    });
+
+    expect(fn () => app(DeactivateUserAction::class)->execute($target))->toThrow(RuntimeException::class);
+
+    Http::assertNothingSent();
+    expect($target->fresh()?->is_active)->toBeTrue()
+        ->and(ClientSession::query()->whereNull('ended_at')->count())->toBe(4)
+        ->and(OidcSession::query()->whereNull('ended_at')->count())->toBe(2);
+
+    $isFailing = false;
+    app(DeactivateUserAction::class)->execute($target->fresh());
+
+    Http::assertSentCount(4);
+    expect($target->fresh()?->is_active)->toBeFalse()
+        ->and(ClientSession::query()->whereNull('ended_at')->count())->toBe(0)
+        ->and(OidcSession::query()->whereNull('ended_at')->count())->toBe(0);
 });

@@ -6,7 +6,8 @@ namespace App\Jobs;
 
 use App\Data\LogoutTokenRequestData;
 use App\Services\LogoutTokenService;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -18,10 +19,19 @@ use Throwable;
  *
  * Retries with backoff so a temporarily down RP still receives the logout; a
  * permanent failure is logged and does not affect other clients' jobs.
+ *
+ * Queued only after the surrounding transaction commits, so a rolled-back logout or
+ * deactivation notifies nobody. Unique per client and `sid` while queued: dispatching the same
+ * logout again (a retried deactivation, two logout paths for one session) sends it once.
  */
-final class SendBackChannelLogoutJob implements ShouldQueue
+final class SendBackChannelLogoutJob implements ShouldBeUnique, ShouldQueueAfterCommit
 {
     use Queueable;
+
+    /**
+     * How long the uniqueness lock outlives a job that never ran (seconds).
+     */
+    public int $uniqueFor = 3600;
 
     public int $tries;
 
@@ -37,6 +47,14 @@ final class SendBackChannelLogoutJob implements ShouldQueue
         public readonly ?string $oidcSessionId,
     ) {
         $this->tries = max(1, (int) config('oidc.backchannel_logout_tries', 3));
+    }
+
+    /**
+     * A session without `sid` is identified by the subject, as in its logout token (§2.4).
+     */
+    public function uniqueId(): string
+    {
+        return $this->clientId.'|'.($this->oidcSessionId ?? 'sub:'.$this->subject);
     }
 
     public function handle(LogoutTokenService $logoutTokenService): void

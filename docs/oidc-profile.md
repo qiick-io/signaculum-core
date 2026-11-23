@@ -236,8 +236,10 @@ Queued `SendBackChannelLogoutJob` (retries/backoff) POSTs `application/x-www-for
 
 - Header: `alg=RS256`, `typ=logout+jwt`, `kid`
 - Claims: `iss`, `aud` = client_id, `iat`, `exp` (`OIDC_LOGOUT_TOKEN_TTL`, default 120s), unique `jti`, `events` = `{"http://schemas.openid.net/event/backchannel-logout": {}}`, `sid` and/or `sub`, **never** `nonce`
-- Triggers: Signaculum logout, end-session, sign out of other browsers, single-browser sign-out (that `sid` only), remove access for a client
-- One failing client never blocks the others (separate jobs)
+- Triggers: Signaculum logout, end-session, sign out of other browsers, single-browser sign-out (that `sid` only), remove access for a client, account deactivation (console, Admin API, LDAP sync)
+- One failing client never blocks the others (separate jobs); each job retries with backoff (`OIDC_BACKCHANNEL_LOGOUT_TRIES`, default 3)
+- Jobs are queued only after the database transaction that ends the session commits. An account deactivation closes the sessions and queues the logouts in one transaction: if any step fails, nothing is deactivated, no client is notified, and the admin can deactivate again
+- One job per client and `sid` (or `sub` without `sid`) while it is queued: the same logout dispatched twice is sent once. Clients still treat a repeated `logout_token` as a no-op (unique `jti`)
 
 ## Signing keys / JWKS
 
