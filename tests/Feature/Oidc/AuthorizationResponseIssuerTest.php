@@ -64,6 +64,22 @@ test('prompt=none login_required includes iss', function (): void {
         ->and($query['state'])->toBe('state-123');
 });
 
+// RFC 6749 §4.1.2.1: an error redirect carries only the defined parameters (plus RFC 9207 iss).
+test('authorization error redirects carry no league hint parameter', function (): void {
+    $loginRequired = redirectQuery($this->get(authorizeUrl($this->client, $this->pkce['challenge'], ['prompt' => 'none']))
+        ->headers->get('Location'));
+
+    $this->actingAs(User::factory()->create());
+    $invalidRequest = redirectQuery($this->get(authorizeUrl($this->client, $this->pkce['challenge'], [
+        'code_challenge' => null,
+        'code_challenge_method' => null,
+    ]))->headers->get('Location'));
+
+    expect(array_keys($loginRequired))->toEqualCanonicalizing(['error', 'error_description', 'state', 'iss'])
+        ->and(array_keys($invalidRequest))->toEqualCanonicalizing(['error', 'error_description', 'state', 'iss'])
+        ->and($invalidRequest['error_description'])->toContain('PKCE is required');
+});
+
 test('a guest login redirect does not receive iss', function (): void {
     $location = $this->get(authorizeUrl($this->client, $this->pkce['challenge']))
         ->headers

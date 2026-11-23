@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Oidc;
 
 use App\Data\AuthorizationContextData;
+use App\Data\ClaimsRequestData;
 use App\Enums\OidcScopeEnum;
 use App\Services\PendingAuthorizationService;
 use DateInterval;
@@ -24,6 +25,9 @@ use Psr\Http\Message\ServerRequestInterface;
  * Authorization request: PKCE must use S256 and, unless relaxed in `config/oidc.php`,
  * is required for every client (RFC 7636, RFC 9700 §2.1.1); `openid` requests must
  * carry a `nonce`. The nonce is kept for the code (see PendingAuthorizationService).
+ * A `claims` parameter (OIDC Core §5.5, limited: see ClaimsRequestData) adds the scope
+ * of each requested claim to the request, so the consent screen names it and userinfo
+ * releases it; the claims asked for in the id_token are kept with the code.
  *
  * Token request: after league has validated the code and its verifier, the stored
  * context of that code is handed to the IdTokenResponse.
@@ -58,6 +62,9 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
             throw $this->redirectedInvalidRequest($authorizationRequest, 'PKCE is required: send `code_challenge` with `code_challenge_method=S256`.');
         }
 
+        $claimsRequest = ClaimsRequestData::fromParameter($this->getQueryStringParameter('claims', $request));
+        $this->addImpliedScopes($authorizationRequest, $claimsRequest);
+
         $nonce = $this->getQueryStringParameter('nonce', $request);
         $isOpenIdRequest = $this->hasOpenIdScope($authorizationRequest->getScopes());
 
@@ -68,7 +75,8 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
         $this->pendingAuthorizationService->remember(
             $authorizationRequest->getClient()->getIdentifier(),
             $isOpenIdRequest ? $nonce : null,
-            $this->isAcrRequested($request),
+            is_string($this->getQueryStringParameter('acr_values', $request)) || $claimsRequest->isAcrRequested(),
+            $claimsRequest->idTokenClaims,
         );
 
         return $authorizationRequest;
@@ -99,70 +107,64 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
             'oidc_session_id',
             'authentication_methods',
             'is_acr_requested',
+            'id_token_claims',
         ]);
 
         return new AuthorizationContextData(
             nonce: $authCode?->getAttribute('nonce'),
             authTime: $authCode?->getAttribute('auth_time') === null ? null : (int) $authCode->getAttribute('auth_time'),
             oidcSessionId: $authCode?->getAttribute('oidc_session_id'),
-            authenticationMethods: $this->authenticationMethodsFrom($authCode?->getAttribute('authentication_methods')),
+            authenticationMethods: $this->stringListFrom($authCode?->getAttribute('authentication_methods')),
             isAcrRequested: (bool) $authCode?->getAttribute('is_acr_requested'),
+            idTokenClaims: $this->stringListFrom($authCode?->getAttribute('id_token_claims')),
         );
     }
 
     /**
-     * True when the client asked for `acr` via `acr_values` or the `claims` parameter
-     * (OIDC Core §5.5 / §3.1.2.1). Discovery still advertises `claims_parameter_supported`
-     * as false for full claims requests; we only look for an `acr` ask.
+     * Add the scope of every claim the `claims` parameter asks for, when this provider
+     * knows that scope and the request does not carry it yet.
      */
-    private function isAcrRequested(ServerRequestInterface $request): bool
+    private function addImpliedScopes(AuthorizationRequestInterface $authorizationRequest, ClaimsRequestData $claimsRequest): void
     {
-        $acrValues = $this->getQueryStringParameter('acr_values', $request);
+        $scopes = $authorizationRequest->getScopes();
+        $scopeIdentifiers = array_map(fn (ScopeEntityInterface $scope): string => $scope->getIdentifier(), $scopes);
 
-        if (is_string($acrValues)) {
-            return true;
-        }
+        foreach ($claimsRequest->impliedScopes() as $impliedScope) {
+            $scopeEntity = $this->scopeRepository->getScopeEntityByIdentifier($impliedScope);
 
-        $claimsParameter = $this->getQueryStringParameter('claims', $request);
-
-        if (! is_string($claimsParameter)) {
-            return false;
-        }
-
-        $decodedClaims = json_decode($claimsParameter, true);
-
-        if (! is_array($decodedClaims)) {
-            return false;
-        }
-
-        $idTokenClaims = $decodedClaims['id_token'] ?? null;
-
-        return is_array($idTokenClaims) && array_key_exists('acr', $idTokenClaims);
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function authenticationMethodsFrom(mixed $storedMethods): array
-    {
-        if (is_string($storedMethods) && $storedMethods !== '') {
-            $decodedMethods = json_decode($storedMethods, true);
-            $storedMethods = is_array($decodedMethods) ? $decodedMethods : [];
-        }
-
-        if (! is_array($storedMethods)) {
-            return [];
-        }
-
-        $authenticationMethods = [];
-
-        foreach ($storedMethods as $storedMethod) {
-            if (is_string($storedMethod) && $storedMethod !== '') {
-                $authenticationMethods[] = $storedMethod;
+            if ($scopeEntity !== null && ! in_array($impliedScope, $scopeIdentifiers, true)) {
+                $scopes[] = $scopeEntity;
             }
         }
 
-        return $authenticationMethods;
+        $authorizationRequest->setScopes($scopes);
+    }
+
+    /**
+     * A JSON list of strings stored on the code (`amr` values, requested claim names).
+     *
+     * @return list<string>
+     */
+    private function stringListFrom(mixed $storedList): array
+    {
+        if (is_string($storedList) && $storedList !== '') {
+            $decodedList = json_decode($storedList, true);
+            $storedList = is_array($decodedList) ? $decodedList : [];
+        }
+
+        if (! is_array($storedList)) {
+            return [];
+        }
+
+        $strings = [];
+
+        foreach ($storedList as $storedValue) {
+            if (is_string($storedValue) && $storedValue !== '') {
+                $strings[] = $storedValue;
+            }
+        }
+
+        return $strings;
     }
 
     /**

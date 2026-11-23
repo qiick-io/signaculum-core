@@ -31,6 +31,7 @@ $user = User::query()->firstOrNew(['email' => $email]);
 $user->forceFill([
     'first_name' => 'Conformance',
     'last_name' => 'Tester',
+    'username' => 'conformance',
     'password' => $password,
     'email_verified_at' => now(),
     'is_active' => true,
