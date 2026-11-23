@@ -121,3 +121,28 @@ test('request on a form post authorization request is rejected as unsupported', 
     expect($query['error'])->toBe('request_not_supported')
         ->and($query)->not->toHaveKey('code');
 });
+
+// OIDC Core §3.1.2.1: after login, a POSTed authorization request resumes like a GET one.
+test('a guest form post authorization request resumes after login', function () {
+    $user = User::factory()->create();
+
+    $this->post('/oauth/authorize', authorizeFormParameters(
+        (string) $this->client->getKey(),
+        $this->pkce['challenge'],
+    ))->assertRedirect('/login');
+
+    $intendedUrl = session('url.intended');
+    parse_str((string) parse_url($intendedUrl, PHP_URL_QUERY), $intendedQuery);
+
+    expect($intendedUrl)->toStartWith(url('/oauth/authorize').'?')
+        ->and($intendedQuery)->toMatchArray([
+            'client_id' => (string) $this->client->getKey(),
+            'state' => 'state-123',
+            'nonce' => 'nonce-456',
+        ]);
+
+    $this->actingAs($user)
+        ->get($intendedUrl)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('oauth/authorize'));
+});
