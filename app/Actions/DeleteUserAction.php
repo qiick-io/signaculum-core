@@ -31,8 +31,9 @@ final class DeleteUserAction
     /**
      * Side effects: deactivation, API-key revocation, soft delete; one InstanceAdminDemotedEvent
      * (`deleted`, never also `deactivated`) when the user was an instance admin; and
-     * ApiKeyCreatorDeletedEvent whenever a key was revoked, admin or not, so the other admins
-     * always hear which keys the deletion revoked.
+     * ApiKeyCreatorDeletedEvent whenever a key that still worked was revoked, admin or not, so
+     * the other admins always hear which working keys the deletion revoked. Keys that had
+     * already expired are revoked too, but announced to nobody: no integration loses access.
      *
      * @throws ValidationException when the target is the last active super-admin
      */
@@ -72,7 +73,10 @@ final class DeleteUserAction
 
             $user->delete();
 
-            return array_values(array_map(intval(...), $apiKeys->modelKeys()));
+            return array_values($apiKeys
+                ->reject(static fn (ApiKey $apiKey): bool => $apiKey->isExpired())
+                ->map(static fn (ApiKey $apiKey): int => $apiKey->id)
+                ->all());
         });
 
         if ($revokedApiKeyIds !== []) {

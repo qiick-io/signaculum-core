@@ -59,7 +59,7 @@ final class CreateApiKeyAction
         $instancePrincipal = $this->ensureInstanceServicePrincipalAction->execute();
 
         $apiKey = DB::transaction(function () use ($issuer, $apiKeyData, $grantedScopes, $secret, $instancePrincipal, $expiresAt): ApiKey {
-            $apiKey = ApiKey::query()->create([
+            $apiKey = (new ApiKey)->forceFill([
                 'name' => $apiKeyData->name,
                 'key_prefix' => $secret->keyPrefix,
                 'key_hash' => $secret->keyHash,
@@ -72,6 +72,7 @@ final class CreateApiKeyAction
                 'rate_limit_per_minute' => $apiKeyData->rateLimitPerMinute,
                 'expires_at' => $expiresAt,
             ]);
+            $apiKey->save();
 
             activity('api-keys')
                 ->causedBy($issuer)

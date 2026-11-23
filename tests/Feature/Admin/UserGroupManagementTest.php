@@ -296,3 +296,34 @@ it('refuses attaching the super-admin role unless the actor is a super-admin', f
 
     expect(UserGroup::query()->where('name', 'Owners')->exists())->toBeFalse();
 });
+
+/*
+ * The admin route group checks only `auth` and `verified`, so the policy call in
+ * UserGroupController::destroy is the one authorization on a group deletion.
+ */
+it('refuses deleting a group without the delete permission', function (): void {
+    $actor = User::factory()->create();
+    grantGroupPermissions($actor, [PermissionEnum::CanShowGroups, PermissionEnum::CanEditGroups]);
+    $group = UserGroup::factory()->create();
+
+    $this->actingAs($actor)
+        ->delete(route('admin.groups.destroy', $group))
+        ->assertForbidden();
+
+    expect($group->fresh()->trashed())->toBeFalse();
+});
+
+it('refuses a delegated group manager deleting a group that grants super-admin', function (): void {
+    $actor = User::factory()->create();
+    grantGroupPermissions($actor, [PermissionEnum::CanShowGroups, PermissionEnum::CanDeleteGroups]);
+    $owners = UserGroup::factory()->create();
+    $owners->users()->attach(User::factory()->instanceAdmin()->create());
+    $owners->roles()->attach(Role::findByName(RoleEnum::SuperAdmin->value));
+    app(EffectivePermissionResolverService::class)->forget();
+
+    $this->actingAs($actor)
+        ->delete(route('admin.groups.destroy', $owners))
+        ->assertForbidden();
+
+    expect($owners->fresh()->trashed())->toBeFalse();
+});

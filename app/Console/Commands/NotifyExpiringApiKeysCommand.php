@@ -27,7 +27,7 @@ final class NotifyExpiringApiKeysCommand extends Command
 {
     public function handle(InstanceAdminPresenceService $instanceAdminPresenceService): int
     {
-        $warningDays = max(1, (int) config('api.key_expiry_warning_days', 7));
+        $warningDays = max(1, config()->integer('api.key_expiry_warning_days'));
         $windowStart = now()->addDays($warningDays);
         $notifiedKeyCount = 0;
 

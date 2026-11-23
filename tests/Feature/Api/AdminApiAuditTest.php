@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\AddOrganizationMemberAction;
 use App\Enums\ApiKeyScopeEnum;
 use App\Enums\OrganizationRoleEnum;
+use App\Http\Middleware\AuthenticateApiKeyMiddleware;
 use App\Models\ApiKey;
 use App\Models\Principal;
 use App\Models\User;
@@ -23,7 +24,7 @@ use Spatie\Activitylog\Models\Activity;
  * caused by the key's service account (the instance_service principal) and names the key's
  * public id and prefix and the admin who created the key.
  *
- * The write routes are read from the route table (every non-GET route under `/api/v1`), never
+ * The write routes are read from the route table ({@see adminApiWriteRouteNames()}), never
  * from a list: a new route fails until {@see adminApiWriteCalls()} can call it, and each call
  * must reach its own route, write at least one entry, and give every entry the three fields.
  */
@@ -115,17 +116,27 @@ function adminApiWriteCalls(string $plainTextToken): array
 }
 
 /**
- * Every write route under `/api/v1`, found in the route table (not in a list), whatever
- * middleware or alias guards it.
+ * Every write route an API key can reach, found in the route table (not in a list): any non-GET
+ * route under `/api/` (whatever its version), and any non-GET route elsewhere that the API key
+ * middleware guards, directly or through an alias or group.
+ *
+ * GET routes are left out: none writes today, and a read cannot be called without knowing what
+ * it reads. The activity hook is global, so an entry a GET did write would still be attributed.
  *
  * @return list<string>
  */
 function adminApiWriteRouteNames(): array
 {
+    $router = app('router');
+
     return collect(Router::getRoutes()->getRoutes())
-        ->filter(static fn (Route $route): bool => str_starts_with($route->uri(), 'api/v1/')
-            && array_diff($route->methods(), ['GET', 'HEAD']) !== [])
-        ->map(static fn (Route $route): string => (string) $route->getName())
+        ->filter(static fn (Route $route): bool => array_diff($route->methods(), ['GET', 'HEAD']) !== [])
+        ->filter(static fn (Route $route): bool => str_starts_with($route->uri(), 'api/')
+            || collect($router->gatherRouteMiddleware($route))->contains(
+                static fn (mixed $middleware): bool => is_string($middleware)
+                    && str_starts_with($middleware, AuthenticateApiKeyMiddleware::class),
+            ))
+        ->map(static fn (Route $route): string => $route->getName() ?? "unnamed {$route->uri()}")
         ->sort()
         ->values()
         ->all();
@@ -229,4 +240,16 @@ it('lists the Admin API actions of a key when the activity log is filtered by it
     expect($apiEntryIds)->not->toBeEmpty()
         ->and(array_intersect($apiEntryIds, $filteredEntryIds($creator)))->toEqualCanonicalizing($apiEntryIds)
         ->and(array_intersect($apiEntryIds, $filteredEntryIds($otherAdmin)))->toBe([]);
+});
+
+it('finds a write route an API key can reach outside /api/v1', function (): void {
+    Router::post('api/v2/probe', static fn () => null)->name('probe.api-v2');
+    Router::post('internal/probe', static fn () => null)->middleware(AuthenticateApiKeyMiddleware::class)->name('probe.guarded');
+    Router::get('internal/probe', static fn () => null)->middleware(AuthenticateApiKeyMiddleware::class)->name('probe.read');
+    Router::post('internal/session-only', static fn () => null)->name('probe.session');
+    Router::getRoutes()->refreshNameLookups();
+
+    expect(adminApiWriteRouteNames())
+        ->toContain('probe.api-v2', 'probe.guarded', 'api.v1.users.store')
+        ->not->toContain('probe.read', 'probe.session', 'api.v1.users.index');
 });
