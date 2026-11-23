@@ -18,6 +18,9 @@ use Laravel\Passport\Passport;
 /**
  * Deactivate an IdP account: refuse further login, revoke Passport tokens, clear
  * browser sessions, and fan out back-channel logout to every open client session.
+ *
+ * All of it happens in one transaction: either the account is deactivated and every relying
+ * party gets its queued logout, or nothing changes and the admin can deactivate again.
  */
 final class DeactivateUserAction
 {
@@ -73,15 +76,17 @@ final class DeactivateUserAction
 
             $user->setRememberToken(Str::random(60));
             $user->save();
+
+            // Every open client session gets its logout token, each with its own `sid`
+            // (Back-Channel Logout 1.0 §2.4), including those that never wrote an OidcSession row.
+            // The jobs are queued only once this transaction commits, so a failure here rolls the
+            // whole deactivation back without notifying any relying party, and the admin retries.
+            $this->dispatchBackChannelLogoutAction->execute($user);
+
+            OidcSession::query()
+                ->where('user_id', $user->getKey())
+                ->whereNull('ended_at')
+                ->update(['ended_at' => now()]);
         });
-
-        // Every open client session gets its logout token, each with its own `sid`
-        // (Back-Channel Logout 1.0 §2.4), including those that never wrote an OidcSession row.
-        $this->dispatchBackChannelLogoutAction->execute($user);
-
-        OidcSession::query()
-            ->where('user_id', $user->getKey())
-            ->whereNull('ended_at')
-            ->update(['ended_at' => now()]);
     }
 }

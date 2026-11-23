@@ -54,6 +54,7 @@ final class SetInstanceAdminAction
             } else {
                 $user->removeRole(RoleEnum::SuperAdmin->value);
             }
+
             // Spatie forgets its permission cache itself; the tracker refreshes the resolver.
         });
     }

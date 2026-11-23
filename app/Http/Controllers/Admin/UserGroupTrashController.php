@@ -21,6 +21,7 @@ class UserGroupTrashController extends Controller
 {
     public function restore(int $group): RedirectResponse
     {
+        Gate::authorize('restoreAny', UserGroup::class);
         $userGroup = UserGroup::onlyTrashed()->findOrFail($group);
         Gate::authorize('restore', $userGroup);
         $userGroup->restore();
@@ -33,6 +34,7 @@ class UserGroupTrashController extends Controller
 
     public function forceDestroy(int $group): RedirectResponse
     {
+        Gate::authorize('forceDeleteAny', UserGroup::class);
         $userGroup = UserGroup::onlyTrashed()->findOrFail($group);
         Gate::authorize('forceDelete', $userGroup);
 
@@ -62,15 +64,23 @@ class UserGroupTrashController extends Controller
             ]);
         }
 
+        $ability = $action === 'restore' ? 'restore' : 'forceDelete';
+
+        // Every group is authorized before any is touched: a permanent deletion cannot be
+        // undone, so a batch the actor may only partly handle changes nothing.
         foreach ($groups as $group) {
-            if ($action === 'restore') {
-                Gate::authorize('restore', $group);
-                $group->restore();
-            } else {
-                Gate::authorize('forceDelete', $group);
-                $group->forceDelete();
-            }
+            Gate::authorize($ability, $group);
         }
+
+        UserGroup::query()->getConnection()->transaction(function () use ($groups, $action): void {
+            foreach ($groups as $group) {
+                if ($action === 'restore') {
+                    $group->restore();
+                } else {
+                    $group->forceDelete();
+                }
+            }
+        });
 
         app(EffectivePermissionResolverService::class)->forget();
 

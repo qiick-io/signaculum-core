@@ -40,10 +40,10 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
 
     Route::get('groups', [UserGroupController::class, 'index'])->name('groups.index');
     Route::post('groups', [UserGroupController::class, 'store'])->name('groups.store');
-    Route::put('groups/{group}', [UserGroupController::class, 'update'])->name('groups.update');
-    Route::delete('groups/{group}', [UserGroupController::class, 'destroy'])->name('groups.destroy');
-    Route::post('groups/{group}/restore', [UserGroupTrashController::class, 'restore'])->name('groups.restore')->withTrashed();
-    Route::delete('groups/{group}/force', [UserGroupTrashController::class, 'forceDestroy'])->name('groups.force-destroy')->withTrashed();
+    Route::put('groups/{group}', [UserGroupController::class, 'update'])->name('groups.update')->whereNumber('group');
+    Route::delete('groups/{group}', [UserGroupController::class, 'destroy'])->name('groups.destroy')->whereNumber('group');
+    Route::post('groups/{group}/restore', [UserGroupTrashController::class, 'restore'])->name('groups.restore')->withTrashed()->whereNumber('group');
+    Route::delete('groups/{group}/force', [UserGroupTrashController::class, 'forceDestroy'])->name('groups.force-destroy')->withTrashed()->whereNumber('group');
     Route::post('groups/bulk', [UserGroupTrashController::class, 'bulk'])->name('groups.bulk');
 
     Route::get('api-keys', [ApiKeyController::class, 'index'])->name('api-keys.index');

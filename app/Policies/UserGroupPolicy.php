@@ -46,16 +46,31 @@ final class UserGroupPolicy
             && $this->canTouch($user, $group);
     }
 
+    /**
+     * The permission alone, checked before a trashed group is looked up, so a user without it
+     * cannot tell an existing group id from a missing one (403 either way).
+     */
+    public function restoreAny(User $user): bool
+    {
+        return $this->permissionResolver->hasPermission($user, PermissionEnum::CanRestoreGroups->value);
+    }
+
     public function restore(User $user, UserGroup $group): bool
     {
-        return $this->permissionResolver->hasPermission($user, PermissionEnum::CanRestoreGroups->value)
-            && $this->canTouch($user, $group);
+        return $this->restoreAny($user) && $this->canTouch($user, $group);
+    }
+
+    /**
+     * The permission alone; see {@see self::restoreAny()}.
+     */
+    public function forceDeleteAny(User $user): bool
+    {
+        return $this->permissionResolver->hasPermission($user, PermissionEnum::CanForceDeleteGroups->value);
     }
 
     public function forceDelete(User $user, UserGroup $group): bool
     {
-        return $this->permissionResolver->hasPermission($user, PermissionEnum::CanForceDeleteGroups->value)
-            && $this->canTouch($user, $group);
+        return $this->forceDeleteAny($user) && $this->canTouch($user, $group);
     }
 
     /**

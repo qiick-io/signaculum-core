@@ -327,3 +327,43 @@ it('refuses a delegated group manager deleting a group that grants super-admin',
 
     expect($owners->fresh()->trashed())->toBeFalse();
 });
+
+it('answers 404 for a group id that is not a number', function (): void {
+    $this->actingAs(instanceAdmin());
+
+    $this->post('/admin/groups/abc/restore')->assertNotFound();
+    $this->delete('/admin/groups/abc/force')->assertNotFound();
+    $this->put('/admin/groups/abc', ['name' => 'Renamed'])->assertNotFound();
+    $this->delete('/admin/groups/abc')->assertNotFound();
+});
+
+it('refuses restore and force-delete before looking the group up', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    // The same 403 whether the trashed group exists or not: no oracle on group ids.
+    $trashed = UserGroup::factory()->create();
+    $trashed->delete();
+
+    foreach ([$trashed->getKey(), $trashed->getKey() + 1000] as $groupId) {
+        $this->post(route('admin.groups.restore', $groupId))->assertForbidden();
+        $this->delete(route('admin.groups.force-destroy', $groupId))->assertForbidden();
+    }
+});
+
+it('authorizes every group of a bulk action before touching any', function (): void {
+    $actor = User::factory()->create();
+    grantGroupPermissions($actor, [PermissionEnum::CanShowGroups, PermissionEnum::CanForceDeleteGroups]);
+    $plain = UserGroup::factory()->create();
+    $owners = UserGroup::factory()->create();
+    $owners->users()->attach(User::factory()->instanceAdmin()->create());
+    $owners->roles()->attach(Role::findByName(RoleEnum::SuperAdmin->value));
+    $plain->delete();
+    $owners->delete();
+    app(EffectivePermissionResolverService::class)->forget();
+
+    $this->actingAs($actor)
+        ->post(route('admin.groups.bulk'), ['action' => 'force_delete', 'ids' => [$plain->getKey(), $owners->getKey()]])
+        ->assertForbidden();
+
+    expect(UserGroup::onlyTrashed()->whereKey([$plain->getKey(), $owners->getKey()])->count())->toBe(2);
+});

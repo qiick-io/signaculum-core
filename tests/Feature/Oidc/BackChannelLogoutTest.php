@@ -143,3 +143,17 @@ test('a session-not-required client still receives sid in the logout token job',
             && $job->subject === $this->user->subject,
     );
 });
+
+test('the same logout for one client and sid is queued once', function () {
+    Queue::fake();
+    $uri = 'https://client.example.test/auth/oidc/backchannel-logout';
+
+    foreach (['sid-1', 'sid-1', 'sid-2', null, null] as $oidcSessionId) {
+        SendBackChannelLogoutJob::dispatch($this->client->getKey(), $uri, $this->user->subject, $oidcSessionId);
+    }
+
+    SendBackChannelLogoutJob::dispatch($this->client->getKey(), $uri, 'another-subject', null);
+    SendBackChannelLogoutJob::dispatch(createOidcClient()->getKey(), $uri, $this->user->subject, 'sid-1');
+
+    Queue::assertPushed(SendBackChannelLogoutJob::class, 5);
+});
