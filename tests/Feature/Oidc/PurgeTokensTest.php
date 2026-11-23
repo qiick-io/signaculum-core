@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Passport\Passport;
 
 /**
@@ -31,6 +32,36 @@ function assertFamilyRevoked(object $testCase): void
     refreshTokens($testCase, $testCase->refreshedTokens['refresh_token'])->assertStatus(400);
 }
 
+/**
+ * Move the stored expiries of the code and of every token `$days` into the past, or only
+ * those of the revoked (rotated) tokens. League stamps expiries with the real clock
+ * (`new DateTimeImmutable()`), which travel() does not move, so ageing the rows keeps
+ * the grants and the purge on one clock.
+ */
+function ageTokenRows(int $days, bool $isRotatedOnly = false): void
+{
+    foreach ([Passport::authCode(), Passport::token(), Passport::refreshToken()] as $tokenModel) {
+        $tokenModel->newQuery()
+            ->when($isRotatedOnly, fn ($query) => $query->where('revoked', true))
+            ->get()
+            ->each(fn (Model $tokenRow) => $tokenModel->newQuery()
+                ->whereKey($tokenRow->getKey())
+                ->update(['expires_at' => $tokenRow->getAttribute('expires_at')->subDays($days)]));
+    }
+}
+
+/**
+ * @return array{int, int, int} the code, access token and refresh token row counts
+ */
+function tokenRowCounts(): array
+{
+    return [
+        Passport::authCode()->newQuery()->count(),
+        Passport::token()->newQuery()->count(),
+        Passport::refreshToken()->newQuery()->count(),
+    ];
+}
+
 test('a code replayed after a purge of revoked rows still revokes its family', function (string $purgeOption) {
     $this->artisan('passport:purge', $purgeOption === '' ? [] : [$purgeOption => true])->assertSuccessful();
 
@@ -49,7 +80,7 @@ test('a refresh token reused after a purge of revoked rows still revokes its fam
 
 // The code (10 minutes) and the first access token (1 hour) expire long before the family's refresh token (30 days).
 test('a refresh token reused after a purge of expired rows still revokes its family', function () {
-    $this->travel(10)->days();
+    ageTokenRows(10);
     $this->refreshedTokens = refreshTokens($this, $this->refreshedTokens['refresh_token'])->assertOk()->json();
 
     $this->artisan('passport:purge', ['--expired' => true])->assertSuccessful();
@@ -69,14 +100,34 @@ test('a family with no usable token left is purged whole', function () {
         ->and(Passport::refreshToken()->newQuery()->count())->toBe(0);
 });
 
-test('a family whose tokens have all expired is purged whole', function () {
-    $this->travel(31 + 8)->days();
+// Past the 30 days of its refresh token and the 7 days of retention, no token of the family is usable.
+test('a family whose tokens have all expired is purged whole', function (string $purgeOption) {
+    ageTokenRows(30 + 8);
 
-    $this->artisan('passport:purge', ['--expired' => true])->assertSuccessful();
+    $this->artisan('passport:purge', $purgeOption === '' ? [] : [$purgeOption => true])->assertSuccessful();
 
-    expect(Passport::authCode()->newQuery()->count())->toBe(0)
-        ->and(Passport::token()->newQuery()->count())->toBe(0)
-        ->and(Passport::refreshToken()->newQuery()->count())->toBe(0);
+    expect(tokenRowCounts())->toBe([0, 0, 0]);
+})->with(['--expired' => '--expired', '--revoked' => '--revoked', 'without options' => '']);
+
+// A rotated refresh token that expired before the cutoff cannot be redeemed any more, so
+// it is no longer needed to detect a reuse: an active family keeps a bounded number of rows.
+test('the rotated tokens of a live family are purged once they expired', function () {
+    foreach (range(1, 10) as $refreshCount) {
+        $this->refreshedTokens = refreshTokens($this, $this->refreshedTokens['refresh_token'])->assertOk()->json();
+    }
+
+    ageTokenRows(30 + 8, isRotatedOnly: true);
+    $recentlyRotatedRefreshToken = $this->refreshedTokens['refresh_token'];
+    $this->refreshedTokens = refreshTokens($this, $recentlyRotatedRefreshToken)->assertOk()->json();
+
+    $this->artisan('passport:purge')->assertSuccessful();
+
+    // The code (the family lock), the recently rotated pair and the live pair.
+    expect(tokenRowCounts())->toBe([1, 2, 2]);
+
+    refreshTokens($this, $recentlyRotatedRefreshToken)->assertStatus(400);
+
+    assertFamilyRevoked($this);
 });
 
 test('revoked tokens outside a code family are purged as before', function () {

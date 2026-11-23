@@ -24,9 +24,19 @@ use Laravel\Passport\Passport;
  * §4.1.2, RFC 9700 §4.5 and §4.14.2), and the refresh grant loses its lock row.
  *
  * Here the code, its access tokens and their refresh tokens are deleted together, and
- * only once every one of them is purgeable: from then on no token of the family can be
- * used, so nothing is left to revoke. Rows outside a family (other grants, or tokens
- * whose code is already gone) are purged one by one, as Passport does.
+ * only once no token of the family is usable: from then on nothing is left to revoke.
+ * A token that expired before the retention cutoff counts as unusable whatever the
+ * options, so `--revoked` alone also clears families that died by expiry.
+ *
+ * A live family keeps its code (the lock and the replay evidence) and the rotated pairs
+ * whose refresh token could still be presented. A rotated pair goes once its refresh
+ * token is revoked and expired before the cutoff: league refuses an expired refresh token
+ * before any reuse check, so it no longer proves anything. The rows of an active family
+ * are thus bounded by the refreshes of one refresh token lifetime plus the retention,
+ * although the sliding refresh lifetime keeps the family itself alive.
+ *
+ * Rows outside a family (other grants, or tokens whose code is already gone) are purged
+ * one by one, as Passport does.
  */
 final class PurgeOAuthTokensCommand extends PurgeCommand
 {
@@ -35,11 +45,11 @@ final class PurgeOAuthTokensCommand extends PurgeCommand
     public function handle(): void
     {
         $isRevokedPurged = $this->option('revoked') || ! $this->option('expired');
-        $expiredBefore = $this->option('expired') || ! $this->option('revoked')
-            ? Date::now()->subHours((int) $this->option('hours'))
-            : null;
+        $retentionCutoff = Date::now()->subHours((int) $this->option('hours'));
+        $expiredBefore = $this->option('expired') || ! $this->option('revoked') ? $retentionCutoff : null;
 
-        $this->purgeDeadTokenFamilies($isRevokedPurged, $expiredBefore);
+        $this->purgeDeadTokenFamilies($isRevokedPurged, $expiredBefore, $retentionCutoff);
+        $this->purgeExpiredRotatedTokens($isRevokedPurged, $expiredBefore, $retentionCutoff);
         $this->purgeTokensOutsideFamilies($isRevokedPurged, $expiredBefore);
 
         $this->components->info(sprintf('Purged %s.', implode(' and ', array_filter([
@@ -51,7 +61,7 @@ final class PurgeOAuthTokensCommand extends PurgeCommand
     /**
      * Delete each code whose row and whole family are purgeable, with that family.
      */
-    private function purgeDeadTokenFamilies(bool $isRevokedPurged, ?CarbonInterface $expiredBefore): void
+    private function purgeDeadTokenFamilies(bool $isRevokedPurged, ?CarbonInterface $expiredBefore, CarbonInterface $retentionCutoff): void
     {
         $authCodesTable = Passport::authCode()->getTable();
         $accessTokensTable = Passport::token()->getTable();
@@ -62,17 +72,19 @@ final class PurgeOAuthTokensCommand extends PurgeCommand
             ->whereNotExists(fn (Builder $query) => $query
                 ->from($accessTokensTable)
                 ->whereColumn("{$accessTokensTable}.auth_code_id", "{$authCodesTable}.id")
-                ->where(fn (Builder $query) => $this->whereUsable($query, $accessTokensTable, $isRevokedPurged, $expiredBefore)))
+                ->where(fn (Builder $query) => $this->whereUsable($query, $accessTokensTable, $isRevokedPurged, $retentionCutoff)))
             ->whereNotExists(fn (Builder $query) => $query
                 ->from($refreshTokensTable)
                 ->join($accessTokensTable, "{$accessTokensTable}.id", '=', "{$refreshTokensTable}.access_token_id")
                 ->whereColumn("{$accessTokensTable}.auth_code_id", "{$authCodesTable}.id")
-                ->where(fn (Builder $query) => $this->whereUsable($query, $refreshTokensTable, $isRevokedPurged, $expiredBefore)))
+                ->where(fn (Builder $query) => $this->whereUsable($query, $refreshTokensTable, $isRevokedPurged, $retentionCutoff)))
             ->select("{$authCodesTable}.id")
             ->chunkById(self::FAMILY_CHUNK_SIZE, function (Collection $deadAuthCodes) use ($accessTokensTable): void {
                 $deadAuthCodeIds = $deadAuthCodes->modelKeys();
 
                 DB::transaction(function () use ($deadAuthCodeIds, $accessTokensTable): void {
+                    // Code rows first, the lock order of TokenFamilyService.
+                    Passport::authCode()->newQuery()->whereKey($deadAuthCodeIds)->lockForUpdate()->pluck('id');
                     Passport::refreshToken()->newQuery()
                         ->whereIn('access_token_id', fn (Builder $query) => $query
                             ->select('id')
@@ -83,6 +95,30 @@ final class PurgeOAuthTokensCommand extends PurgeCommand
                     Passport::authCode()->newQuery()->whereKey($deadAuthCodeIds)->delete();
                 });
             }, "{$authCodesTable}.id", 'id');
+    }
+
+    /**
+     * In live families: delete the refresh tokens that are revoked and expired before the
+     * cutoff, then the access tokens left without a refresh token that are purgeable.
+     * Single statements, no family lock: none of these rows can be redeemed any more.
+     */
+    private function purgeExpiredRotatedTokens(bool $isRevokedPurged, ?CarbonInterface $expiredBefore, CarbonInterface $retentionCutoff): void
+    {
+        $accessTokensTable = Passport::token()->getTable();
+        $refreshTokensTable = Passport::refreshToken()->getTable();
+
+        Passport::refreshToken()->newQuery()
+            ->where('revoked', true)
+            ->where('expires_at', '<', $retentionCutoff)
+            ->delete();
+
+        Passport::token()->newQuery()
+            ->whereNotNull('auth_code_id')
+            ->where(fn (Builder $query) => $this->wherePurgeable($query, $accessTokensTable, $isRevokedPurged, $expiredBefore))
+            ->whereNotExists(fn (Builder $query) => $query
+                ->from($refreshTokensTable)
+                ->whereColumn("{$refreshTokensTable}.access_token_id", "{$accessTokensTable}.id"))
+            ->delete();
     }
 
     /**
@@ -139,18 +175,17 @@ final class PurgeOAuthTokensCommand extends PurgeCommand
     }
 
     /**
-     * The negation of wherePurgeable(), with a missing expiry counted as never expiring.
+     * Not revoked (when revoked rows are purged) and not expired before the cutoff, with a
+     * missing expiry counted as never expiring.
      */
-    private function whereUsable(Builder $query, string $table, bool $isRevokedPurged, ?CarbonInterface $expiredBefore): void
+    private function whereUsable(Builder $query, string $table, bool $isRevokedPurged, CarbonInterface $retentionCutoff): void
     {
         if ($isRevokedPurged) {
             $query->where("{$table}.revoked", false);
         }
 
-        if ($expiredBefore !== null) {
-            $query->where(fn (Builder $query) => $query
-                ->whereNull("{$table}.expires_at")
-                ->orWhere("{$table}.expires_at", '>=', $expiredBefore));
-        }
+        $query->where(fn (Builder $query) => $query
+            ->whereNull("{$table}.expires_at")
+            ->orWhere("{$table}.expires_at", '>=', $retentionCutoff));
     }
 }
