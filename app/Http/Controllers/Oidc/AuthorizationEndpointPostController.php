@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Oidc;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Auth\AuthenticationException;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Passport\Contracts\AuthorizationViewResponse;
@@ -49,7 +48,7 @@ final class AuthorizationEndpointPostController extends Controller
         Request $request,
         ResponseInterface $psrResponse,
         AuthorizationViewResponse $viewResponse,
-    ): Response|AuthorizationViewResponse|RedirectResponse {
+    ): Response|AuthorizationViewResponse {
         if ($this->isConsentApproval($request)) {
             if (Auth::guard('web')->guest()) {
                 throw new AuthenticationException(guards: ['web']);

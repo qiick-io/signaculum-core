@@ -146,3 +146,33 @@ test('a guest form post authorization request resumes after login', function () 
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('oauth/authorize'));
 });
+
+// A re-authentication started by a POSTed request resumes that request, never the Referer (open redirect).
+test('a posted re-authentication resumes the authorization request, not the referer', function (array $reauthenticationParameter) {
+    $this->actingAs(User::factory()->create());
+
+    $this->withHeader('Referer', 'https://attacker.example.test/phishing')
+        ->post('/oauth/authorize', authorizeFormParameters(
+            (string) $this->client->getKey(),
+            $this->pkce['challenge'],
+            $reauthenticationParameter,
+        ))
+        ->assertRedirect('/login');
+
+    expect(session('url.intended'))->toStartWith(url('/oauth/authorize').'?')
+        ->and(session('url.intended'))->toContain('state=state-123');
+})->with([
+    'prompt=login' => [['prompt' => 'login']],
+    'max_age=0' => [['max_age' => '0']],
+]);
+
+test('a guest posted authorization request ignores the referer', function () {
+    $this->withHeader('Referer', 'https://attacker.example.test/phishing')
+        ->post('/oauth/authorize', authorizeFormParameters(
+            (string) $this->client->getKey(),
+            $this->pkce['challenge'],
+        ))
+        ->assertRedirect('/login');
+
+    expect(session('url.intended'))->toStartWith(url('/oauth/authorize').'?');
+});
