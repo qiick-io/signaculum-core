@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Services\TokenFamilyService;
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
@@ -44,8 +46,16 @@ final class PurgeOAuthTokensCommand extends PurgeCommand
 
     public function handle(): void
     {
+        $retentionHours = filter_var($this->option('hours'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+
+        // A negative retention puts the cutoff in the future and would delete rotated refresh
+        // tokens that can still be presented, so their reuse would go undetected.
+        if ($retentionHours === false) {
+            $this->fail('The --hours option must be a whole number of hours, 0 or more.');
+        }
+
         $isRevokedPurged = $this->option('revoked') || ! $this->option('expired');
-        $retentionCutoff = Date::now()->subHours((int) $this->option('hours'));
+        $retentionCutoff = Date::now()->subHours($retentionHours);
         $expiredBefore = $this->option('expired') || ! $this->option('revoked') ? $retentionCutoff : null;
 
         $this->purgeDeadTokenFamilies($isRevokedPurged, $expiredBefore, $retentionCutoff);
@@ -93,7 +103,7 @@ final class PurgeOAuthTokensCommand extends PurgeCommand
                         ->delete();
                     Passport::token()->newQuery()->whereIn('auth_code_id', $deadAuthCodeIds)->delete();
                     Passport::authCode()->newQuery()->whereKey($deadAuthCodeIds)->delete();
-                });
+                }, TokenFamilyService::TRANSACTION_ATTEMPTS);
             }, "{$authCodesTable}.id", 'id');
     }
 
@@ -107,18 +117,18 @@ final class PurgeOAuthTokensCommand extends PurgeCommand
         $accessTokensTable = Passport::token()->getTable();
         $refreshTokensTable = Passport::refreshToken()->getTable();
 
-        Passport::refreshToken()->newQuery()
+        $this->retryingOnDeadlock(fn () => Passport::refreshToken()->newQuery()
             ->where('revoked', true)
             ->where('expires_at', '<', $retentionCutoff)
-            ->delete();
+            ->delete());
 
-        Passport::token()->newQuery()
+        $this->retryingOnDeadlock(fn () => Passport::token()->newQuery()
             ->whereNotNull('auth_code_id')
             ->where(fn (Builder $query) => $this->wherePurgeable($query, $accessTokensTable, $isRevokedPurged, $expiredBefore))
             ->whereNotExists(fn (Builder $query) => $query
                 ->from($refreshTokensTable)
                 ->whereColumn("{$refreshTokensTable}.access_token_id", "{$accessTokensTable}.id"))
-            ->delete();
+            ->delete());
     }
 
     /**
@@ -137,27 +147,38 @@ final class PurgeOAuthTokensCommand extends PurgeCommand
                 ->from($authCodesTable)
                 ->whereColumn("{$authCodesTable}.id", "{$accessTokensTable}.auth_code_id"));
 
-        Passport::token()->newQuery()
+        $this->retryingOnDeadlock(fn () => Passport::token()->newQuery()
             ->where(fn (Builder $query) => $this->wherePurgeable($query, $accessTokensTable, $isRevokedPurged, $expiredBefore))
             ->where($isOutsideFamily)
             ->whereDoesntHave('refreshToken', fn ($query) => $query
                 ->where('revoked', false)
                 ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', $now)))
-            ->delete();
+            ->delete());
 
-        Passport::refreshToken()->newQuery()
+        $this->retryingOnDeadlock(fn () => Passport::refreshToken()->newQuery()
             ->where(fn (Builder $query) => $this->wherePurgeable($query, $refreshTokensTable, $isRevokedPurged, $expiredBefore))
             ->whereNotExists(fn (Builder $query) => $query
                 ->from($accessTokensTable)
                 ->join($authCodesTable, "{$authCodesTable}.id", '=', "{$accessTokensTable}.auth_code_id")
                 ->whereColumn("{$accessTokensTable}.id", "{$refreshTokensTable}.access_token_id"))
-            ->delete();
+            ->delete());
 
         if (Passport::$deviceCodeGrantEnabled) {
-            Passport::deviceCode()->newQuery()
+            $this->retryingOnDeadlock(fn () => Passport::deviceCode()->newQuery()
                 ->where(fn (Builder $query) => $this->wherePurgeable($query, Passport::deviceCode()->getTable(), $isRevokedPurged, $expiredBefore))
-                ->delete();
+                ->delete());
         }
+    }
+
+    /**
+     * Run one purge statement in a transaction that Laravel retries when the database
+     * picks it as a deadlock victim (MySQL and MariaDB may, scanning for `NOT EXISTS`).
+     *
+     * @param  Closure(): mixed  $statement
+     */
+    private function retryingOnDeadlock(Closure $statement): void
+    {
+        DB::transaction($statement, TokenFamilyService::TRANSACTION_ATTEMPTS);
     }
 
     /**
