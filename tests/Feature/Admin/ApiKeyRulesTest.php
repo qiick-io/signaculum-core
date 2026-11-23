@@ -225,10 +225,11 @@ describe('deleting the creator', function (): void {
             ->and($revoked?->previous_key_valid_until)->toBeNull()
             ->and($revocation->subject?->is($apiKey))->toBeTrue()
             ->and((string) $revocation->causer_id)->toBe((string) $this->admin->getKey())
-            ->and($revocation->properties?->only(['name', 'scopes', 'reason'])->all())->toBe([
+            // MySQL stores JSON object keys in its own order, so compare them sorted.
+            ->and($revocation->properties?->only(['name', 'scopes', 'reason'])->sortKeys()->all())->toBe([
                 'name' => 'Rule key',
-                'scopes' => [ApiKeyScopeEnum::UsersWrite->value],
                 'reason' => 'user_deleted',
+                'scopes' => [ApiKeyScopeEnum::UsersWrite->value],
             ]);
     });
 
