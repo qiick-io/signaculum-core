@@ -40,6 +40,7 @@ test('discovery publishes the qiick protocol profile', function () {
             'frontchannel_logout_supported' => true,
             'frontchannel_logout_session_supported' => true,
             'authorization_response_iss_parameter_supported' => true,
+            'claims_parameter_supported' => true,
             'revocation_endpoint_auth_methods_supported' => [
                 'client_secret_basic',
                 'client_secret_post',
