@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Models\Webhook;
 use App\Services\SigningKeyService;
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -53,6 +54,11 @@ pest()->extend(TestCase::class)
 
 pest()->extend(TestCase::class)
     ->in('Unit');
+
+// Two-session races need committed rows that a second connection can see.
+pest()->extend(TestCase::class)
+    ->use(DatabaseTruncation::class)
+    ->in('Concurrency');
 
 /*
 |--------------------------------------------------------------------------

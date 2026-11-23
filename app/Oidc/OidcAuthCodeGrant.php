@@ -192,21 +192,26 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
             return;
         }
 
-        $isRedeemed = Passport::authCode()->newQuery()
-            ->whereKey($this->redeemingAuthCodeId)
-            ->where('revoked', true)
-            ->exists();
+        // The same lock OidcRefreshTokenGrant takes: a refresh in flight finishes first, so
+        // the tokens it mints are part of the family revoked here.
+        DB::transaction(function (): void {
+            $isRedeemed = (bool) Passport::authCode()->newQuery()
+                ->whereKey($this->redeemingAuthCodeId)
+                ->lockForUpdate()
+                ->value('revoked');
 
-        if (! $isRedeemed) {
-            return;
-        }
+            if (! $isRedeemed) {
+                return;
+            }
 
-        $familyAccessTokenIds = Passport::token()->newQuery()
-            ->where('auth_code_id', $this->redeemingAuthCodeId)
-            ->pluck('id');
+            $familyAccessTokenIds = Passport::token()->newQuery()
+                ->where('auth_code_id', $this->redeemingAuthCodeId)
+                ->lockForUpdate()
+                ->pluck('id');
 
-        Passport::token()->newQuery()->whereKey($familyAccessTokenIds)->update(['revoked' => true]);
-        Passport::refreshToken()->newQuery()->whereIn('access_token_id', $familyAccessTokenIds)->update(['revoked' => true]);
+            Passport::token()->newQuery()->whereKey($familyAccessTokenIds)->update(['revoked' => true]);
+            Passport::refreshToken()->newQuery()->whereIn('access_token_id', $familyAccessTokenIds)->update(['revoked' => true]);
+        });
     }
 
     private function storedContext(string $authCodeId): AuthorizationContextData
