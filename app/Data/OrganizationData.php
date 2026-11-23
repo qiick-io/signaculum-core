@@ -35,13 +35,27 @@ final readonly class OrganizationData
     ) {}
 
     /**
+     * The slug as given, or derived from the name when absent or empty. The requests call this
+     * before validation too, so a derived slug meets the same rules (unique, not reserved) as a
+     * typed one. Anything else that is not a string is returned as is, for the `string` rule.
+     */
+    public static function slugOrDerived(mixed $slug, mixed $name): mixed
+    {
+        if (($slug === null || $slug === '') && is_string($name)) {
+            return Str::slug($name);
+        }
+
+        return $slug;
+    }
+
+    /**
      * Builds the payload from one validated admin request: the web forms or the Admin REST API.
      *
      * Organisations have the same two doors as applications, and built this object
      * field by field on each (#186). Both construct here now, so a field reaches one
      * only by reaching the other.
      *
-     * An absent or empty slug is derived from the name, as the create form does.
+     * An absent or empty slug is derived from the name ({@see self::slugOrDerived()}).
      *
      * @param  array<string, mixed>  $validated
      */
@@ -54,11 +68,10 @@ final readonly class OrganizationData
         );
 
         $name = (string) ($validated['name'] ?? '');
-        $slug = $validated['slug'] ?? null;
 
         return new self(
             name: $name,
-            slug: is_string($slug) && $slug !== '' ? $slug : Str::slug($name),
+            slug: (string) self::slugOrDerived($validated['slug'] ?? null, $name),
             isMfaRequired: filter_var($validated['is_mfa_required'] ?? null, FILTER_VALIDATE_BOOLEAN),
         );
     }

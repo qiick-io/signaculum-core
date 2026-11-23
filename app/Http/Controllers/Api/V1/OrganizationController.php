@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\OrganizationResource;
 use App\Models\Organization;
 use App\Models\User;
+use App\Rules\ReservedOrganizationSlugRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -58,10 +59,13 @@ final class OrganizationController extends Controller
         /** @var User $creator */
         $creator = $request->user();
 
+        // A slug derived from the name is validated like a typed one (unique, not reserved).
+        $request->merge(['slug' => OrganizationData::slugOrDerived($request->input('slug'), $request->input('name'))]);
+
         /** @var array<string, mixed> $validated */
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', 'unique:organizations,slug'],
+            'slug' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:organizations,slug', new ReservedOrganizationSlugRule],
         ]);
 
         // One construction for both doors (#186): the web form requests build the

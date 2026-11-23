@@ -6,6 +6,7 @@ namespace App\Http\Requests\Organizations;
 
 use App\Data\OrganizationData;
 use App\Models\Organization;
+use App\Rules\ReservedOrganizationSlugRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,8 +27,16 @@ final class StoreOrganizationRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', Rule::unique('organizations', 'slug')],
+            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('organizations', 'slug'), new ReservedOrganizationSlugRule],
         ];
+    }
+
+    /**
+     * Derive the slug from the name first, so a derived slug is validated like a typed one.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['slug' => OrganizationData::slugOrDerived($this->input('slug'), $this->input('name'))]);
     }
 
     /**
