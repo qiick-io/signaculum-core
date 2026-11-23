@@ -44,6 +44,10 @@ updates:
     groups:
       docker-minor-patch:
         update-types: ["minor", "patch"]
+    # PHP jumps are coordinated with .php-version and the CI matrix, not by Dependabot.
+    ignore:
+      - dependency-name: "php"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "develop"
