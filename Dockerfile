@@ -2,7 +2,7 @@
 #   docker build --target production -t signaculum:prod .
 #   docker buildx bake -f docker-bake.hcl production
 
-FROM php:8.4-fpm-bookworm AS php-base
+FROM php:8.6-fpm-bookworm AS php-base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl git unzip \
