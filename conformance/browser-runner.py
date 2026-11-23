@@ -36,6 +36,15 @@ OP_HOST = urllib.parse.urlsplit(
     os.environ.get("SIGNACULUM_BASE_URL", "https://signaculum-proxy:8443")
 ).hostname
 SUITE_HOST = urllib.parse.urlsplit(CONFORMANCE_SERVER).hostname
+OP_BASE_URL = os.environ.get("SIGNACULUM_BASE_URL", "https://signaculum-proxy:8443").rstrip("/")
+# Where this process reaches the OP proxy. On the CI host "signaculum-proxy"
+# resolves to 127.0.0.1, whose port 8443 is the suite's nginx: the proxy is
+# published on 9443 there, so the runner connects to that port and sends the
+# OP host in the Host header. Inside the Compose network both are the same.
+OP_CONNECT_URL = os.environ.get("SIGNACULUM_CONNECT_URL", OP_BASE_URL).rstrip("/")
+# Consecutive failed browser visits before the runner gives up. Without a cap a
+# broken login retries forever and every suite module waits until it times out.
+MAX_CONSECUTIVE_FAILURES = int(os.environ.get("CONFORMANCE_BROWSER_MAX_FAILURES", "5"))
 
 
 def log(message: str) -> None:
@@ -133,6 +142,18 @@ def html_escape(value: str) -> str:
     )
 
 
+def op_client(cookies: dict) -> httpx.Client:
+    """HTTP client for form posts to the OP, carrying the browser's cookies."""
+    return httpx.Client(
+        base_url=OP_CONNECT_URL,
+        headers={"Host": urllib.parse.urlsplit(OP_BASE_URL).netloc},
+        verify=False,
+        timeout=30.0,
+        follow_redirects=False,
+        cookies=cookies,
+    )
+
+
 def is_login_page(driver) -> bool:
     parsed = urllib.parse.urlsplit(driver.current_url)
 
@@ -184,19 +205,19 @@ def login(driver) -> bool:
         return False
 
     log(f"Logging in at {describe_url(driver.current_url)}")
-    base_url = os.environ.get("SIGNACULUM_BASE_URL", "https://signaculum-proxy:8443").rstrip("/")
+    base_url = OP_BASE_URL
     browser_cookies = {cookie["name"]: cookie["value"] for cookie in driver.get_cookies()}
     xsrf_token = urllib.parse.unquote(browser_cookies.get("XSRF-TOKEN", ""))
 
     if not xsrf_token:
         raise RuntimeError("Login page has no XSRF-TOKEN cookie")
 
-    with httpx.Client(verify=False, timeout=30.0, follow_redirects=False, cookies=browser_cookies) as client:
+    with op_client(browser_cookies) as client:
         response = None
 
         for attempt in range(1, 6):
             response = client.post(
-                f"{base_url}/login",
+                "/login",
                 data={
                     "email": OIDC_TEST_USER,
                     "password": OIDC_TEST_PASSWORD,
@@ -292,7 +313,7 @@ def grant_consent_if_present(driver) -> bool:
         return False
 
     log("Granting consent")
-    base_url = os.environ.get("SIGNACULUM_BASE_URL", "https://signaculum-proxy:8443").rstrip("/")
+    base_url = OP_BASE_URL
     browser_cookies = {cookie["name"]: cookie["value"] for cookie in driver.get_cookies()}
     csrf_inputs = {
         element.get_attribute("name"): element.get_attribute("value")
@@ -306,9 +327,9 @@ def grant_consent_if_present(driver) -> bool:
     if not auth_token or not csrf_token:
         raise RuntimeError("Consent form is missing auth_token or CSRF token")
 
-    with httpx.Client(verify=False, timeout=30.0, follow_redirects=False, cookies=browser_cookies) as client:
+    with op_client(browser_cookies) as client:
         response = client.post(
-            f"{base_url}/oauth/authorize",
+            "/oauth/authorize",
             data={
                 "_token": csrf_token,
                 "auth_token": auth_token,
@@ -418,7 +439,7 @@ def confirm_logout_if_present(driver) -> bool:
             return False
 
     log("Confirming RP-initiated logout")
-    base_url = os.environ.get("SIGNACULUM_BASE_URL", "https://signaculum-proxy:8443").rstrip("/")
+    base_url = OP_BASE_URL
     # Post from inside Chromium so the session + XSRF cookies stay same-origin
     # (httpx from the runner container hits Laravel CSRF 419).
     result = driver.execute_async_script(
@@ -691,6 +712,7 @@ def main() -> None:
     drivers: dict = {}
     processed: set = set()
     active_test_id = None
+    consecutive_failures = 0
 
     with httpx.Client(verify=False, timeout=15.0) as client:
         while True:
@@ -727,9 +749,19 @@ def main() -> None:
                     try:
                         visit_and_acknowledge(driver, client, test_id, method, url)
                         processed.add(key)
+                        consecutive_failures = 0
                     except Exception as exc:  # noqa: BLE001
                         log(f"Browser visit failed: {type(exc).__name__}: {exc}")
                         close_driver(drivers, test_id)
+                        consecutive_failures += 1
+
+                        if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                            log(f"Giving up after {consecutive_failures} consecutive failed visits")
+
+                            for open_test_id in list(drivers):
+                                close_driver(drivers, open_test_id)
+
+                            sys.exit(1)
 
                 # Visits already acknowledged but still WAITING on a screenshot.
                 if test_id in drivers and not get_browser_items(status):
