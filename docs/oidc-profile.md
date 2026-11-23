@@ -41,7 +41,8 @@ Returned by `DiscoveryDocumentService` (cached one hour at the HTTP layer):
 - `code_challenge_methods_supported`: `S256`
 - `claims_supported`: `iss`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `azp`, `sid`, `amr`, `acr`, plus user claims below
 - `acr_values_supported`: `urn:qiick:loa:pwd`, `urn:qiick:loa:mfa`
-- `claims_parameter_supported` / `request_parameter_supported` / `request_uri_parameter_supported`: `false` (OIDC Request Objects are not implemented; PAR uses its own `request_uri` values — see below)
+- `claims_parameter_supported`: `true` (limited form, see [The `claims` parameter](#the-claims-parameter))
+- `request_parameter_supported` / `request_uri_parameter_supported`: `false` (OIDC Request Objects are not implemented; PAR uses its own `request_uri` values — see below)
 - `require_pushed_authorization_requests`: `false` (the server does not require PAR for every client; an application can require it for itself, see below)
 - `backchannel_logout_supported`: `true`
 - `backchannel_logout_session_supported`: `true`
@@ -102,7 +103,9 @@ Device `id_token` rules (OIDC Core §2 / §3.1.3.6; RFC 8628 has no authorizatio
 
 ## Claims per scope
 
-User claims come from `OidcClaimsService` (same values in `id_token` and userinfo). Empty optional claims are omitted, never sent as empty strings.
+User claims come from `OidcClaimsService` (same values wherever they appear). Empty optional claims are omitted, never sent as empty strings.
+
+**Where they go (OIDC Core §5.4, changed 2026-11-23, #262).** Every Signaculum flow that returns an `id_token` also issues an access token, so the claims of the `profile` and `email` scopes are released at **userinfo only**. The `id_token` carries them only when the [`claims` parameter](#the-claims-parameter) asks for them in its `id_token` member. `orgs` (`qiick.orgs`, a qiick scope outside §5.4) stays in the `id_token` as well as in userinfo. Clients must read profile and email claims from userinfo (`qiick/laravel-oidc` does with `userinfo => true`, its default).
 
 | Scope        | Claims                                                                                                                                                                                                                                                                                                    |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -110,6 +113,18 @@ User claims come from `OidcClaimsService` (same values in `id_token` and userinf
 | `profile`    | `name`, `given_name` (`users.first_name`), `family_name` (when `users.last_name` is set), `preferred_username` (when `users.username` is set; omitted otherwise — RPs must key on `sub`, not `preferred_username`, which can change), `locale` (BCP 47, when set), `updated_at` (Unix timestamp when set) |
 | `email`      | `email`, `email_verified`                                                                                                                                                                                                                                                                                 |
 | `qiick.orgs` | `orgs`: `[{ id, slug, roles }]` (roles `owner` / `admin` / `member` / `billing`; empty list when the user has no memberships; sorted by `slug`)                                                                                                                                                           |
+
+**Supported `profile` claims.** Signaculum releases only the `profile` claims it stores: `name`, `given_name`, `family_name`, `preferred_username`, `locale`, `updated_at`. `middle_name`, `nickname`, `profile`, `picture`, `website`, `gender`, `birthdate` and `zoneinfo` are never released: Signaculum holds no such data, and OIDC Core §5.4 asks for claims only when available. The conformance suite's `oidcc-scope-profile` warns about the missing ones; that warning is accepted.
+
+### The `claims` parameter
+
+OIDC Core §5.5, in a limited form (`ClaimsRequestData`):
+
+- Members `userinfo` and `id_token`; any other member is ignored.
+- Only the user claims of the table above, plus `acr` in `id_token`; unknown claims are ignored.
+- `essential` is accepted. Every known claim the user has a value for is released, so essential and voluntary claims behave the same. `value` and `values` are ignored.
+- Each requested claim adds its scope to the request (`name` → `profile`, `email` → `email`, `orgs` → `qiick.orgs`), so the consent screen names it and the access token carries it.
+- A `claims` value that is not a JSON object is ignored.
 
 **Id-token-only** (from `IdTokenService`, not scope-gated): `iss`, `aud`, `azp`, `iat`, `exp` (TTL `OIDC_ID_TOKEN_TTL`, default 600s), optional `nonce`, `auth_time` when known (and **always** when the authorization request carried `max_age`), **`sid`** (per-browser session id, stable within the Laravel session, regenerated at login), **`amr`** (always present; RFC 8176), optional **`acr`** (only when requested).
 

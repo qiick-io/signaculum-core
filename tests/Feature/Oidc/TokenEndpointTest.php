@@ -56,24 +56,50 @@ test('the subject is an opaque uuid, not the database id', function () {
         ->and($this->user->subject)->not->toBe((string) $this->user->id);
 });
 
-test('profile and email claims follow the granted scopes', function () {
+// OIDC Core §5.4: with an access token, scope claims are released at userinfo, not in the id_token.
+test('the id_token carries no profile or email claims unless the claims parameter asks', function () {
     $this->actingAs($this->user);
 
     $code = approveAuthorization($this->client, $this->pkce['challenge'])['code'];
     $claims = verifiedIdToken(redeemCode($this->client, $code, $this->pkce['verifier'])->json('id_token'))->claims();
 
-    expect($claims->get('name'))->toBe('Ada Lovelace')
-        ->and($claims->get('given_name'))->toBe('Ada')
-        ->and($claims->get('family_name'))->toBe('Lovelace')
-        ->and($claims->get('email'))->toBe('ada@example.test')
-        ->and($claims->get('email_verified'))->toBeTrue();
-
-    $openIdOnlyPkce = pkcePair();
-    $code = approveAuthorization($this->client, $openIdOnlyPkce['challenge'], ['scope' => 'openid'])['code'];
-    $claims = verifiedIdToken(redeemCode($this->client, $code, $openIdOnlyPkce['verifier'])->json('id_token'))->claims();
-
     expect($claims->has('name'))->toBeFalse()
-        ->and($claims->has('email'))->toBeFalse();
+        ->and($claims->has('given_name'))->toBeFalse()
+        ->and($claims->has('email'))->toBeFalse()
+        ->and($claims->has('email_verified'))->toBeFalse();
+});
+
+// OIDC Core §5.5: claims asked for in the id_token member are released there.
+test('the claims parameter puts the requested claims in the id_token', function () {
+    $this->actingAs($this->user);
+
+    $code = approveAuthorization($this->client, $this->pkce['challenge'], [
+        'scope' => 'openid',
+        'claims' => json_encode(['id_token' => ['email' => ['essential' => true], 'name' => null]]),
+    ])['code'];
+    $claims = verifiedIdToken(redeemCode($this->client, $code, $this->pkce['verifier'])->json('id_token'))->claims();
+
+    expect($claims->get('email'))->toBe('ada@example.test')
+        ->and($claims->get('name'))->toBe('Ada Lovelace')
+        ->and($claims->has('email_verified'))->toBeFalse()
+        ->and($claims->has('given_name'))->toBeFalse();
+});
+
+test('unknown claims and value constraints in the claims parameter are ignored', function () {
+    $this->actingAs($this->user);
+
+    $code = approveAuthorization($this->client, $this->pkce['challenge'], [
+        'scope' => 'openid',
+        'claims' => json_encode([
+            'id_token' => ['shoe_size' => ['essential' => true], 'email' => ['value' => 'someone@else.test']],
+            'userinfo' => ['favourite_colour' => null],
+        ]),
+    ])['code'];
+    $response = redeemCode($this->client, $code, $this->pkce['verifier'])->assertOk();
+    $claims = verifiedIdToken($response->json('id_token'))->claims();
+
+    expect($claims->has('shoe_size'))->toBeFalse()
+        ->and($claims->get('email'))->toBe('ada@example.test');
 });
 
 test('auth_time is the moment the user logged in', function () {
