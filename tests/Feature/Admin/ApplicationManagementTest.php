@@ -404,3 +404,54 @@ test('changing post-logout redirect uris is recorded in the activity log', funct
         ->and(array_key_exists('post_logout_redirect_uris', $clearing['attributes'] ?? []))->toBeTrue()
         ->and($clearing['attributes']['post_logout_redirect_uris'])->toBeNull();
 });
+
+// The front-channel logout URI is loaded in an iframe on every logout (OIDC Front-Channel
+// Logout 1.0 §2): credentials in it would be sent in clear, and `rp.test@evil.test` reads as
+// one host while pointing at another (#281).
+test('a front-channel logout uri must not contain a user name or password', function (string $frontchannelLogoutUri) {
+    $admin = instanceAdminForApplications();
+    $client = createOidcClient();
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', $client), applicationFormPayload([
+            'frontchannel_logout_uri' => $frontchannelLogoutUri,
+        ]))
+        ->assertSessionHasErrors(['frontchannel_logout_uri' => 'The front-channel logout URI must not contain a user name or password.']);
+
+    expect($client->refresh()->frontchannel_logout_uri)->toBeNull();
+})->with([
+    'user and password' => 'https://user:pass@externa.test/auth/oidc/frontchannel-logout',
+    'user only' => 'https://externa.test@evil.test/auth/oidc/frontchannel-logout',
+]);
+
+// Only an explicit empty value clears the front-channel settings: a client that leaves the
+// fields out of an update must not unregister the RP from front-channel logout (#281).
+test('an update without the front-channel fields leaves them as they are', function () {
+    $admin = instanceAdminForApplications();
+    $client = createOidcClient();
+    $client->forceFill([
+        'frontchannel_logout_uri' => 'https://externa.test/auth/oidc/frontchannel-logout',
+        'is_frontchannel_logout_session_required' => true,
+    ])->save();
+
+    $payloadWithoutFrontchannelFields = collect(applicationFormPayload())
+        ->except(['frontchannel_logout_uri', 'is_frontchannel_logout_session_required'])
+        ->all();
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', $client), $payloadWithoutFrontchannelFields)
+        ->assertRedirect(route('admin.applications.index'));
+
+    $client->refresh();
+
+    expect($client->frontchannel_logout_uri)->toBe('https://externa.test/auth/oidc/frontchannel-logout')
+        ->and($client->is_frontchannel_logout_session_required)->toBeTrue();
+
+    $this->put(route('admin.applications.update', $client), applicationFormPayload())
+        ->assertRedirect(route('admin.applications.index'));
+
+    $client->refresh();
+
+    expect($client->frontchannel_logout_uri)->toBeNull()
+        ->and($client->is_frontchannel_logout_session_required)->toBeFalse();
+});

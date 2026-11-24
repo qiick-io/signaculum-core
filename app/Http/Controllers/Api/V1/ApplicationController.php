@@ -80,7 +80,7 @@ final class ApplicationController extends Controller
 
         // Same normalisation and same rule as the admin form (StoreApplicationRequest),
         // so a URI is accepted or refused identically at both doors.
-        if ($applicationData->frontchannelLogoutUri !== null) {
+        if (($applicationData->frontchannelLogoutUri ?? '') !== '') {
             $message = FrontchannelLogoutUriRule::failureMessageFor($applicationData->frontchannelLogoutUri);
 
             if ($message !== null) {

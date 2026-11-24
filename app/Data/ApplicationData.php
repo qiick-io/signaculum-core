@@ -42,6 +42,11 @@ final readonly class ApplicationData
      *                                                     URIs. Null when the request left the field out: an update
      *                                                     then keeps the registered list, and only an explicit empty
      *                                                     list clears it.
+     * @param  string|null  $frontchannelLogoutUri  OIDC Front-Channel Logout 1.0 §2. Null when the request left
+     *                                              the field out, so an update keeps the registered URI; an empty
+     *                                              string when it was sent empty, which clears it.
+     * @param  bool|null  $isFrontchannelLogoutSessionRequired  null when the request left the field out, so an
+     *                                                          update keeps the stored flag
      */
     public function __construct(
         public string $name,
@@ -53,7 +58,7 @@ final readonly class ApplicationData
         public bool $isDeviceAuthorizationEnabled = false,
         public bool $isPushedAuthorizationRequired = false,
         public ?string $frontchannelLogoutUri = null,
-        public bool $isFrontchannelLogoutSessionRequired = false,
+        public ?bool $isFrontchannelLogoutSessionRequired = null,
     ) {}
 
     /**
@@ -89,8 +94,12 @@ final readonly class ApplicationData
             isClientCredentialsEnabled: self::parseBoolean($validated['is_client_credentials_enabled'] ?? null),
             isDeviceAuthorizationEnabled: self::parseBoolean($validated['is_device_authorization_enabled'] ?? null),
             isPushedAuthorizationRequired: self::parseBoolean($validated['is_pushed_authorization_required'] ?? null),
-            frontchannelLogoutUri: FrontchannelLogoutUriRule::normalize($validated['frontchannel_logout_uri'] ?? null),
-            isFrontchannelLogoutSessionRequired: self::parseBoolean($validated['is_frontchannel_logout_session_required'] ?? null),
+            frontchannelLogoutUri: array_key_exists('frontchannel_logout_uri', $validated)
+                ? FrontchannelLogoutUriRule::normalize($validated['frontchannel_logout_uri']) ?? ''
+                : null,
+            isFrontchannelLogoutSessionRequired: array_key_exists('is_frontchannel_logout_session_required', $validated)
+                ? self::parseBoolean($validated['is_frontchannel_logout_session_required'])
+                : null,
         );
     }
 

@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 /**
  * Absolute front-channel logout URI (OIDC Front-Channel Logout 1.0 §2–§3).
  *
- * https required except localhost / 127.0.0.1; no fragment. Stored and matched
+ * https required except localhost / 127.0.0.1; no fragment; no user name or password. Stored and matched
  * as the exact registered string.
  */
 final class FrontchannelLogoutUriRule implements ValidationRule
@@ -48,6 +48,12 @@ final class FrontchannelLogoutUriRule implements ValidationRule
 
         if (str_contains($value, '#')) {
             return __('The front-channel logout URI must not contain a fragment.');
+        }
+
+        // The URI becomes an iframe `src` on every logout: userinfo would send credentials
+        // in clear, and `https://rp.test@evil.test/` reads as one host while pointing at another.
+        if (parse_url($value, PHP_URL_USER) !== null || parse_url($value, PHP_URL_PASS) !== null) {
+            return __('The front-channel logout URI must not contain a user name or password.');
         }
 
         $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
