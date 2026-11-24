@@ -103,6 +103,10 @@ it('refuses a malformed create payload field by field', function (array $payload
     'no redirect uris' => [[...applicationApiPayload(), 'redirect_uris' => []], ['redirect_uris']],
     'redirect uri not a url' => [[...applicationApiPayload(), 'redirect_uris' => ['not-a-url']], ['redirect_uris.0']],
     'redirect uris not a list' => [[...applicationApiPayload(), 'redirect_uris' => 'https://a.test/cb'], ['redirect_uris']],
+    // Shapes Laravel's `url` rule lets through and the admin form's RedirectUriRule refuses (#279).
+    'redirect uri over plain http' => [[...applicationApiPayload(), 'redirect_uris' => ['http://a.test/cb']], ['redirect_uris.0']],
+    'redirect uri with a fragment' => [[...applicationApiPayload(), 'redirect_uris' => ['https://a.test/cb#done']], ['redirect_uris.0']],
+    'redirect uri with another scheme' => [[...applicationApiPayload(), 'redirect_uris' => ['ftp://a.test/cb']], ['redirect_uris.0']],
     'confidential missing' => [['name' => 'Externa', 'redirect_uris' => ['https://a.test/cb'], 'is_first_party' => false], ['is_confidential']],
     'confidential not boolean' => [[...applicationApiPayload(), 'is_confidential' => 'maybe'], ['is_confidential']],
     'first party missing' => [['name' => 'Externa', 'redirect_uris' => ['https://a.test/cb'], 'is_confidential' => true], ['is_first_party']],
@@ -427,4 +431,14 @@ it('defaults the device authorization grant to off when the field is omitted', f
     $application = Client::query()->where('name', 'No device grant app')->firstOrFail();
 
     expect($application->hasGrantType('urn:ietf:params:oauth:grant-type:device_code'))->toBeFalse();
+});
+
+it('accepts loopback redirect uris over http, as the admin form does', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::ApplicationsWrite->value]);
+
+    $this->withToken($plain)->postJson('/api/v1/applications', applicationApiPayload([
+        'redirect_uris' => ['http://localhost:3000/callback', 'http://127.0.0.1/callback'],
+    ]))
+        ->assertCreated()
+        ->assertJsonPath('data.redirect_uris', ['http://localhost:3000/callback', 'http://127.0.0.1/callback']);
 });
