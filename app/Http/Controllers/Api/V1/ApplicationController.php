@@ -63,7 +63,7 @@ final class ApplicationController extends Controller
             'redirect_uris' => ['required', 'array', 'min:1'],
             'redirect_uris.*' => ['required', 'url'],
             'post_logout_redirect_uris' => ['sometimes', 'array'],
-            'post_logout_redirect_uris.*' => ['required', 'string', new RedirectUriRule],
+            'post_logout_redirect_uris.*' => ['required', 'string', new RedirectUriRule(isPostLogoutRedirectUri: true)],
             'is_confidential' => ['required', 'boolean'],
             'is_first_party' => ['required', 'boolean'],
             'is_client_credentials_enabled' => ['sometimes', 'boolean'],

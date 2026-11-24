@@ -35,10 +35,14 @@ final class UpdateApplicationAction
             'is_first_party' => $applicationData->isFirstParty,
             'is_pushed_authorization_required' => $applicationData->isPushedAuthorizationRequired,
             'grant_types' => $applicationData->grantTypes(),
-            'post_logout_redirect_uris' => $applicationData->postLogoutRedirectUris === [] ? null : $applicationData->postLogoutRedirectUris,
             'frontchannel_logout_uri' => $applicationData->frontchannelLogoutUri,
             'is_frontchannel_logout_session_required' => $applicationData->isFrontchannelLogoutSessionRequired,
         ];
+
+        // A request that left the field out keeps the registered list; an empty list clears it.
+        if ($applicationData->postLogoutRedirectUris !== null) {
+            $attributes['post_logout_redirect_uris'] = $applicationData->postLogoutRedirectUris ?: null;
+        }
 
         if ($applicationData->isConfidential && ! $wasConfidential) {
             $attributes['secret'] = Str::random(40);

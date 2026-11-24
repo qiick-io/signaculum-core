@@ -116,6 +116,17 @@ it('refuses a malformed create payload field by field', function (array $payload
     'post-logout uri not a string' => [[...applicationApiPayload(), 'post_logout_redirect_uris' => [['nested']]], ['post_logout_redirect_uris.0']],
 ]);
 
+// The post-logout field shares the redirect URI rule, but its errors name the field the client sent.
+it('names post-logout redirect uris in their validation errors', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::ApplicationsWrite->value]);
+
+    $this->withToken($plain)->postJson('/api/v1/applications', applicationApiPayload([
+        'post_logout_redirect_uris' => ['https://a.test/logged-out#done'],
+    ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['post_logout_redirect_uris.0' => 'Post-logout redirect URIs must not contain a fragment.']);
+});
+
 it('creates an application with post-logout redirect uris and reads them back', function (): void {
     ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::ApplicationsWrite->value, ApiKeyScopeEnum::ApplicationsRead->value]);
 

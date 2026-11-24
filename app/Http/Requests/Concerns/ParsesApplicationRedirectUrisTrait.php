@@ -33,7 +33,7 @@ trait ParsesApplicationRedirectUrisTrait
     protected function validateParsedPostLogoutRedirectUris(Validator $validator): void
     {
         foreach (ApplicationData::parseRedirectUris($this->input('post_logout_redirect_uris')) as $uri) {
-            $message = RedirectUriRule::failureMessageFor($uri);
+            $message = RedirectUriRule::failureMessageFor($uri, isPostLogoutRedirectUri: true);
 
             if ($message !== null) {
                 $validator->errors()->add('post_logout_redirect_uris', $message);

@@ -316,9 +316,46 @@ test('post-logout redirect uris follow the redirect uri rules', function (string
 })->with([
     'plain http' => 'http://externa.test/auth/oidc/logged-out',
     'fragment' => 'https://externa.test/auth/oidc/logged-out#done',
+    'user and password' => 'https://user:pass@externa.test/auth/oidc/logged-out',
+    'user only' => 'https://externa.test@evil.test/auth/oidc/logged-out',
     'wildcard host' => 'https://*.externa.test/auth/oidc/logged-out',
     'relative' => '/auth/oidc/logged-out',
 ]);
+
+test('post-logout redirect uri errors name the post-logout field', function (string $postLogoutRedirectUri, string $expectedMessage) {
+    $admin = instanceAdminForApplications();
+    $client = createOidcClient();
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', $client), applicationFormPayload([
+            'post_logout_redirect_uris' => $postLogoutRedirectUri,
+        ]))
+        ->assertSessionHasErrors(['post_logout_redirect_uris' => $expectedMessage]);
+})->with([
+    'not a url' => ['/auth/oidc/logged-out', 'Each post-logout redirect URI must be a valid URL.'],
+    'fragment' => ['https://externa.test/auth/oidc/logged-out#done', 'Post-logout redirect URIs must not contain a fragment.'],
+    'plain http' => ['http://externa.test/auth/oidc/logged-out', 'Post-logout redirect URIs must use https, except http://localhost or http://127.0.0.1.'],
+    'userinfo' => ['https://user:pass@externa.test/auth/oidc/logged-out', 'Post-logout redirect URIs must not contain a user name or password.'],
+]);
+
+// Only an explicit empty list clears the column: a client that leaves the field out of an
+// update, such as a script built before the field existed, must not wipe the registered URIs.
+test('an update without post-logout redirect uris leaves them as they are', function () {
+    $admin = instanceAdminForApplications();
+    $client = createOidcClient();
+    $client->forceFill(['post_logout_redirect_uris' => ['https://externa.test/auth/oidc/logged-out']])->save();
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', $client), applicationFormPayload())
+        ->assertRedirect(route('admin.applications.index'));
+
+    expect($client->refresh()->post_logout_redirect_uris)->toBe(['https://externa.test/auth/oidc/logged-out']);
+
+    $this->put(route('admin.applications.update', $client), applicationFormPayload(['post_logout_redirect_uris' => '']))
+        ->assertRedirect(route('admin.applications.index'));
+
+    expect($client->refresh()->post_logout_redirect_uris)->toBeNull();
+});
 
 test('loopback post-logout redirect uris may use http', function () {
     $admin = instanceAdminForApplications();
@@ -343,14 +380,27 @@ test('changing post-logout redirect uris is recorded in the activity log', funct
         ]))
         ->assertRedirect(route('admin.applications.index'));
 
-    $activity = Activity::query()
+    $latestUpdate = fn (): Activity => Activity::query()
         ->where('subject_type', $client->getMorphClass())
         ->where('subject_id', $client->getKey())
         ->where('event', 'updated')
         ->latest('id')
         ->firstOrFail();
 
-    expect((string) $activity->causer_id)->toBe((string) $admin->getKey())
-        ->and($activity->attribute_changes?->toArray()['attributes']['post_logout_redirect_uris'] ?? null)
+    $registration = $latestUpdate()->attribute_changes?->toArray() ?? [];
+
+    expect((string) $latestUpdate()->causer_id)->toBe((string) $admin->getKey())
+        ->and(array_key_exists('post_logout_redirect_uris', $registration['old'] ?? []))->toBeTrue()
+        ->and($registration['old']['post_logout_redirect_uris'])->toBeNull()
+        ->and($registration['attributes']['post_logout_redirect_uris'] ?? null)
         ->toBe(['https://externa.test/auth/oidc/logged-out']);
+
+    $this->put(route('admin.applications.update', $client), applicationFormPayload(['post_logout_redirect_uris' => '']))
+        ->assertRedirect(route('admin.applications.index'));
+
+    $clearing = $latestUpdate()->attribute_changes?->toArray() ?? [];
+
+    expect($clearing['old']['post_logout_redirect_uris'] ?? null)->toBe(['https://externa.test/auth/oidc/logged-out'])
+        ->and(array_key_exists('post_logout_redirect_uris', $clearing['attributes'] ?? []))->toBeTrue()
+        ->and($clearing['attributes']['post_logout_redirect_uris'])->toBeNull();
 });

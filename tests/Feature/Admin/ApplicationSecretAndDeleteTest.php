@@ -130,3 +130,24 @@ test('redirect uris must be https except localhost and must not contain fragment
         ])
         ->assertRedirect(route('admin.applications.index'));
 });
+
+// Credentials in a URI are sent in clear wherever it is logged, and `https://good.test@evil.test/`
+// reads as one host while pointing at another, so a redirect URI never carries userinfo.
+test('redirect uris must not contain a user name or password', function (string $redirectUri) {
+    $admin = applicationAdmin();
+
+    $this->actingAs($admin)
+        ->post(route('admin.applications.store'), [
+            'name' => 'Userinfo URIs',
+            'redirect_uris' => $redirectUri,
+            'is_confidential' => true,
+            'is_first_party' => false,
+            'is_client_credentials_enabled' => false,
+            'is_device_authorization_enabled' => false,
+            'is_pushed_authorization_required' => false,
+        ])
+        ->assertSessionHasErrors(['redirect_uris' => 'Redirect URIs must not contain a user name or password.']);
+})->with([
+    'user and password' => 'https://user:pass@app.example.test/cb',
+    'user only' => 'https://app.example.test@evil.example.test/cb',
+]);
