@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Data\TokenFamilyData;
+use App\Enums\TokenFamilyRootEnum;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Passport;
 
 /**
- * The token family of an authorization code: every access token issued from the code
- * or refreshed from one of its tokens carries the code's id (`auth_code_id`), and each
- * access token owns its refresh tokens.
+ * The token family of an authorization code or a device code: every access token
+ * issued from the root or refreshed from one of its tokens carries the root's id
+ * (`auth_code_id` or `device_code_id`), and each access token owns its refresh tokens.
  *
- * The code row is the family's lock: the code exchange, every refresh and every
- * revocation lock it first, so they run one after the other within a family and a
- * revocation never misses a token minted in parallel (RFC 9700 §4.5, §4.14.2).
+ * The root row is the family's lock: every refresh and every revocation lock it first
+ * (the code exchange claims the code row), so they run one after the other within a
+ * family and a revocation never misses a token minted in parallel (RFC 9700 §4.5,
+ * §4.14.2). Device clients are usually public, so their rotated refresh tokens need the
+ * same reuse detection (RFC 9700 §2.2.2).
  */
 final class TokenFamilyService
 {
@@ -29,23 +33,39 @@ final class TokenFamilyService
     /**
      * Lock the family root. Call it inside a transaction, before any other lock.
      */
-    public function lock(string $authCodeId): void
+    public function lock(TokenFamilyData $family): void
     {
-        Passport::authCode()->newQuery()->whereKey($authCodeId)->lockForUpdate()->value('id');
+        $family->root->rootModel()->newQuery()->whereKey($family->rootId)->lockForUpdate()->value('id');
+    }
+
+    /**
+     * Put a newly issued access token in the family.
+     */
+    public function tag(string $accessTokenId, TokenFamilyData $family): void
+    {
+        Passport::token()->newQuery()->whereKey($accessTokenId)->update([$family->root->value => $family->rootId]);
     }
 
     /**
      * The family an access token belongs to; null for tokens from other grants.
      */
-    public function authCodeIdOfAccessToken(mixed $accessTokenId): ?string
+    public function familyOfAccessToken(mixed $accessTokenId): ?TokenFamilyData
     {
         if (! is_string($accessTokenId)) {
             return null;
         }
 
-        $authCodeId = Passport::token()->newQuery()->whereKey($accessTokenId)->value('auth_code_id');
+        $accessToken = Passport::token()->newQuery()->whereKey($accessTokenId)->first(array_column(TokenFamilyRootEnum::cases(), 'value'));
 
-        return is_string($authCodeId) ? $authCodeId : null;
+        foreach (TokenFamilyRootEnum::cases() as $root) {
+            $rootId = $accessToken?->getAttribute($root->value);
+
+            if (is_string($rootId)) {
+                return new TokenFamilyData($root, $rootId);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -56,17 +76,17 @@ final class TokenFamilyService
      *
      * @param  Closure(): bool  $isReuseDetected  whether the presented code or refresh token was already used
      */
-    public function revokeWhenReused(string $authCodeId, Closure $isReuseDetected): void
+    public function revokeWhenReused(TokenFamilyData $family, Closure $isReuseDetected): void
     {
-        DB::transaction(function () use ($authCodeId, $isReuseDetected): void {
-            $this->lock($authCodeId);
+        DB::transaction(function () use ($family, $isReuseDetected): void {
+            $this->lock($family);
 
             if (! $isReuseDetected()) {
                 return;
             }
 
             $familyAccessTokenIds = Passport::token()->newQuery()
-                ->where('auth_code_id', $authCodeId)
+                ->where($family->root->value, $family->rootId)
                 ->lockForUpdate()
                 ->pluck('id');
 

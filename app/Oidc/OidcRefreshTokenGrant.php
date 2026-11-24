@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Oidc;
 
+use App\Data\TokenFamilyData;
 use App\Services\TokenFamilyService;
 use DateInterval;
 use Illuminate\Support\Facades\DB;
@@ -20,13 +21,13 @@ use Throwable;
 
 /**
  * Passport's refresh token grant, keeping each refreshed access token in the token
- * family of the authorization code it descends from (`auth_code_id`).
+ * family of the authorization code or device code it descends from (TokenFamilyService).
  *
  * Refresh tokens rotate, so without this link a replayed code (see OidcAuthCodeGrant)
  * could only revoke the tokens issued at the code exchange, and a leaked code's
  * holder could keep access by refreshing once (RFC 9700 §4.5).
  *
- * A refresh runs in one transaction that first locks the family root (the code row),
+ * A refresh runs in one transaction that first locks the family root (the code or device code row),
  * the same lock the replay revocation takes: a refresh in flight while a replay
  * revokes the family either finishes first (and its new tokens are revoked with the
  * family) or starts after (and finds its refresh token revoked). The refresh token is
@@ -38,15 +39,15 @@ use Throwable;
  * before league answers `invalid_grant`, which forces both back to a new authorization.
  * That includes the loser of two parallel refreshes of one token, and a presenter that
  * fails client authentication: holding the token is enough, as for a replayed code.
- * Tokens from other grants (device code, client credentials) have no family to revoke.
+ * Client credentials tokens have no refresh token, so no family.
  */
 final class OidcRefreshTokenGrant extends RefreshTokenGrant
 {
     /**
-     * The code whose token family the current refresh belongs to; the grant handles
-     * one request at a time.
+     * The token family the current refresh belongs to; the grant handles one request
+     * at a time.
      */
-    private ?string $familyAuthCodeId = null;
+    private ?TokenFamilyData $family = null;
 
     public function __construct(
         RefreshTokenRepositoryInterface $refreshTokenRepository,
@@ -64,7 +65,7 @@ final class OidcRefreshTokenGrant extends RefreshTokenGrant
         ResponseTypeInterface $responseType,
         DateInterval $accessTokenTTL,
     ): ResponseTypeInterface {
-        $this->familyAuthCodeId = null;
+        $this->family = null;
 
         try {
             return DB::transaction(
@@ -86,11 +87,10 @@ final class OidcRefreshTokenGrant extends RefreshTokenGrant
     protected function validateOldRefreshToken(ServerRequestInterface $request, string $clientId): array
     {
         $refreshTokenData = parent::validateOldRefreshToken($request, $clientId);
-        $authCodeId = $this->tokenFamilyService->authCodeIdOfAccessToken($refreshTokenData['access_token_id'] ?? null);
+        $this->family = $this->tokenFamilyService->familyOfAccessToken($refreshTokenData['access_token_id'] ?? null);
 
-        if ($authCodeId !== null) {
-            $this->tokenFamilyService->lock($authCodeId);
-            $this->familyAuthCodeId = $authCodeId;
+        if ($this->family !== null) {
+            $this->tokenFamilyService->lock($this->family);
         }
 
         $claimedRefreshTokenCount = Passport::refreshToken()->newQuery()
@@ -116,10 +116,8 @@ final class OidcRefreshTokenGrant extends RefreshTokenGrant
     ): AccessTokenEntityInterface {
         $accessToken = parent::issueAccessToken($accessTokenTTL, $client, $userIdentifier, $scopes);
 
-        if ($this->familyAuthCodeId !== null) {
-            Passport::token()->newQuery()
-                ->whereKey($accessToken->getIdentifier())
-                ->update(['auth_code_id' => $this->familyAuthCodeId]);
+        if ($this->family !== null) {
+            $this->tokenFamilyService->tag($accessToken->getIdentifier(), $this->family);
         }
 
         return $accessToken;
@@ -138,14 +136,14 @@ final class OidcRefreshTokenGrant extends RefreshTokenGrant
             return;
         }
 
-        $authCodeId = $this->tokenFamilyService->authCodeIdOfAccessToken($presentedRefreshToken['access_token_id']);
+        $family = $this->tokenFamilyService->familyOfAccessToken($presentedRefreshToken['access_token_id']);
 
-        if ($authCodeId === null) {
+        if ($family === null) {
             return;
         }
 
         $this->tokenFamilyService->revokeWhenReused(
-            $authCodeId,
+            $family,
             fn (): bool => (bool) Passport::refreshToken()->newQuery()
                 ->whereKey($presentedRefreshToken['refresh_token_id'])
                 ->value('revoked'),

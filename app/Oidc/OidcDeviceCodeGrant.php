@@ -5,8 +5,15 @@ declare(strict_types=1);
 namespace App\Oidc;
 
 use App\Data\AuthorizationContextData;
+use App\Data\TokenFamilyData;
+use App\Enums\TokenFamilyRootEnum;
+use App\Services\TokenFamilyService;
 use DateInterval;
 use Laravel\Passport\Passport;
+use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
+use League\OAuth2\Server\Entities\ClientEntityInterface;
+use League\OAuth2\Server\Entities\DeviceCodeEntityInterface;
+use League\OAuth2\Server\Entities\ScopeEntityInterface;
 use League\OAuth2\Server\Grant\DeviceCodeGrant;
 use League\OAuth2\Server\Repositories\DeviceCodeRepositoryInterface;
 use League\OAuth2\Server\Repositories\RefreshTokenRepositoryInterface;
@@ -21,14 +28,25 @@ use Psr\Http\Message\ServerRequestInterface;
  * so an `id_token` can carry truthful `auth_time` / `amr` / `sid` from the approving
  * session (OIDC Core §2, §3.1.3.6; RFC 8176). There is no `nonce` on the device
  * authorization request (RFC 8628).
+ *
+ * The issued access token carries the device code's id (`device_code_id`), and
+ * OidcRefreshTokenGrant passes it on: the device code is the root of a token family,
+ * so a reused device refresh token revokes the family (RFC 9700 §2.2.2, §4.14.2;
+ * device clients are usually public).
  */
 final class OidcDeviceCodeGrant extends DeviceCodeGrant
 {
+    /**
+     * The device code of the current token request; the grant handles one request at a time.
+     */
+    private ?string $redeemingDeviceCodeId = null;
+
     public function __construct(
         DeviceCodeRepositoryInterface $deviceCodeRepository,
         RefreshTokenRepositoryInterface $refreshTokenRepository,
         DateInterval $deviceCodeTTL,
         string $verificationUri,
+        private readonly TokenFamilyService $tokenFamilyService,
         int $retryInterval = 5,
     ) {
         parent::__construct(
@@ -45,6 +63,7 @@ final class OidcDeviceCodeGrant extends DeviceCodeGrant
         ResponseTypeInterface $responseType,
         DateInterval $accessTokenTTL,
     ): ResponseTypeInterface {
+        $this->redeemingDeviceCodeId = null;
         $deviceCodeId = (string) $this->getRequestParameter('device_code', $request);
         $responseType = parent::respondToAccessTokenRequest($request, $responseType, $accessTokenTTL);
 
@@ -53,6 +72,35 @@ final class OidcDeviceCodeGrant extends DeviceCodeGrant
         }
 
         return $responseType;
+    }
+
+    protected function validateDeviceCode(ServerRequestInterface $request, ClientEntityInterface $client): DeviceCodeEntityInterface
+    {
+        $deviceCode = parent::validateDeviceCode($request, $client);
+        $this->redeemingDeviceCodeId = $deviceCode->getIdentifier();
+
+        return $deviceCode;
+    }
+
+    /**
+     * @param  array<ScopeEntityInterface>  $scopes
+     */
+    protected function issueAccessToken(
+        DateInterval $accessTokenTTL,
+        ClientEntityInterface $client,
+        ?string $userIdentifier,
+        array $scopes = [],
+    ): AccessTokenEntityInterface {
+        $accessToken = parent::issueAccessToken($accessTokenTTL, $client, $userIdentifier, $scopes);
+
+        if ($this->redeemingDeviceCodeId !== null) {
+            $this->tokenFamilyService->tag(
+                $accessToken->getIdentifier(),
+                new TokenFamilyData(TokenFamilyRootEnum::DeviceCode, $this->redeemingDeviceCodeId),
+            );
+        }
+
+        return $accessToken;
     }
 
     private function storedContext(string $deviceCodeId): AuthorizationContextData

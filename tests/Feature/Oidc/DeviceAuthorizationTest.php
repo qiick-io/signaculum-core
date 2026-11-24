@@ -526,3 +526,69 @@ test('a denial cannot be overturned by a consent screen that was already open el
         ->assertStatus(401)
         ->assertJson(['error' => 'access_denied']);
 });
+
+/**
+ * A user approves a device code for a new public device client, which redeems it and
+ * refreshes once (the first refresh token rotates). Sets `client` on the test case for
+ * refreshTokens().
+ *
+ * @return array{issued: array<string, mixed>, refreshed: array<string, mixed>}
+ */
+function deviceTokenFamily(object $testCase): array
+{
+    $testCase->client = deviceAuthorizationClient();
+    $testCase->actingAs(User::factory()->create());
+
+    $device = issueDeviceCode($testCase->client);
+    approveDeviceAuthorization($device['user_code']);
+
+    $issuedTokens = redeemDeviceCode($testCase->client, $device['device_code'])->assertOk()->json();
+    $refreshedTokens = refreshTokens($testCase, $issuedTokens['refresh_token'])->assertOk()->json();
+
+    return ['issued' => $issuedTokens, 'refreshed' => $refreshedTokens];
+}
+
+/**
+ * The family's newest access token is refused and its newest refresh token no longer refreshes.
+ *
+ * @param  array<string, mixed>  $refreshedTokens
+ */
+function assertDeviceFamilyRevoked(object $testCase, array $refreshedTokens): void
+{
+    app('auth')->forgetGuards();
+
+    $testCase->withToken($refreshedTokens['access_token'])->getJson('/oauth/userinfo')->assertUnauthorized();
+    refreshTokens($testCase, $refreshedTokens['refresh_token'])->assertStatus(400);
+}
+
+// RFC 9700 §2.2.2 and §4.14.2: device clients are usually public, so their rotated refresh tokens need reuse detection.
+test('reusing a rotated device refresh token revokes its token family', function () {
+    $deviceTokens = deviceTokenFamily($this);
+
+    refreshTokens($this, $deviceTokens['issued']['refresh_token'])
+        ->assertStatus(400)
+        ->assertJsonPath('error', 'invalid_grant');
+
+    assertDeviceFamilyRevoked($this, $deviceTokens['refreshed']);
+});
+
+test('a device refresh token reused after a purge still revokes its family', function () {
+    $deviceTokens = deviceTokenFamily($this);
+
+    $this->artisan('passport:purge')->assertSuccessful();
+
+    refreshTokens($this, $deviceTokens['issued']['refresh_token'])->assertStatus(400);
+
+    assertDeviceFamilyRevoked($this, $deviceTokens['refreshed']);
+});
+
+test('a device token family with no usable token left is purged whole', function () {
+    deviceTokenFamily($this);
+    ageTokenRows(30 + 8);
+
+    $this->artisan('passport:purge')->assertSuccessful();
+
+    expect(Passport::deviceCode()->newQuery()->count())->toBe(0)
+        ->and(Passport::token()->newQuery()->count())->toBe(0)
+        ->and(Passport::refreshToken()->newQuery()->count())->toBe(0);
+});
