@@ -17,6 +17,13 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('name');
             $table->string('slug')->unique();
+            // Members must enrol a second factor before finishing an authorization (#120).
+            $table->boolean('is_mfa_required')->default(false);
+            // Logo and brand colours on login and consent for this organisation (#67).
+            $table->string('logo_path')->nullable();
+            $table->string('logo_dark_path')->nullable();
+            $table->string('brand_color', 7)->nullable();
+            $table->string('brand_color_dark', 7)->nullable();
             $table->timestamps();
         });
     }
