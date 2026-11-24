@@ -322,7 +322,7 @@ The `gh` token has the `workflow` scope (since 2026-11-05): workflow changes go 
 
 - Commit and push only as **LucaGiardi20** (`git config user.name` = "Luca Giardi"). Check `gh api user -q .login` returns `LucaGiardi20` before any `gh` write.
 - Never use `--admin`, `--no-verify`, force-push to shared branches, or bypass branch protection.
-- The repo is **private** until Luca decides otherwise. Never change its visibility.
+- The repo is **public** (MIT); the maintainer made it public. Never change its visibility.
 - Never commit `.env`, secrets, keys, tokens, personal phone numbers or email addresses. Only `.env.example`.
 
 ## Ask Luca first
