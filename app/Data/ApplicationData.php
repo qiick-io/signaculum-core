@@ -25,6 +25,7 @@ final readonly class ApplicationData
     private const CARRIED_PROPERTIES = [
         'name',
         'redirectUris',
+        'postLogoutRedirectUris',
         'isConfidential',
         'isFirstParty',
         'isClientCredentialsEnabled',
@@ -36,10 +37,13 @@ final readonly class ApplicationData
 
     /**
      * @param  list<string>  $redirectUris
+     * @param  list<string>  $postLogoutRedirectUris  where the end-session endpoint may send the user back
+     *                                                (OIDC RP-Initiated Logout 1.0 §2); same shape as redirect URIs
      */
     public function __construct(
         public string $name,
         public array $redirectUris,
+        public array $postLogoutRedirectUris,
         public bool $isConfidential,
         public bool $isFirstParty,
         public bool $isClientCredentialsEnabled = false,
@@ -74,6 +78,7 @@ final readonly class ApplicationData
         return new self(
             name: (string) ($validated['name'] ?? ''),
             redirectUris: self::parseRedirectUris($validated['redirect_uris'] ?? null),
+            postLogoutRedirectUris: self::parseRedirectUris($validated['post_logout_redirect_uris'] ?? null),
             isConfidential: self::parseBoolean($validated['is_confidential'] ?? null),
             isFirstParty: self::parseBoolean($validated['is_first_party'] ?? null),
             isClientCredentialsEnabled: self::parseBoolean($validated['is_client_credentials_enabled'] ?? null),

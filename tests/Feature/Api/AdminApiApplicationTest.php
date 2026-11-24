@@ -109,7 +109,37 @@ it('refuses a malformed create payload field by field', function (array $payload
     'client credentials not boolean' => [[...applicationApiPayload(), 'is_client_credentials_enabled' => 'yes please'], ['is_client_credentials_enabled']],
     'pushed authorization not boolean' => [[...applicationApiPayload(), 'is_pushed_authorization_required' => 'yes please'], ['is_pushed_authorization_required']],
     'device authorization not boolean' => [[...applicationApiPayload(), 'is_device_authorization_enabled' => 'yes please'], ['is_device_authorization_enabled']],
+    'post-logout uris not a list' => [[...applicationApiPayload(), 'post_logout_redirect_uris' => 'https://a.test/'], ['post_logout_redirect_uris']],
+    'post-logout uri over plain http' => [[...applicationApiPayload(), 'post_logout_redirect_uris' => ['http://a.test/logged-out']], ['post_logout_redirect_uris.0']],
+    'post-logout uri with a fragment' => [[...applicationApiPayload(), 'post_logout_redirect_uris' => ['https://a.test/logged-out#done']], ['post_logout_redirect_uris.0']],
+    'post-logout uri with a wildcard host' => [[...applicationApiPayload(), 'post_logout_redirect_uris' => ['https://*.a.test/logged-out']], ['post_logout_redirect_uris.0']],
+    'post-logout uri not a string' => [[...applicationApiPayload(), 'post_logout_redirect_uris' => [['nested']]], ['post_logout_redirect_uris.0']],
 ]);
+
+it('creates an application with post-logout redirect uris and reads them back', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::ApplicationsWrite->value, ApiKeyScopeEnum::ApplicationsRead->value]);
+
+    $created = $this->withToken($plain)->postJson('/api/v1/applications', applicationApiPayload([
+        'post_logout_redirect_uris' => ['https://externa.test/auth/oidc/logged-out', 'https://externa.test/'],
+    ]))->assertCreated()
+        ->assertJsonPath('data.post_logout_redirect_uris', ['https://externa.test/auth/oidc/logged-out', 'https://externa.test/']);
+
+    $this->withToken($plain)->getJson('/api/v1/applications/'.$created->json('data.id'))
+        ->assertOk()
+        ->assertJsonPath('data.post_logout_redirect_uris', ['https://externa.test/auth/oidc/logged-out', 'https://externa.test/']);
+
+    expect(Client::query()->whereKey($created->json('data.id'))->sole()->post_logout_redirect_uris)
+        ->toBe(['https://externa.test/auth/oidc/logged-out', 'https://externa.test/']);
+});
+
+it('lists an application without post-logout redirect uris as an empty list', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::ApplicationsRead->value]);
+    namedOidcClient('Listed app');
+
+    $this->withToken($plain)->getJson('/api/v1/applications')
+        ->assertOk()
+        ->assertJsonPath('data.0.post_logout_redirect_uris', []);
+});
 
 it('answers 404 for an application id that does not exist', function (): void {
     ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::ApplicationsWrite->value]);

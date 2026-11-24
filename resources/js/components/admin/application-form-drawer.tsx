@@ -34,6 +34,7 @@ import type { AdminApplicationRow } from '@/types/admin';
 const EMPTY_APPLICATION_FORM = {
     name: '',
     redirect_uris: '',
+    post_logout_redirect_uris: '',
     is_confidential: true,
     is_first_party: false,
     is_client_credentials_enabled: false,
@@ -80,6 +81,8 @@ export function ApplicationFormDrawer({
             const payload = {
                 name: editing.name,
                 redirect_uris: editing.redirect_uris.join('\n'),
+                post_logout_redirect_uris:
+                    editing.post_logout_redirect_uris.join('\n'),
                 is_confidential: editing.is_confidential,
                 is_first_party: editing.is_first_party,
                 is_client_credentials_enabled:
@@ -281,39 +284,20 @@ export function ApplicationFormDrawer({
                             <FieldError>{form.errors.name}</FieldError>
                         </Field>
 
-                        <Field
-                            data-invalid={
-                                !!form.errors.redirect_uris || undefined
+                        <UriListField
+                            id="application-redirect-uris"
+                            name="redirect_uris"
+                            label={t(
+                                'admin.applications.form.redirectUrisRequired',
+                            )}
+                            hint={t('admin.applications.form.redirectUrisHint')}
+                            value={form.data.redirect_uris}
+                            error={form.errors.redirect_uris}
+                            disabled={readOnly || form.processing}
+                            onChange={(value) =>
+                                form.setData('redirect_uris', value)
                             }
-                        >
-                            <FieldLabel htmlFor="application-redirect-uris">
-                                {t(
-                                    'admin.applications.form.redirectUrisRequired',
-                                )}
-                            </FieldLabel>
-                            <Textarea
-                                id="application-redirect-uris"
-                                name="redirect_uris"
-                                value={form.data.redirect_uris}
-                                rows={4}
-                                disabled={readOnly || form.processing}
-                                aria-invalid={
-                                    !!form.errors.redirect_uris || undefined
-                                }
-                                onChange={(event) =>
-                                    form.setData(
-                                        'redirect_uris',
-                                        event.target.value,
-                                    )
-                                }
-                            />
-                            <FieldDescription>
-                                {t('admin.applications.form.redirectUrisHint')}
-                            </FieldDescription>
-                            <FieldError>
-                                {form.errors.redirect_uris}
-                            </FieldError>
-                        </Field>
+                        />
 
                         <Field>
                             <div className="flex items-start gap-3">
@@ -491,6 +475,23 @@ export function ApplicationFormDrawer({
                             </FieldError>
                         </Field>
 
+                        <UriListField
+                            id="application-post-logout-redirect-uris"
+                            name="post_logout_redirect_uris"
+                            label={t(
+                                'admin.applications.form.postLogoutRedirectUris',
+                            )}
+                            hint={t(
+                                'admin.applications.form.postLogoutRedirectUrisHint',
+                            )}
+                            value={form.data.post_logout_redirect_uris}
+                            error={form.errors.post_logout_redirect_uris}
+                            disabled={readOnly || form.processing}
+                            onChange={(value) =>
+                                form.setData('post_logout_redirect_uris', value)
+                            }
+                        />
+
                         <Field
                             data-invalid={
                                 !!form.errors.frontchannel_logout_uri ||
@@ -644,5 +645,48 @@ export function ApplicationFormDrawer({
                 onConfirm={deleteApplication}
             />
         </DrawerContent>
+    );
+}
+
+type UriListFieldProps = {
+    id: string;
+    name: string;
+    label: string;
+    hint: string;
+    value: string;
+    error?: string;
+    disabled: boolean;
+    onChange: (value: string) => void;
+};
+
+/**
+ * A list of absolute URIs, one per line, with its label, hint and validation error.
+ * Redirect URIs and post-logout redirect URIs share the shape and the server rules.
+ */
+function UriListField({
+    id,
+    name,
+    label,
+    hint,
+    value,
+    error,
+    disabled,
+    onChange,
+}: UriListFieldProps) {
+    return (
+        <Field data-invalid={!!error || undefined}>
+            <FieldLabel htmlFor={id}>{label}</FieldLabel>
+            <Textarea
+                id={id}
+                name={name}
+                value={value}
+                rows={4}
+                disabled={disabled}
+                aria-invalid={!!error || undefined}
+                onChange={(event) => onChange(event.target.value)}
+            />
+            <FieldDescription>{hint}</FieldDescription>
+            <FieldError>{error}</FieldError>
+        </Field>
     );
 }

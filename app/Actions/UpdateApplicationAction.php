@@ -35,6 +35,7 @@ final class UpdateApplicationAction
             'is_first_party' => $applicationData->isFirstParty,
             'is_pushed_authorization_required' => $applicationData->isPushedAuthorizationRequired,
             'grant_types' => $applicationData->grantTypes(),
+            'post_logout_redirect_uris' => $applicationData->postLogoutRedirectUris === [] ? null : $applicationData->postLogoutRedirectUris,
             'frontchannel_logout_uri' => $applicationData->frontchannelLogoutUri,
             'is_frontchannel_logout_session_required' => $applicationData->isFrontchannelLogoutSessionRequired,
         ];

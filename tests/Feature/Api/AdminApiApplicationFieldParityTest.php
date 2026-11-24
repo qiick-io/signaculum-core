@@ -44,6 +44,11 @@ function applicationDataFieldProbes(): array
             'send' => ['https://enumerated.test/auth/oidc/callback'],
             'expect' => ['https://enumerated.test/auth/oidc/callback'],
         ],
+        'postLogoutRedirectUris' => [
+            'field' => 'post_logout_redirect_uris',
+            'send' => ['https://enumerated.test/auth/oidc/logged-out'],
+            'expect' => ['https://enumerated.test/auth/oidc/logged-out'],
+        ],
         'isConfidential' => [
             'field' => 'is_confidential',
             'send' => true,

@@ -27,6 +27,7 @@ final class ApplicationResource extends JsonResource
             'id' => (string) $application->getKey(),
             'name' => $application->name,
             'redirect_uris' => $application->redirect_uris ?? [],
+            'post_logout_redirect_uris' => $application->post_logout_redirect_uris ?? [],
             'is_confidential' => $application->confidential(),
             'is_first_party' => (bool) $application->is_first_party,
             'is_client_credentials_enabled' => $application->hasGrantType('client_credentials'),

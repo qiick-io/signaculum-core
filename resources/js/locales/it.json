@@ -607,6 +607,8 @@
                 "nameRequired": "Nome *",
                 "redirectUrisRequired": "URI di redirect *",
                 "redirectUrisHint": "Un URL assoluto per riga. https obbligatorio tranne http://localhost o http://127.0.0.1. Niente frammenti. Corrispondenza esatta a runtime.",
+                "postLogoutRedirectUris": "URI di redirect dopo il logout",
+                "postLogoutRedirectUrisHint": "Dove l'app può riportare le persone dopo l'uscita (OIDC RP-Initiated Logout). Un URL assoluto per riga, stesse regole degli URI di redirect. Le app laravel-oidc usano {APP_URL}/auth/oidc/logged-out. Un URI che non è in questo elenco viene rifiutato.",
                 "clientId": "Client ID",
                 "discoveryUrl": "URL di discovery",
                 "configureCommand": "oidc:configure",

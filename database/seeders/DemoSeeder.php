@@ -83,12 +83,20 @@ final class DemoSeeder extends Seeder
         $externa = $createApplication->execute(new ApplicationData(
             name: 'Externa',
             redirectUris: ['https://externa.acme.example/auth/oidc/callback'],
+            // laravel-oidc's post-logout default, and `{APP_URL}/` for apps on an older beta.
+            postLogoutRedirectUris: ['https://externa.acme.example/auth/oidc/logged-out', 'https://externa.acme.example/'],
             isConfidential: true,
             isFirstParty: true,
         ));
         $createApplication->execute(new ApplicationData(
             name: 'Excubia App',
             redirectUris: ['https://excubia.acme.example/auth/oidc/callback', 'https://excubia.globex.example/auth/oidc/callback'],
+            postLogoutRedirectUris: [
+                'https://excubia.acme.example/auth/oidc/logged-out',
+                'https://excubia.acme.example/',
+                'https://excubia.globex.example/auth/oidc/logged-out',
+                'https://excubia.globex.example/',
+            ],
             isConfidential: true,
             isFirstParty: true,
         ));

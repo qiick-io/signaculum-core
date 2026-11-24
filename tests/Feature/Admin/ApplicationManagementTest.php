@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Activity;
 use App\Models\Client;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -254,4 +255,102 @@ test('first-party applications skip authorization consent', function () {
     $thirdParty = createOidcClient();
 
     expect($thirdParty->skipsAuthorization($admin, []))->toBeFalse();
+});
+
+// OIDC RP-Initiated Logout 1.0 §2: the end-session endpoint only redirects to a post-logout URI registered on the client.
+test('an instance admin registers post-logout redirect uris the end-session endpoint then honours', function () {
+    $admin = instanceAdminForApplications();
+    $client = createOidcClient();
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', $client), applicationFormPayload([
+            'post_logout_redirect_uris' => "https://externa.test/auth/oidc/logged-out\nhttps://externa.test/\nhttps://externa.test/",
+        ]))
+        ->assertRedirect(route('admin.applications.index'));
+
+    expect($client->refresh()->post_logout_redirect_uris)->toBe(['https://externa.test/auth/oidc/logged-out', 'https://externa.test/']);
+
+    $this->get(route('admin.applications.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('applications.data.0.post_logout_redirect_uris', ['https://externa.test/auth/oidc/logged-out', 'https://externa.test/']));
+
+    auth()->guard('web')->logout();
+
+    $this->get('/oauth/end-session?'.http_build_query([
+        'client_id' => $client->getKey(),
+        'post_logout_redirect_uri' => 'https://externa.test/auth/oidc/logged-out',
+    ]))->assertRedirect('https://externa.test/auth/oidc/logged-out');
+});
+
+test('an instance admin creates an application with post-logout redirect uris and clears them', function () {
+    $admin = instanceAdminForApplications();
+
+    $this->actingAs($admin)
+        ->post(route('admin.applications.store'), applicationFormPayload([
+            'post_logout_redirect_uris' => 'https://externa.test/auth/oidc/logged-out',
+        ]))
+        ->assertRedirect(route('admin.applications.index'));
+
+    $client = Client::query()->where('name', 'Externa')->sole();
+
+    expect($client->post_logout_redirect_uris)->toBe(['https://externa.test/auth/oidc/logged-out']);
+
+    $this->put(route('admin.applications.update', $client), applicationFormPayload(['post_logout_redirect_uris' => '']))
+        ->assertRedirect(route('admin.applications.index'));
+
+    expect($client->refresh()->post_logout_redirect_uris)->toBeNull();
+});
+
+// The same shape as redirect URIs (RedirectUriRule): matched exactly, so no wildcard, no fragment, https except loopback.
+test('post-logout redirect uris follow the redirect uri rules', function (string $postLogoutRedirectUri) {
+    $admin = instanceAdminForApplications();
+    $client = createOidcClient();
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', $client), applicationFormPayload([
+            'post_logout_redirect_uris' => "https://externa.test/auth/oidc/logged-out\n{$postLogoutRedirectUri}",
+        ]))
+        ->assertSessionHasErrors('post_logout_redirect_uris');
+
+    expect($client->refresh()->post_logout_redirect_uris)->toBeNull();
+})->with([
+    'plain http' => 'http://externa.test/auth/oidc/logged-out',
+    'fragment' => 'https://externa.test/auth/oidc/logged-out#done',
+    'wildcard host' => 'https://*.externa.test/auth/oidc/logged-out',
+    'relative' => '/auth/oidc/logged-out',
+]);
+
+test('loopback post-logout redirect uris may use http', function () {
+    $admin = instanceAdminForApplications();
+    $client = createOidcClient();
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', $client), applicationFormPayload([
+            'post_logout_redirect_uris' => "http://localhost:8000/auth/oidc/logged-out\nhttp://127.0.0.1/auth/oidc/logged-out",
+        ]))
+        ->assertSessionHasNoErrors();
+
+    expect($client->refresh()->post_logout_redirect_uris)->toHaveCount(2);
+});
+
+test('changing post-logout redirect uris is recorded in the activity log', function () {
+    $admin = instanceAdminForApplications();
+    $client = createOidcClient();
+
+    $this->actingAs($admin)
+        ->put(route('admin.applications.update', $client), applicationFormPayload([
+            'post_logout_redirect_uris' => 'https://externa.test/auth/oidc/logged-out',
+        ]))
+        ->assertRedirect(route('admin.applications.index'));
+
+    $activity = Activity::query()
+        ->where('subject_type', $client->getMorphClass())
+        ->where('subject_id', $client->getKey())
+        ->where('event', 'updated')
+        ->latest('id')
+        ->firstOrFail();
+
+    expect((string) $activity->causer_id)->toBe((string) $admin->getKey())
+        ->and($activity->attribute_changes?->toArray()['attributes']['post_logout_redirect_uris'] ?? null)
+        ->toBe(['https://externa.test/auth/oidc/logged-out']);
 });
