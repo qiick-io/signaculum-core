@@ -182,9 +182,9 @@ RFC 9700 §2.2.1 / §2.2.2: short-lived access tokens, refresh rotation with reu
 
 ### Token families and reuse detection
 
-Every access and refresh token issued from an authorization code or a device code, or refreshed from one of its tokens, belongs to the token family of that code.
+Every access and refresh token issued from an authorization code or a device code, or refreshed from one of its tokens, belongs to the token family rooted in that authorization code or device code.
 
-- **Replayed code** (RFC 6749 §4.1.2, RFC 9700 §4.5): presenting a redeemed code again revokes the whole family, then answers `invalid_grant`.
+- **Replayed code** (RFC 6749 §4.1.2, RFC 9700 §4.5): presenting a redeemed authorization code or device code again revokes the whole family, then answers `invalid_grant`. A device code is single use (RFC 8628 §3.5), so two parallel polls of an approved device code count as a replay.
 - **Reused refresh token** (RFC 9700 §4.14.2): presenting a refresh token that was already rotated or revoked revokes the whole family, then answers `invalid_grant`. The server cannot tell the attacker from the legitimate client, so both have to authorize again. This also applies to a client that refreshes the same token twice in parallel: send one refresh at a time.
 - Device code tokens have their own family, rooted in the device code: device clients are usually public, and RFC 9700 §2.2.2 requires reuse detection for their rotated refresh tokens. Client credentials tokens have no refresh token, so no family.
 - **`passport:purge`** (any options) keeps what reuse detection needs, and no more:

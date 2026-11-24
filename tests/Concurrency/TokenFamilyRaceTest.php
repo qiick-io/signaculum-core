@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Passport;
@@ -120,4 +122,64 @@ test('a rotated refresh token reused while its family refreshes also revokes the
     expect($familyAccessTokens)->toHaveCount(3)
         ->and($familyAccessTokens->every(fn ($accessToken): bool => (bool) $accessToken->revoked))->toBeTrue()
         ->and(Passport::refreshToken()->newQuery()->where('revoked', false)->count())->toBe(0);
+});
+
+/**
+ * Point the race at a device code family (RFC 9700 §2.2.2): its rotated refresh token is
+ * the one raceWhileRefreshing() refreshes.
+ *
+ * @return array{device_code: string, issued: array<string, mixed>, refreshed: array<string, mixed>}
+ */
+function raceOnDeviceFamily(object $testCase): array
+{
+    $deviceTokens = deviceTokenFamily($testCase);
+    $testCase->issuedTokens = $deviceTokens['refreshed'];
+
+    return $deviceTokens;
+}
+
+/**
+ * Every access token of the family of `$deviceCode`, and whether any of their refresh tokens is still live.
+ *
+ * @return array{accessTokens: Collection<int, Model>, liveRefreshTokenCount: int}
+ */
+function deviceFamilyState(string $deviceCode): array
+{
+    $familyAccessTokens = Passport::token()->newQuery()->where('device_code_id', $deviceCode)->get();
+
+    return [
+        'accessTokens' => $familyAccessTokens,
+        'liveRefreshTokenCount' => Passport::refreshToken()->newQuery()
+            ->whereIn('access_token_id', $familyAccessTokens->modelKeys())
+            ->where('revoked', false)
+            ->count(),
+    ];
+}
+
+test('a device code replayed while its family refreshes also revokes the refreshed tokens', function () {
+    $deviceTokens = raceOnDeviceFamily($this);
+
+    raceWhileRefreshing($this, 'insert into', 'oauth_access_tokens', function () use ($deviceTokens): void {
+        redeemDeviceCode($this->client, $deviceTokens['device_code']);
+    });
+
+    $familyState = deviceFamilyState($deviceTokens['device_code']);
+
+    expect($familyState['accessTokens'])->toHaveCount(3)
+        ->and($familyState['accessTokens']->every(fn ($accessToken): bool => (bool) $accessToken->revoked))->toBeTrue()
+        ->and($familyState['liveRefreshTokenCount'])->toBe(0);
+});
+
+test('a rotated device refresh token reused while its family refreshes also revokes the refreshed tokens', function () {
+    $deviceTokens = raceOnDeviceFamily($this);
+
+    raceWhileRefreshing($this, 'insert into', 'oauth_access_tokens', function () use ($deviceTokens): void {
+        refreshTokens($this, $deviceTokens['issued']['refresh_token']);
+    });
+
+    $familyState = deviceFamilyState($deviceTokens['device_code']);
+
+    expect($familyState['accessTokens'])->toHaveCount(3)
+        ->and($familyState['accessTokens']->every(fn ($accessToken): bool => (bool) $accessToken->revoked))->toBeTrue()
+        ->and($familyState['liveRefreshTokenCount'])->toBe(0);
 });
