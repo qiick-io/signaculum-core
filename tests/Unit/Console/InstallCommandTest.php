@@ -15,16 +15,38 @@ use Laravel\Passport\Passport;
  * Parallel workers each get their own database but share storage/, so one Passport key pair
  * serves them all. Deleting it here made token signing fail in whichever worker raced it (#144).
  * The installer therefore writes its keys into a directory of this file's own.
+ *
+ * The same holds for the files the installer writes (#176): `.env` is shared by every parallel
+ * worker and by the developer's own checkout, and `database/database.sqlite` is the developer's
+ * local data. Each test points the application's environment path at a directory of its own,
+ * with a copy of `.env.example`, and the guard in afterEach() fails the test when the real
+ * `.env`, `.env.example` or `database/database.sqlite` changed in any byte.
  */
 beforeEach(function () {
     $this->passportKeyDirectory = sys_get_temp_dir().'/signaculum-install-keys-'.Str::uuid();
     File::ensureDirectoryExists($this->passportKeyDirectory);
     Passport::loadKeysFrom($this->passportKeyDirectory);
+
+    $this->realInstallFileFingerprints = installFileFingerprints();
+
+    $this->installDirectory = sys_get_temp_dir().'/signaculum-install-'.Str::uuid();
+    File::ensureDirectoryExists($this->installDirectory);
+    File::copy(base_path('.env.example'), $this->installDirectory.'/.env.example');
+    app()->useEnvironmentPath($this->installDirectory);
 });
 
 afterEach(function () {
     Passport::$keyPath = null;
     File::deleteDirectory($this->passportKeyDirectory);
+
+    app()->useEnvironmentPath(base_path());
+    File::deleteDirectory($this->installDirectory);
+    clearInstallSqliteOverride();
+
+    expect(installFileFingerprints())->toBe(
+        $this->realInstallFileFingerprints,
+        'The installer test changed a file of the real checkout (#176).',
+    );
 });
 
 test('signaculum:install is registered', function () {
@@ -32,58 +54,38 @@ test('signaculum:install is registered', function () {
 });
 
 test('install refuses a production .env without --force', function () {
-    $path = base_path('.env');
-    $backup = File::exists($path) ? File::get($path) : null;
-    File::put($path, "APP_ENV=production\nAPP_KEY=\n");
+    File::put(app()->environmentFilePath(), "APP_ENV=production\nAPP_KEY=\n");
 
-    try {
-        $this->artisan(InstallCommand::class)
-            ->expectsOutputToContain('Refusing: APP_ENV looks like production')
-            ->assertFailed();
-    } finally {
-        restoreInstallEnv($path, $backup);
-    }
+    $this->artisan(InstallCommand::class)
+        ->expectsOutputToContain('Refusing: APP_ENV looks like production')
+        ->assertFailed();
 });
 
 test('install refuses when .env.example is missing', function () {
-    $examplePath = base_path('.env.example');
-    $exampleBackup = File::exists($examplePath) ? File::get($examplePath) : null;
-    File::delete($examplePath);
+    File::delete($this->installDirectory.'/.env.example');
 
-    try {
-        $this->artisan(InstallCommand::class, [
-            '--force' => true,
-            '--no-npm' => true,
-            '--no-interaction' => true,
-        ])
-            ->expectsOutputToContain('.env.example is missing')
-            ->assertFailed();
-    } finally {
-        if ($exampleBackup !== null) {
-            File::put($examplePath, $exampleBackup);
-        }
-    }
+    $this->artisan(InstallCommand::class, [
+        '--force' => true,
+        '--no-npm' => true,
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('.env.example is missing')
+        ->assertFailed();
 });
 
 test('install refuses an existing .env without --force in non-interactive mode', function () {
-    $path = base_path('.env');
-    $backup = File::exists($path) ? File::get($path) : null;
-    File::put($path, "APP_ENV=local\nAPP_KEY=base64:dGVzdA==\n");
+    File::put(app()->environmentFilePath(), "APP_ENV=local\nAPP_KEY=base64:dGVzdA==\n");
 
-    try {
-        $this->artisan(InstallCommand::class, [
-            '--no-npm' => true,
-            '--no-interaction' => true,
-        ])
-            ->expectsOutputToContain('.env already exists')
-            ->assertFailed();
-    } finally {
-        restoreInstallEnv($path, $backup);
-    }
+    $this->artisan(InstallCommand::class, [
+        '--no-npm' => true,
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('.env already exists')
+        ->assertFailed();
 });
 
 test('install skips creating an administrator when a user already exists', function () {
-    [$envPath, $envBackup, $sqlitePath] = beginInstallFixtures();
+    $sqlitePath = useInstallSqliteDatabase($this->installDirectory);
     setInstallAdminEnvironment(
         email: 'admin@example.com',
         password: 'password',
@@ -114,12 +116,11 @@ test('install skips creating an administrator when a user already exists', funct
         expect(DB::connection('sqlite')->table('users')->count())->toBe(1);
     } finally {
         clearInstallAdminEnvironment();
-        restoreInstallEnv($envPath, $envBackup, $sqlitePath);
     }
 });
 
 test('install migrates sqlite, creates keys and the first administrator', function () {
-    [$envPath, $envBackup, $sqlitePath] = beginInstallFixtures();
+    $sqlitePath = useInstallSqliteDatabase($this->installDirectory);
     setInstallAdminEnvironment(
         email: 'admin@example.com',
         password: 'password',
@@ -159,16 +160,16 @@ test('install migrates sqlite, creates keys and the first administrator', functi
             ->and(is_string($administrator->password) && Hash::check('password', $administrator->password))->toBeTrue()
             ->and(File::exists($this->passportKeyDirectory.'/oauth-private.key'))->toBeTrue()
             ->and(File::exists($this->passportKeyDirectory.'/oauth-public.key'))->toBeTrue()
-            ->and(File::get($envPath))->toContain('APP_NAME=Signaculum')
-            ->and(File::get($envPath))->toContain('DB_CONNECTION=sqlite');
+            ->and(File::get(app()->environmentFilePath()))->toContain('APP_NAME=Signaculum')
+            ->and(File::get(app()->environmentFilePath()))->toContain('DB_CONNECTION=sqlite')
+            ->and(File::get(app()->environmentFilePath()))->toContain('DB_DATABASE='.$sqlitePath);
     } finally {
         clearInstallAdminEnvironment();
-        restoreInstallEnv($envPath, $envBackup, $sqlitePath);
     }
 });
 
 test('install fails closed under --no-interaction when no password is provided', function () {
-    [$envPath, $envBackup, $sqlitePath] = beginInstallFixtures();
+    $sqlitePath = useInstallSqliteDatabase($this->installDirectory);
     setInstallAdminEnvironment(
         email: 'generated@example.com',
         password: null,
@@ -186,12 +187,11 @@ test('install fails closed under --no-interaction when no password is provided',
             ->assertFailed();
     } finally {
         clearInstallAdminEnvironment();
-        restoreInstallEnv($envPath, $envBackup, $sqlitePath);
     }
 });
 
 test('install refuses the known default password when APP_ENV is staging', function () {
-    [$envPath, $envBackup, $sqlitePath] = beginInstallFixtures();
+    $sqlitePath = useInstallSqliteDatabase($this->installDirectory);
     setInstallAdminEnvironment(
         email: 'staging-admin@example.com',
         password: 'password',
@@ -214,59 +214,54 @@ test('install refuses the known default password when APP_ENV is staging', funct
         putenv('SIGNACULUM_INSTALL_APP_ENV');
         unset($_ENV['SIGNACULUM_INSTALL_APP_ENV'], $_SERVER['SIGNACULUM_INSTALL_APP_ENV']);
         clearInstallAdminEnvironment();
-        restoreInstallEnv($envPath, $envBackup, $sqlitePath);
     }
 });
 
 test('install refuses a production APP_ENV in an existing .env without --force', function () {
-    $path = base_path('.env');
-    $backup = File::exists($path) ? File::get($path) : null;
-    File::put($path, "APP_ENV=production\nAPP_KEY=\n");
+    File::put(app()->environmentFilePath(), "APP_ENV=production\nAPP_KEY=\n");
 
-    try {
-        $this->artisan(InstallCommand::class, [
-            '--no-npm' => true,
-            '--no-interaction' => true,
-        ])
-            ->expectsOutputToContain('Refusing: APP_ENV looks like production')
-            ->assertFailed();
-    } finally {
-        restoreInstallEnv($path, $backup);
-    }
+    $this->artisan(InstallCommand::class, [
+        '--no-npm' => true,
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('Refusing: APP_ENV looks like production')
+        ->assertFailed();
 });
 
 /**
- * @return array{0: string, 1: string|null, 2: string}
+ * Points a non-interactive install at an empty SQLite file inside the test's own directory.
  */
-function beginInstallFixtures(): array
+function useInstallSqliteDatabase(string $installDirectory): string
 {
-    $envPath = base_path('.env');
-    $backup = File::exists($envPath) ? File::get($envPath) : null;
-    $sqlitePath = database_path('install-test-'.uniqid('', true).'.sqlite');
+    $sqlitePath = $installDirectory.'/database.sqlite';
     File::put($sqlitePath, '');
     putenv("SIGNACULUM_INSTALL_SQLITE={$sqlitePath}");
     $_ENV['SIGNACULUM_INSTALL_SQLITE'] = $sqlitePath;
     $_SERVER['SIGNACULUM_INSTALL_SQLITE'] = $sqlitePath;
 
-    return [$envPath, $backup, $sqlitePath];
+    return $sqlitePath;
 }
 
-function restoreInstallEnv(string $envPath, ?string $backup, ?string $sqlitePath = null): void
+function clearInstallSqliteOverride(): void
 {
     putenv('SIGNACULUM_INSTALL_SQLITE');
     unset($_ENV['SIGNACULUM_INSTALL_SQLITE'], $_SERVER['SIGNACULUM_INSTALL_SQLITE']);
+}
 
-    if ($sqlitePath !== null) {
-        File::delete($sqlitePath);
+/**
+ * A hash of each real checkout file the installer could write, or null when it does not exist.
+ *
+ * @return array<string, string|null>
+ */
+function installFileFingerprints(): array
+{
+    $fingerprints = [];
+
+    foreach ([base_path('.env'), base_path('.env.example'), database_path('database.sqlite')] as $path) {
+        $fingerprints[$path] = File::exists($path) ? hash_file('sha256', $path) : null;
     }
 
-    if ($backup === null) {
-        File::delete($envPath);
-
-        return;
-    }
-
-    File::put($envPath, $backup);
+    return $fingerprints;
 }
 
 /**
@@ -374,19 +369,12 @@ test('install helpers escape empty values and detect a missing production env', 
     $looksLikeProduction->setAccessible(true);
     $environmentValue->setAccessible(true);
 
-    $path = base_path('.env');
-    $backup = File::exists($path) ? File::get($path) : null;
-    File::delete($path);
-
-    try {
-        expect($escape->invoke($command, ''))->toBe('""')
-            ->and($escape->invoke($command, 'plain'))->toBe('plain')
-            ->and($escape->invoke($command, 'hash#tag'))->toBe('"hash#tag"')
-            ->and($looksLikeProduction->invoke($command))->toBeFalse()
-            ->and($environmentValue->invoke($command, 'SIGNACULUM_MISSING_KEY', 'fallback'))->toBe('fallback');
-    } finally {
-        restoreInstallEnv($path, $backup);
-    }
+    expect(File::exists(app()->environmentFilePath()))->toBeFalse()
+        ->and($escape->invoke($command, ''))->toBe('""')
+        ->and($escape->invoke($command, 'plain'))->toBe('plain')
+        ->and($escape->invoke($command, 'hash#tag'))->toBe('"hash#tag"')
+        ->and($looksLikeProduction->invoke($command))->toBeFalse()
+        ->and($environmentValue->invoke($command, 'SIGNACULUM_MISSING_KEY', 'fallback'))->toBe('fallback');
 });
 
 test('install builds a mysql process environment for child artisan calls', function () {
