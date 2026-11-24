@@ -6,7 +6,9 @@ namespace App\Oidc;
 
 use App\Data\AuthorizationContextData;
 use App\Data\ClaimsRequestData;
+use App\Data\TokenFamilyData;
 use App\Enums\OidcScopeEnum;
+use App\Enums\TokenFamilyRootEnum;
 use App\Services\PendingAuthorizationService;
 use App\Services\TokenFamilyService;
 use DateInterval;
@@ -157,9 +159,7 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
 
         $accessToken = parent::issueAccessToken($accessTokenTTL, $client, $userIdentifier, $scopes);
 
-        Passport::token()->newQuery()
-            ->whereKey($accessToken->getIdentifier())
-            ->update(['auth_code_id' => $this->redeemingAuthCodeId]);
+        $this->tokenFamilyService->tag($accessToken->getIdentifier(), $this->redeemingFamily());
 
         return $accessToken;
     }
@@ -199,9 +199,18 @@ final class OidcAuthCodeGrant extends AuthCodeGrant
         }
 
         $this->tokenFamilyService->revokeWhenReused(
-            $authCodeId,
+            new TokenFamilyData(TokenFamilyRootEnum::AuthCode, $authCodeId),
             fn (): bool => (bool) Passport::authCode()->newQuery()->whereKey($authCodeId)->value('revoked'),
         );
+    }
+
+    /**
+     * The family of the code being claimed; issueAccessToken() runs only after the claim
+     * succeeded, so the id is set.
+     */
+    private function redeemingFamily(): TokenFamilyData
+    {
+        return new TokenFamilyData(TokenFamilyRootEnum::AuthCode, (string) $this->redeemingAuthCodeId);
     }
 
     private function storedContext(string $authCodeId): AuthorizationContextData

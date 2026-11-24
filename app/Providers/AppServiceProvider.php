@@ -578,6 +578,7 @@ class AppServiceProvider extends ServiceProvider
                     $this->app->make(RefreshTokenRepository::class),
                     new DateInterval('PT10M'),
                     route('passport.device'),
+                    $this->app->make(TokenFamilyService::class),
                     5,
                 );
                 $deviceCodeGrant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());

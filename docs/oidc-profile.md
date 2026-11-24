@@ -182,13 +182,13 @@ RFC 9700 §2.2.1 / §2.2.2: short-lived access tokens, refresh rotation with reu
 
 ### Token families and reuse detection
 
-Every access and refresh token issued from an authorization code, or refreshed from one of its tokens, belongs to the token family of that code.
+Every access and refresh token issued from an authorization code or a device code, or refreshed from one of its tokens, belongs to the token family of that code.
 
 - **Replayed code** (RFC 6749 §4.1.2, RFC 9700 §4.5): presenting a redeemed code again revokes the whole family, then answers `invalid_grant`.
 - **Reused refresh token** (RFC 9700 §4.14.2): presenting a refresh token that was already rotated or revoked revokes the whole family, then answers `invalid_grant`. The server cannot tell the attacker from the legitimate client, so both have to authorize again. This also applies to a client that refreshes the same token twice in parallel: send one refresh at a time.
-- Tokens from the device code and client credentials grants have no code family: a reused refresh token there only gets `invalid_grant`.
+- Device code tokens have their own family, rooted in the device code: device clients are usually public, and RFC 9700 §2.2.2 requires reuse detection for their rotated refresh tokens. Client credentials tokens have no refresh token, so no family.
 - **`passport:purge`** (any options) keeps what reuse detection needs, and no more:
-    - a live family keeps its code row and every rotated access / refresh pair whose refresh token is not yet past its expiry plus the retention (`--hours`, 7 days by default). An older rotated refresh token is refused as expired anyway, so its pair is deleted; an active session keeps the refreshes of about 37 days;
+    - a live family keeps its code (or device code) row and every rotated access / refresh pair whose refresh token is not yet past its expiry plus the retention (`--hours`, 7 days by default). An older rotated refresh token is refused as expired anyway, so its pair is deleted; an active session keeps the refreshes of about 37 days;
     - a family with no usable token left (revoked, or expired past the retention, whatever the options) is deleted whole;
     - rows outside a family are purged as Passport does;
     - `--hours` must be 0 or more: a negative retention would delete rotated refresh tokens that can still be presented.
