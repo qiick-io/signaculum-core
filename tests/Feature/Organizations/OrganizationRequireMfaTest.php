@@ -128,6 +128,40 @@ test('an enrolled member with only email-code amr is stepped up before authorizi
         ->and(session('url.intended'))->toStartWith(url('/oauth/authorize'));
 });
 
+// OIDC Core §3.1.2.1: a form POST authorization request is stepped up like a GET one, and resumes
+// that request after the second factor, never the Referer or the dashboard (#164).
+test('a form POST authorization request is stepped up like the GET', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->withTwoFactor()->create();
+    $organization = createOrganizationWithOwner($owner, [
+        'slug' => 'posted-step-up-org',
+        'is_mfa_required' => true,
+    ]);
+
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    $client = createOidcClient();
+    parse_str((string) parse_url(authorizeUrl($client, pkcePair()['challenge']), PHP_URL_QUERY), $authorizationParameters);
+
+    $this->actingAs($member);
+    session([
+        OidcSessionService::SESSION_KEY => 'sid-before-step-up',
+        'oidc.authentication_subject' => (string) $member->getKey(), 'oidc.authentication_methods' => [AuthenticationMethodEnum::Password->value],
+    ]);
+
+    $this->withHeader('Referer', 'https://attacker.example.test/phishing')
+        ->post('/oauth/authorize', $authorizationParameters)
+        ->assertRedirect('/login');
+
+    expect(auth()->check())->toBeFalse()
+        ->and(session('url.intended'))->toStartWith(url('/oauth/authorize').'?')
+        ->and(session('url.intended'))->toContain('client_id='.$client->getKey());
+});
+
 test('an enrolled member with password-only amr is stepped up before authorizing', function () {
     $owner = User::factory()->create();
     $member = User::factory()->withTwoFactor()->create();
