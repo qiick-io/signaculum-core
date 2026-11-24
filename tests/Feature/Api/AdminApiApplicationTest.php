@@ -386,6 +386,8 @@ it('refuses a front-channel logout URI the admin form would also refuse', functi
     'plain http' => ['http://front-channel.test/logout'],
     'carries a fragment' => ['https://front-channel.test/logout#done'],
     'not a url' => ['not-a-url'],
+    'carries a user name and password' => ['https://user:pass@front-channel.test/logout'],
+    'carries a user name' => ['https://front-channel.test@evil.test/logout'],
 ]);
 
 /*

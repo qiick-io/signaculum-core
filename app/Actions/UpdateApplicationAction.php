@@ -35,13 +35,19 @@ final class UpdateApplicationAction
             'is_first_party' => $applicationData->isFirstParty,
             'is_pushed_authorization_required' => $applicationData->isPushedAuthorizationRequired,
             'grant_types' => $applicationData->grantTypes(),
-            'frontchannel_logout_uri' => $applicationData->frontchannelLogoutUri,
-            'is_frontchannel_logout_session_required' => $applicationData->isFrontchannelLogoutSessionRequired,
         ];
 
-        // A request that left the field out keeps the registered list; an empty list clears it.
+        // A request that left a logout field out keeps what is registered; an empty value clears it.
         if ($applicationData->postLogoutRedirectUris !== null) {
             $attributes['post_logout_redirect_uris'] = $applicationData->postLogoutRedirectUris ?: null;
+        }
+
+        if ($applicationData->frontchannelLogoutUri !== null) {
+            $attributes['frontchannel_logout_uri'] = $applicationData->frontchannelLogoutUri ?: null;
+        }
+
+        if ($applicationData->isFrontchannelLogoutSessionRequired !== null) {
+            $attributes['is_frontchannel_logout_session_required'] = $applicationData->isFrontchannelLogoutSessionRequired;
         }
 
         if ($applicationData->isConfidential && ! $wasConfidential) {

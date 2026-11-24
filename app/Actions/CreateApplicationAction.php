@@ -42,8 +42,8 @@ final class CreateApplicationAction
             'is_pushed_authorization_required' => $applicationData->isPushedAuthorizationRequired,
             'grant_types' => $applicationData->grantTypes(),
             'post_logout_redirect_uris' => $applicationData->postLogoutRedirectUris ?: null,
-            'frontchannel_logout_uri' => $applicationData->frontchannelLogoutUri,
-            'is_frontchannel_logout_session_required' => $applicationData->isFrontchannelLogoutSessionRequired,
+            'frontchannel_logout_uri' => $applicationData->frontchannelLogoutUri ?: null,
+            'is_frontchannel_logout_session_required' => $applicationData->isFrontchannelLogoutSessionRequired ?? false,
         ])->save();
 
         $client->plainSecret = $plainSecret;
