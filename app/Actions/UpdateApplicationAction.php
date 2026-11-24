@@ -39,6 +39,11 @@ final class UpdateApplicationAction
             'is_frontchannel_logout_session_required' => $applicationData->isFrontchannelLogoutSessionRequired,
         ];
 
+        // A request that left the field out keeps the registered list; an empty list clears it.
+        if ($applicationData->postLogoutRedirectUris !== null) {
+            $attributes['post_logout_redirect_uris'] = $applicationData->postLogoutRedirectUris ?: null;
+        }
+
         if ($applicationData->isConfidential && ! $wasConfidential) {
             $attributes['secret'] = Str::random(40);
         }

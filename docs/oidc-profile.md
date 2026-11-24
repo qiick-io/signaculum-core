@@ -236,7 +236,7 @@ Client credentials exchange:
 
 On `oauth_clients` (beside Passport's columns):
 
-- `post_logout_redirect_uris` (JSON array, default `[]`): exact-match only
+- `post_logout_redirect_uris` (JSON array, default `[]`): exact-match only; each one an absolute https URL (http only for localhost / 127.0.0.1), no fragment, no user name or password, no wildcard. Set in Admin → Applications (one per line) or `post_logout_redirect_uris` on `POST /api/v1/applications`. An update that leaves the field out keeps the registered list; only an explicit empty list clears it
 - `backchannel_logout_uri` (nullable string)
 - `is_backchannel_logout_session_required` (boolean, default `true`): when true, the `logout_token` always carries `sid`
 - `frontchannel_logout_uri` (nullable string): absolute https URL (http only for localhost); exact value; no fragment

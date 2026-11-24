@@ -81,6 +81,7 @@ export type AdminApplicationRow = {
     id: string;
     name: string;
     redirect_uris: string[];
+    post_logout_redirect_uris: string[];
     is_confidential: boolean;
     is_first_party: boolean;
     is_client_credentials_enabled: boolean;

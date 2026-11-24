@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ApplicationResource;
 use App\Models\Client;
 use App\Rules\FrontchannelLogoutUriRule;
+use App\Rules\RedirectUriRule;
 use App\Services\ApplicationQueryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,6 +62,8 @@ final class ApplicationController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'redirect_uris' => ['required', 'array', 'min:1'],
             'redirect_uris.*' => ['required', 'url'],
+            'post_logout_redirect_uris' => ['sometimes', 'array'],
+            'post_logout_redirect_uris.*' => ['required', 'string', new RedirectUriRule(isPostLogoutRedirectUri: true)],
             'is_confidential' => ['required', 'boolean'],
             'is_first_party' => ['required', 'boolean'],
             'is_client_credentials_enabled' => ['sometimes', 'boolean'],

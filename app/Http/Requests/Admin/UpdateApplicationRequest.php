@@ -37,6 +37,7 @@ final class UpdateApplicationRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'redirect_uris' => ['required', 'string'],
+            'post_logout_redirect_uris' => ['sometimes', 'nullable', 'string'],
             'is_confidential' => ['required', 'boolean'],
             'is_first_party' => ['required', 'boolean'],
             'is_client_credentials_enabled' => ['required', 'boolean'],
@@ -63,6 +64,7 @@ final class UpdateApplicationRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             $this->validateParsedRedirectUris($validator);
+            $this->validateParsedPostLogoutRedirectUris($validator);
             $this->validateFrontchannelLogoutUri($validator);
 
             if ($this->boolean('is_client_credentials_enabled') && ! $this->boolean('is_confidential')) {

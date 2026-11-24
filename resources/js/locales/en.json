@@ -607,6 +607,8 @@
                 "nameRequired": "Name *",
                 "redirectUrisRequired": "Redirect URIs *",
                 "redirectUrisHint": "One absolute URL per line. https required except http://localhost or http://127.0.0.1. No fragments. Exact match at runtime.",
+                "postLogoutRedirectUris": "Post-logout redirect URIs",
+                "postLogoutRedirectUrisHint": "Where the app may send people back after signing out (OIDC RP-Initiated Logout). One absolute URL per line, same rules as redirect URIs. laravel-oidc apps use {APP_URL}/auth/oidc/logged-out. A URI that is not listed here is refused.",
                 "clientId": "Client ID",
                 "discoveryUrl": "Discovery URL",
                 "configureCommand": "oidc:configure",
