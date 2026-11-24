@@ -14,6 +14,7 @@ use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Entities\DeviceCodeEntityInterface;
 use League\OAuth2\Server\Entities\ScopeEntityInterface;
+use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\Grant\DeviceCodeGrant;
 use League\OAuth2\Server\Repositories\DeviceCodeRepositoryInterface;
 use League\OAuth2\Server\Repositories\RefreshTokenRepositoryInterface;
@@ -33,6 +34,12 @@ use Psr\Http\Message\ServerRequestInterface;
  * OidcRefreshTokenGrant passes it on: the device code is the root of a token family,
  * so a reused device refresh token revokes the family (RFC 9700 §2.2.2, §4.14.2;
  * device clients are usually public).
+ *
+ * A device code is single use (RFC 8628 §3.5). Presenting a redeemed one again means it
+ * leaked, as for an authorization code (RFC 6749 §4.1.2, RFC 9700 §4.5; see
+ * OidcAuthCodeGrant): its whole family is revoked before league answers `invalid_grant`.
+ * Holding the code is enough, by design. Two parallel polls of an approved code count as
+ * a replay too: the loser revokes the winner's tokens.
  */
 final class OidcDeviceCodeGrant extends DeviceCodeGrant
 {
@@ -58,6 +65,10 @@ final class OidcDeviceCodeGrant extends DeviceCodeGrant
         );
     }
 
+    /**
+     * @throws OAuthServerException `invalid_grant` for a replayed device code, after the
+     *                              tokens of its family have been revoked
+     */
     public function respondToAccessTokenRequest(
         ServerRequestInterface $request,
         ResponseTypeInterface $responseType,
@@ -65,13 +76,37 @@ final class OidcDeviceCodeGrant extends DeviceCodeGrant
     ): ResponseTypeInterface {
         $this->redeemingDeviceCodeId = null;
         $deviceCodeId = (string) $this->getRequestParameter('device_code', $request);
-        $responseType = parent::respondToAccessTokenRequest($request, $responseType, $accessTokenTTL);
+
+        try {
+            $responseType = parent::respondToAccessTokenRequest($request, $responseType, $accessTokenTTL);
+        } catch (OAuthServerException $exception) {
+            $this->revokeTokenFamilyOfRedeemedDeviceCode($deviceCodeId);
+
+            throw $exception;
+        }
 
         if ($responseType instanceof IdTokenResponse && $deviceCodeId !== '') {
             $responseType->setAuthorizationContext($this->storedContext($deviceCodeId));
         }
 
         return $responseType;
+    }
+
+    /**
+     * A redeemed device code is revoked; a code still pending, denied without tokens or
+     * merely polled too soon leaves nothing to revoke. The check runs under the family
+     * lock, so a refresh in flight finishes first and its tokens are revoked too.
+     */
+    private function revokeTokenFamilyOfRedeemedDeviceCode(string $deviceCodeId): void
+    {
+        if ($deviceCodeId === '') {
+            return;
+        }
+
+        $this->tokenFamilyService->revokeWhenReused(
+            new TokenFamilyData(TokenFamilyRootEnum::DeviceCode, $deviceCodeId),
+            fn (): bool => (bool) Passport::deviceCode()->newQuery()->whereKey($deviceCodeId)->value('revoked'),
+        );
     }
 
     protected function validateDeviceCode(ServerRequestInterface $request, ClientEntityInterface $client): DeviceCodeEntityInterface
