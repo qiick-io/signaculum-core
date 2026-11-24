@@ -61,7 +61,7 @@ final class ApplicationController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'redirect_uris' => ['required', 'array', 'min:1'],
-            'redirect_uris.*' => ['required', 'url'],
+            'redirect_uris.*' => ['required', 'string', new RedirectUriRule],
             'post_logout_redirect_uris' => ['sometimes', 'array'],
             'post_logout_redirect_uris.*' => ['required', 'string', new RedirectUriRule(isPostLogoutRedirectUri: true)],
             'is_confidential' => ['required', 'boolean'],
