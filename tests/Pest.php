@@ -221,6 +221,111 @@ function tokenRowCounts(): array
     ];
 }
 
+/*
+| RFC 8628 device authorization grant: a public device client, its device code, the
+| user's approval on the consent screen and the polling of the token endpoint.
+*/
+
+function deviceAuthorizationClient(): Client
+{
+    $client = app(ClientRepository::class)->createDeviceAuthorizationGrantClient(
+        'CLI device',
+        confidential: false,
+    );
+
+    return $client;
+}
+
+/**
+ * Issue a device code for the given client and scopes.
+ *
+ * @return array{device_code: string, user_code: string, interval: int}
+ */
+function issueDeviceCode(Client $client, string $scope = 'openid profile'): array
+{
+    $response = test()->postJson(route('passport.device.code'), [
+        'client_id' => $client->getKey(),
+        'scope' => $scope,
+    ])->assertOk();
+
+    return [
+        'device_code' => (string) $response->json('device_code'),
+        'user_code' => (string) $response->json('user_code'),
+        'interval' => (int) $response->json('interval'),
+    ];
+}
+
+/**
+ * Open the device consent screen and approve (or deny) as the current user.
+ */
+function approveDeviceAuthorization(string $userCode, bool $isApproved = true): void
+{
+    test()->get(route('passport.device.authorizations.authorize', ['user_code' => $userCode]))
+        ->assertOk();
+
+    $authToken = session('authToken');
+
+    expect($authToken)->toBeString()->not->toBeEmpty();
+
+    if ($isApproved) {
+        test()->post(route('passport.device.authorizations.approve'), [
+            'auth_token' => $authToken,
+        ])->assertRedirect();
+
+        return;
+    }
+
+    test()->delete(route('passport.device.authorizations.deny'), [
+        'auth_token' => $authToken,
+    ])->assertRedirect();
+}
+
+/**
+ * Poll the token endpoint with a device code (RFC 8628 §3.4).
+ */
+function redeemDeviceCode(Client $client, string $deviceCode): TestResponse
+{
+    return test()->post('/oauth/token', [
+        'grant_type' => 'urn:ietf:params:oauth:grant-type:device_code',
+        'client_id' => $client->getKey(),
+        'device_code' => $deviceCode,
+    ]);
+}
+
+/**
+ * A user approves a device code for a new public device client, which redeems it and
+ * refreshes once (the first refresh token rotates). Sets `client` on the test case for
+ * refreshTokens().
+ *
+ * @return array{device_code: string, issued: array<string, mixed>, refreshed: array<string, mixed>}
+ */
+function deviceTokenFamily(object $testCase): array
+{
+    $testCase->client = deviceAuthorizationClient();
+    $testCase->actingAs(User::factory()->create());
+
+    $device = issueDeviceCode($testCase->client);
+    approveDeviceAuthorization($device['user_code']);
+
+    $issuedTokens = redeemDeviceCode($testCase->client, $device['device_code'])->assertOk()->json();
+    $refreshedTokens = refreshTokens($testCase, $issuedTokens['refresh_token'])->assertOk()->json();
+
+    return ['device_code' => $device['device_code'], 'issued' => $issuedTokens, 'refreshed' => $refreshedTokens];
+}
+
+/**
+ * The family's newest access token is refused and its newest refresh token no longer refreshes.
+ *
+ * @param  array<string, mixed>  $refreshedTokens
+ */
+function assertDeviceFamilyRevoked(object $testCase, array $refreshedTokens): void
+{
+    app('auth')->forgetGuards();
+
+    $testCase->withToken($refreshedTokens['access_token'])->getJson('/oauth/userinfo')->assertUnauthorized();
+    refreshTokens($testCase, $refreshedTokens['refresh_token'])->assertStatus(400);
+}
+
 /**
  * Parse an id_token and check its RS256 signature with the stored key of its `kid`.
  */
