@@ -48,11 +48,13 @@ php artisan oidc:configure \
 
 Typical URIs for the package defaults:
 
-| Purpose      | URI                                               |
-| ------------ | ------------------------------------------------- |
-| Redirect     | `{APP_URL}/auth/oidc/callback`                    |
-| Post-logout  | `{APP_URL}/` (or `oidc.post_logout_redirect_uri`) |
-| Back-channel | `{APP_URL}/auth/oidc/backchannel-logout`          |
+| Purpose      | URI                                                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| Redirect     | `{APP_URL}/auth/oidc/callback`                                                                                                |
+| Post-logout  | `{APP_URL}/auth/oidc/logged-out` from the next laravel-oidc beta; `{APP_URL}/` before it (or `oidc.post_logout_redirect_uri`) |
+| Back-channel | `{APP_URL}/auth/oidc/backchannel-logout`                                                                                      |
+
+While an application moves to the next laravel-oidc beta, register both post-logout URIs: Signaculum matches the `post_logout_redirect_uri` exactly against the registered list.
 
 ## Machine clients
 
