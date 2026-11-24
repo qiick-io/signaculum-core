@@ -25,6 +25,10 @@ return new class extends Migration
             $table->string('brand_color', 7)->nullable();
             $table->string('brand_color_dark', 7)->nullable();
             $table->timestamps();
+            // Deleting an organisation is an offboarding that keeps its principals and audit rows
+            // as evidence (principals.organisation_id is restrict), so the row is soft-deleted and
+            // its unique slug stays taken: nobody can take over a deleted organisation's identity.
+            $table->softDeletes();
         });
     }
 

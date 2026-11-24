@@ -837,9 +837,9 @@
         },
         "danger": {
             "title": "Elimina organizzazione",
-            "description": "Elimina l’organizzazione e tutte le membership. L’azione non è reversibile.",
+            "description": "Dismette l’organizzazione: tutti i membri perdono l’accesso, gli inviti in sospeso vengono annullati e le API key dei suoi account vengono revocate. Lo storico di audit resta, e il suo slug non potrà più essere usato.",
             "confirmTitle": "Eliminare questa organizzazione?",
-            "confirmDescription": "Digita il nome dell’organizzazione per confermare l’eliminazione permanente."
+            "confirmDescription": "Digita il nome dell’organizzazione per confermare. I membri perdono subito l’accesso; l’azione non è reversibile."
         },
         "views": {
             "label": "Viste dell'organizzazione",

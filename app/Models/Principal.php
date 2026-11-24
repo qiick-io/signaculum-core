@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Enums\PrincipalTypeEnum;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $organisation_id
  * @property string $name
  * @property Carbon|null $deactivated_at
+ * @property PrincipalDeactivationReasonEnum|null $deactivation_reason
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -37,6 +39,7 @@ class Principal extends Model
         'organisation_id',
         'name',
         'deactivated_at',
+        'deactivation_reason',
     ];
 
     /**
@@ -47,6 +50,7 @@ class Principal extends Model
         return [
             'type' => PrincipalTypeEnum::class,
             'deactivated_at' => 'datetime',
+            'deactivation_reason' => PrincipalDeactivationReasonEnum::class,
         ];
     }
 

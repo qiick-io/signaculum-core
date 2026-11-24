@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Enums\PrincipalTypeEnum;
 use App\Models\Organization;
 use App\Models\Principal;
@@ -25,6 +26,9 @@ final class DeactivateOrganizationMembershipPrincipalAction
             ->where('organisation_id', $organization->getKey())
             ->where('user_id', $user->getKey())
             ->whereNull('deactivated_at')
-            ->update(['deactivated_at' => Date::now()]);
+            ->update([
+                'deactivated_at' => Date::now(),
+                'deactivation_reason' => PrincipalDeactivationReasonEnum::Offboarded->value,
+            ]);
     }
 }

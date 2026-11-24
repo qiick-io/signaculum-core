@@ -29,6 +29,7 @@ final class EnsureOrganizationMembershipPrincipalAction
         $principal->fill([
             'name' => $displayName,
             'deactivated_at' => null,
+            'deactivation_reason' => null,
         ]);
         $principal->save();
 

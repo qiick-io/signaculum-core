@@ -34,6 +34,6 @@ final class ReactivateUserAction
             ->where('user_id', $user->getKey())
             ->whereIn('organisation_id', $organisationIds)
             ->whereNotNull('deactivated_at')
-            ->update(['deactivated_at' => null]);
+            ->update(['deactivated_at' => null, 'deactivation_reason' => null]);
     }
 }

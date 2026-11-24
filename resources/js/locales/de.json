@@ -837,9 +837,9 @@
         },
         "danger": {
             "title": "Organisation löschen",
-            "description": "Löscht die Organisation und alle Mitgliedschaften. Dies kann nicht rückgängig gemacht werden.",
+            "description": "Offboardet die Organisation: Alle Mitglieder verlieren den Zugang, offene Einladungen werden storniert und API-Schlüssel ihrer Konten widerrufen. Der Audit-Verlauf bleibt erhalten, und ihr Slug kann nicht erneut verwendet werden.",
             "confirmTitle": "Diese Organisation löschen?",
-            "confirmDescription": "Geben Sie den Organisationsnamen ein, um die endgültige Löschung zu bestätigen."
+            "confirmDescription": "Geben Sie den Organisationsnamen zur Bestätigung ein. Mitglieder verlieren sofort den Zugang; dies kann nicht rückgängig gemacht werden."
         },
         "views": {
             "label": "Organisationsansichten",
