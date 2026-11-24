@@ -47,13 +47,13 @@ final class InstallCommand extends Command
             return self::FAILURE;
         }
 
-        if (! File::exists(base_path('.env.example'))) {
+        if (! File::exists($this->environmentExamplePath())) {
             $this->components->error('.env.example is missing.');
 
             return self::FAILURE;
         }
 
-        $envPath = base_path('.env');
+        $envPath = app()->environmentFilePath();
 
         if (File::exists($envPath) && ! $force) {
             if ($this->isNonInteractive()) {
@@ -75,7 +75,7 @@ final class InstallCommand extends Command
         $databaseCredentials = $connection === 'sqlite' ? [] : $this->askForDatabaseCredentials($connection);
 
         $preservedAppKey = $this->resolvePreservedAppKey($envPath);
-        $env = File::get(base_path('.env.example'));
+        $env = File::get($this->environmentExamplePath());
         $env = $this->setEnv($env, 'APP_NAME', $appName);
         $env = $this->setEnv($env, 'APP_URL', $appUrl);
         $env = $this->setEnv($env, 'DB_CONNECTION', $connection);
@@ -438,17 +438,31 @@ final class InstallCommand extends Command
         return $environment;
     }
 
+    /**
+     * `.env.example` sits next to the environment file the application reads.
+     *
+     * Both paths come from the application rather than base_path(), so a test (or a deployment
+     * with a custom environment path) points the installer at its own files: the installer test
+     * once rewrote the `.env` shared by every parallel worker and by the developer (#176).
+     */
+    private function environmentExamplePath(): string
+    {
+        return app()->environmentPath().DIRECTORY_SEPARATOR.'.env.example';
+    }
+
     private function looksLikeProduction(): bool
     {
         if (app()->environment('production')) {
             return true;
         }
 
-        if (! File::exists(base_path('.env'))) {
+        $envPath = app()->environmentFilePath();
+
+        if (! File::exists($envPath)) {
             return false;
         }
 
-        return preg_match('/^APP_ENV\s*=\s*production\s*$/mi', File::get(base_path('.env'))) === 1;
+        return preg_match('/^APP_ENV\s*=\s*production\s*$/mi', File::get($envPath)) === 1;
     }
 
     /**
@@ -470,7 +484,7 @@ final class InstallCommand extends Command
      */
     private function appEnvironmentFromDotEnv(): string
     {
-        $envPath = base_path('.env');
+        $envPath = app()->environmentFilePath();
 
         if (! File::exists($envPath)) {
             return (string) app()->environment();
