@@ -190,7 +190,8 @@ Every access and refresh token issued from an authorization code, or refreshed f
 - **`passport:purge`** (any options) keeps what reuse detection needs, and no more:
     - a live family keeps its code row and every rotated access / refresh pair whose refresh token is not yet past its expiry plus the retention (`--hours`, 7 days by default). An older rotated refresh token is refused as expired anyway, so its pair is deleted; an active session keeps the refreshes of about 37 days;
     - a family with no usable token left (revoked, or expired past the retention, whatever the options) is deleted whole;
-    - rows outside a family are purged as Passport does.
+    - rows outside a family are purged as Passport does;
+    - `--hours` must be 0 or more: a negative retention would delete rotated refresh tokens that can still be presented.
 
     Scheduling it (for example `Schedule::command('passport:purge')->hourly()`) is safe.
 

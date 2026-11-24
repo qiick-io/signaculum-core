@@ -19,12 +19,14 @@ use App\Models\User;
 use App\Models\Webhook;
 use App\Services\SigningKeyService;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Client;
 use Laravel\Passport\ClientRepository;
+use Laravel\Passport\Passport;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Encoding\ChainedFormatter;
 use Lcobucci\JWT\Encoding\JoseEncoder;
@@ -183,6 +185,40 @@ function refreshTokens(object $testCase, string $refreshToken): TestResponse
         'client_secret' => $testCase->client->plainSecret,
         'refresh_token' => $refreshToken,
     ]);
+}
+
+/**
+ * Move the stored expiries of the code and of every token `$days` into the past, or only
+ * those of the revoked (rotated) tokens. League stamps expiries with the real clock
+ * (`new DateTimeImmutable()`), which travel() does not move, so ageing the rows keeps
+ * the grants and the purge on one clock.
+ *
+ * Only the rows age: the `expire_time` inside an issued (encrypted) token does not, so
+ * league still accepts an aged token that has not really expired. Never expect league
+ * to answer `expired` for a token aged here.
+ */
+function ageTokenRows(int $days, bool $isRotatedOnly = false): void
+{
+    foreach ([Passport::authCode(), Passport::token(), Passport::refreshToken()] as $tokenModel) {
+        $tokenModel->newQuery()
+            ->when($isRotatedOnly, fn ($query) => $query->where('revoked', true))
+            ->get()
+            ->each(fn (Model $tokenRow) => $tokenModel->newQuery()
+                ->whereKey($tokenRow->getKey())
+                ->update(['expires_at' => $tokenRow->getAttribute('expires_at')->subDays($days)]));
+    }
+}
+
+/**
+ * @return array{int, int, int} the code, access token and refresh token row counts
+ */
+function tokenRowCounts(): array
+{
+    return [
+        Passport::authCode()->newQuery()->count(),
+        Passport::token()->newQuery()->count(),
+        Passport::refreshToken()->newQuery()->count(),
+    ];
 }
 
 /**

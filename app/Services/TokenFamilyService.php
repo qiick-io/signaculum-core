@@ -20,6 +20,13 @@ use Laravel\Passport\Passport;
 final class TokenFamilyService
 {
     /**
+     * Attempts of a token family transaction. MySQL and MariaDB (REPEATABLE READ) may pick
+     * one as a deadlock victim against a parallel grant or purge; Laravel retries it on
+     * such concurrency errors, so a reuse is still revoked instead of answering 500.
+     */
+    public const int TRANSACTION_ATTEMPTS = 3;
+
+    /**
      * Lock the family root. Call it inside a transaction, before any other lock.
      */
     public function lock(string $authCodeId): void
@@ -65,6 +72,6 @@ final class TokenFamilyService
 
             Passport::token()->newQuery()->whereKey($familyAccessTokenIds)->update(['revoked' => true]);
             Passport::refreshToken()->newQuery()->whereIn('access_token_id', $familyAccessTokenIds)->update(['revoked' => true]);
-        });
+        }, self::TRANSACTION_ATTEMPTS);
     }
 }

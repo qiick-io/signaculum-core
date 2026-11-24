@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Laravel\Passport\Passport;
 
 /**
@@ -30,36 +29,6 @@ function assertFamilyRevoked(object $testCase): void
 
     $testCase->withToken($testCase->refreshedTokens['access_token'])->getJson('/oauth/userinfo')->assertUnauthorized();
     refreshTokens($testCase, $testCase->refreshedTokens['refresh_token'])->assertStatus(400);
-}
-
-/**
- * Move the stored expiries of the code and of every token `$days` into the past, or only
- * those of the revoked (rotated) tokens. League stamps expiries with the real clock
- * (`new DateTimeImmutable()`), which travel() does not move, so ageing the rows keeps
- * the grants and the purge on one clock.
- */
-function ageTokenRows(int $days, bool $isRotatedOnly = false): void
-{
-    foreach ([Passport::authCode(), Passport::token(), Passport::refreshToken()] as $tokenModel) {
-        $tokenModel->newQuery()
-            ->when($isRotatedOnly, fn ($query) => $query->where('revoked', true))
-            ->get()
-            ->each(fn (Model $tokenRow) => $tokenModel->newQuery()
-                ->whereKey($tokenRow->getKey())
-                ->update(['expires_at' => $tokenRow->getAttribute('expires_at')->subDays($days)]));
-    }
-}
-
-/**
- * @return array{int, int, int} the code, access token and refresh token row counts
- */
-function tokenRowCounts(): array
-{
-    return [
-        Passport::authCode()->newQuery()->count(),
-        Passport::token()->newQuery()->count(),
-        Passport::refreshToken()->newQuery()->count(),
-    ];
 }
 
 test('a code replayed after a purge of revoked rows still revokes its family', function (string $purgeOption) {
@@ -129,6 +98,12 @@ test('the rotated tokens of a live family are purged once they expired', functio
 
     assertFamilyRevoked($this);
 });
+
+test('a negative or malformed retention is refused and purges nothing', function (string $hours) {
+    $this->artisan('passport:purge', ['--hours' => $hours])->assertFailed();
+
+    expect(tokenRowCounts())->toBe([1, 2, 2]);
+})->with(['negative' => '-1', 'not a number' => 'a week']);
 
 test('revoked tokens outside a code family are purged as before', function () {
     $standaloneAccessToken = Passport::token()->newQuery()->firstOrFail()->replicate()->fill([
