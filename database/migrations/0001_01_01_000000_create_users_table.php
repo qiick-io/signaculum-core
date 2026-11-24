@@ -7,9 +7,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Users table: base identity columns. Later migrations (still folded toward one create_
- * before the first stable release) add OIDC subject, names, locale, 2FA, LDAP, etc.
- * Username and timezone ship here so beta.1 does not need this week's add_ migrations.
+ * Users table: every column of a Signaculum account, in one create_ migration before the
+ * first stable release (#218). The earlier add_ migrations (subject, names, locale, 2FA,
+ * status, lockout, LDAP) are folded in here; a database created by a beta is recreated.
  *
  * @see knowledge/decisions/2026-11-20-migrations-freeze-at-first-stable-release
  */
@@ -22,12 +22,32 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            // Opaque, never reassigned OpenID Connect subject (`sub`). Clients key their
+            // identities on (iss, sub), so it must not leak the auto-increment id or ever change.
+            $table->uuid('subject')->nullable()->unique();
+            // First and last name, released as `given_name` / `family_name`; `name` is the
+            // joined full name (User::name accessor), not a column.
+            $table->string('first_name')->default('');
+            $table->string('last_name')->nullable();
             $table->string('email')->unique();
+            // UI language, also released as the OIDC `locale` claim (profile scope).
+            $table->string('locale', 10)->nullable();
+            // Stable LDAP directory link for read-only sync (#77): the converted objectGUID /
+            // entryUUID, null for a local-only account. Missing directory entries are
+            // deactivated, never deleted.
+            $table->string('ldap_guid')->nullable()->unique();
+            $table->string('ldap_dn')->nullable();
             $table->string('username')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
+            $table->boolean('is_active')->default(true);
+            // Brute-force lockout: failed password logins and the moment the account unlocks.
+            $table->unsignedInteger('failed_login_attempts')->default(0);
+            $table->timestamp('locked_until')->nullable();
             // Nullable: LDAP-sourced accounts authenticate by bind, not a local hash (#187).
             $table->string('password')->nullable();
+            $table->text('two_factor_secret')->nullable();
+            $table->text('two_factor_recovery_codes')->nullable();
+            $table->timestamp('two_factor_confirmed_at')->nullable();
             $table->string('timezone')->default('UTC');
             $table->timestamp('last_login_at')->nullable();
             $table->string('last_login_ip', 45)->nullable();

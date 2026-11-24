@@ -20,6 +20,9 @@ return new class extends Migration
             $table->boolean('revoked');
             $table->timestamps();
             $table->dateTime('expires_at')->nullable();
+            // Root of the token family of an authorization code (refreshes inherit it), so a
+            // replayed code revokes the whole family it issued (RFC 6749 §4.1.2, RFC 9700 §4.5).
+            $table->char('auth_code_id', 80)->nullable()->index();
             // Root of the token family of a device code grant (RFC 9700 §4.14.2); the
             // authorization code root is `auth_code_id`.
             $table->char('device_code_id', 80)->nullable()->index();

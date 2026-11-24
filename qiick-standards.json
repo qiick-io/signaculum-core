@@ -63,12 +63,6 @@
             "decision": "knowledge/decisions/2026-11-19-roles-groups-initial-admin-and-username",
             "review_by": "2027-05-01",
             "issue": "https://github.com/qiick-io/signaculum-core/issues/223"
-        },
-        "C34": {
-            "reason": "Remaining historical add_/alter_ files fold before the first stable tag",
-            "decision": "knowledge/decisions/2026-11-20-migrations-freeze-at-first-stable-release",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/218"
         }
     }
 }
