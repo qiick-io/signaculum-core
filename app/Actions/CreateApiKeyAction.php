@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Data\ApiKeyData;
-use App\Data\ApiKeyScopesData;
 use App\Data\IssuedApiKeyData;
-use App\Enums\ApiKeyScopeEnum;
 use App\Models\ApiKey;
 use App\Models\User;
 use App\Services\ApiKeyLifetimeService;
-use App\Services\ApiKeySecretService;
+use App\Services\ApiKeyScopeVocabularyService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
+use Qiick\ApiKeys\ScopeSet;
+use Qiick\ApiKeys\TokenCodec;
 
 /**
  * Creates an Admin REST API key owned by the singleton `instance_service` principal.
@@ -33,7 +33,8 @@ use InvalidArgumentException;
 final class CreateApiKeyAction
 {
     public function __construct(
-        private readonly ApiKeySecretService $apiKeySecretService,
+        private readonly TokenCodec $tokenCodec,
+        private readonly ApiKeyScopeVocabularyService $apiKeyScopeVocabularyService,
         private readonly EnsureInstanceServicePrincipalAction $ensureInstanceServicePrincipalAction,
         private readonly ApiKeyLifetimeService $apiKeyLifetimeService,
     ) {}
@@ -47,15 +48,15 @@ final class CreateApiKeyAction
     {
         Gate::forUser($issuer)->authorize('create', ApiKey::class);
 
-        $grantedScopes = ApiKeyScopesData::fromStored($apiKeyData->scopes, ApiKeyScopeEnum::values());
+        $grantedScopes = ScopeSet::parseStored($apiKeyData->scopes, $this->apiKeyScopeVocabularyService);
 
-        if ($grantedScopes === null) {
+        if ($grantedScopes->isEmpty()) {
             throw new InvalidArgumentException('An API key needs at least one known scope.');
         }
 
         $expiresAt = $this->apiKeyLifetimeService->allowedExpiry($apiKeyData->expiresAt, CarbonImmutable::now());
 
-        $secret = $this->apiKeySecretService->issue();
+        $secret = $this->tokenCodec->issue();
         $instancePrincipal = $this->ensureInstanceServicePrincipalAction->execute();
 
         $apiKey = DB::transaction(function () use ($issuer, $apiKeyData, $grantedScopes, $secret, $instancePrincipal, $expiresAt): ApiKey {
@@ -63,11 +64,12 @@ final class CreateApiKeyAction
                 'name' => $apiKeyData->name,
                 'key_prefix' => $secret->keyPrefix,
                 'key_hash' => $secret->keyHash,
+                'token_version' => $secret->tokenVersion,
                 // Attribution / FK: the issuing admin. Ownership for auth is the principal.
                 'owner_id' => $issuer->getKey(),
                 'owner_principal_id' => $instancePrincipal->getKey(),
                 'created_by' => $issuer->getKey(),
-                'scopes' => $grantedScopes->scopes,
+                'scopes' => $grantedScopes->values(),
                 'ip_allowlist' => $apiKeyData->ipAllowlist,
                 'rate_limit_per_minute' => $apiKeyData->rateLimitPerMinute,
                 'expires_at' => $expiresAt,
@@ -78,12 +80,12 @@ final class CreateApiKeyAction
                 ->causedBy($issuer)
                 ->performedOn($apiKey)
                 ->event('created')
-                ->withProperties(['name' => $apiKey->name, 'scopes' => $grantedScopes->scopes])
+                ->withProperties(['name' => $apiKey->name, 'scopes' => $grantedScopes->values()])
                 ->log('API key created');
 
             return $apiKey;
         });
 
-        return new IssuedApiKeyData($apiKey, $secret->plainTextToken);
+        return new IssuedApiKeyData($apiKey, $secret->plainText);
     }
 }

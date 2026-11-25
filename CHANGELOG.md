@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Admin API keys run on `qiick/laravel-api-keys` `^0.3@beta`** (the fleet package; `config/api-keys.php`). Signaculum keeps its owner rule (the `instance_service` principal, an active instance admin to act as) and its 90-day lifetime cap. What changes for integrations:
+    - new keys are **token version 2** (`sig_<env>_<id><secret>` plus a 6-character checksum; secret scanners: `\bsig_(?:live|test)_[A-Za-z0-9]{40}(?:[A-Za-z0-9]{6})?\b`);
+    - refusal messages are the package's ("The API key is not valid.", "The API key has expired.", …); the `error` codes and `WWW-Authenticate` headers are unchanged, except that a key whose stored scopes no longer parse is now `403 insufficient_scope` instead of `401 invalid_token`;
+    - a failed-attempt brake: after 20 wrong guesses a minute from one address, every key from that address is `429`;
+    - rate limits answer with `Retry-After` and `X-RateLimit-*`, and need Redis or Memcached as the cache store until the package's database limiter ships (0.3.0-beta.2);
+    - expiry mails come from `api-keys:notify-expiring` (it replaces `signaculum:notify-expiring-api-keys`): one per key and expiry once the key expires within seven days, again after a rotation;
+    - `last_used_user_agent` is recorded; the `api_keys` table has the package's columns (`token_version`, `previous_key_prefix`, `restrictions`, `rate_limit_per_day` / `_month`, expiry-notice stamps, exposure and revocation details). **Recreate beta databases with `php artisan migrate:fresh --seed`**; keys issued before must be created again.
+    - Configuration moved from `config/api.php` to `config/api-keys.php`: `key_prefix`, `key_environment`, `key_rotation_grace_hours`, `key_expiry_warning_days` and `default_rate_limit_per_minute`.
+
 - Pinned the Docker image back to `php:8.4-fpm-bookworm` to match `.php-version`; Dependabot now ignores PHP minor and major image updates so the version jump is made by hand with the CI matrix (#245).
 - Renamed the PAR storage table from `oauth_pushed_authorization_requests` to `signaculum_pushed_authorization_requests` so the standard name stays free for `qiick/laravel-mcp-oauth` (#238). **Recreate beta.1 databases with `php artisan migrate:fresh --seed`** (the `create_` migration was edited in place). Spent and expired PAR rows are pruned daily via `model:prune`.
 - Spatie `permission.column_names.team_foreign_key` is `organisation_id` while `teams` stays `false` (decision 2026-11-22). With teams off the Spatie team column is not created yet; recreate beta.1 databases with `php artisan migrate:fresh --seed` so config (and any atypical `permission.testing` schema) stays aligned.

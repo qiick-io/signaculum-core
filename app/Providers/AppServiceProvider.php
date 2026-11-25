@@ -25,7 +25,12 @@ use App\Oidc\OidcRefreshTokenGrant;
 use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
 use App\Services\ActivityOrganisationResolverService;
+use App\Services\ApiKeyAuthorizerService;
+use App\Services\ApiKeyExpiryRecipientService;
 use App\Services\ApiKeyLifetimeService;
+use App\Services\ApiKeyRepositoryService;
+use App\Services\ApiKeyScopeVocabularyService;
+use App\Services\ApplicationClockService;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\EmailTemplateService;
 use App\Services\InstanceAdminDemotionService;
@@ -62,6 +67,19 @@ use Laravel\Passport\Bridge\RefreshTokenRepository;
 use Laravel\Passport\Passport;
 use Laravel\Passport\Scope;
 use League\OAuth2\Server\AuthorizationServer;
+use Qiick\ApiKeys\ApiKeyAuthenticator;
+use Qiick\ApiKeys\Audit;
+use Qiick\ApiKeys\Contracts\ApiKeyRepository;
+use Qiick\ApiKeys\Contracts\AttemptLimiter;
+use Qiick\ApiKeys\Contracts\Clock;
+use Qiick\ApiKeys\Contracts\ExpiryRecipientResolver;
+use Qiick\ApiKeys\Contracts\KeyAuthorizer;
+use Qiick\ApiKeys\Contracts\LifetimePolicy;
+use Qiick\ApiKeys\Contracts\ScopeVocabulary;
+use Qiick\ApiKeys\FailedAttemptLimiter;
+use Qiick\ApiKeys\IpAllowlist;
+use Qiick\ApiKeys\TokenCodec;
+use Qiick\ApiKeys\UsageRecorder;
 use Spatie\Activitylog\Facades\Activity;
 use Spatie\Permission\Events\PermissionAttachedEvent;
 use Spatie\Permission\Events\PermissionDetachedEvent;
@@ -89,6 +107,38 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(EffectivePermissionResolverService::class);
         // One instance per process, so a tracked change nested in another is reported once.
         $this->app->singleton(InstanceAdminDemotionService::class);
+
+        $this->registerApiKeys();
+    }
+
+    /**
+     * Admin API keys run on qiick/laravel-api-keys: the product binds its table, its rules and
+     * its scope vocabulary, and builds the authenticator from `config/api-keys.php`.
+     */
+    protected function registerApiKeys(): void
+    {
+        $this->app->singleton(ApiKeyRepository::class, ApiKeyRepositoryService::class);
+        $this->app->singleton(Clock::class, ApplicationClockService::class);
+        $this->app->singleton(KeyAuthorizer::class, ApiKeyAuthorizerService::class);
+        $this->app->singleton(ScopeVocabulary::class, ApiKeyScopeVocabularyService::class);
+        $this->app->singleton(ExpiryRecipientResolver::class, ApiKeyExpiryRecipientService::class);
+        // Signaculum's 90-day ceiling, which configuration may only lower (decision 2026-11-22).
+        $this->app->singleton(LifetimePolicy::class, ApiKeyLifetimeService::class);
+
+        $this->app->singleton(ApiKeyAuthenticator::class, fn ($app): ApiKeyAuthenticator => new ApiKeyAuthenticator(
+            codec: $app->make(TokenCodec::class),
+            repository: $app->make(ApiKeyRepository::class),
+            authorizer: $app->make(KeyAuthorizer::class),
+            vocabulary: $app->make(ScopeVocabulary::class),
+            ipAllowlist: $app->make(IpAllowlist::class),
+            usageRecorder: $app->make(UsageRecorder::class),
+            clock: $app->make(Clock::class),
+            attemptLimiter: $app->make(AttemptLimiter::class),
+            failedAttemptLimiter: $app->make(FailedAttemptLimiter::class),
+            usageThrottleSeconds: config()->integer('api-keys.usage_throttle_seconds'),
+            bypassThrottleOnIpChange: config()->boolean('api-keys.usage_bypass_throttle_on_ip_change'),
+            defaultRateLimitPerMinute: config()->integer('api-keys.default_rate_limit_per_minute'),
+        ));
     }
 
     /**
@@ -294,7 +344,7 @@ class AppServiceProvider extends ServiceProvider
                 ? 'api-key:'.$apiKey->getKey()
                 : (string) $request->ip();
 
-            return Limit::perMinute((int) config('api.default_rate_limit_per_minute', 60))
+            return Limit::perMinute(config()->integer('api-keys.default_rate_limit_per_minute'))
                 ->by($identifier);
         });
 
@@ -666,11 +716,15 @@ class AppServiceProvider extends ServiceProvider
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent(),
                 ...($apiKey instanceof ApiKey ? [
-                    'api_key_id' => $apiKey->uuid,
                     'api_key_prefix' => $apiKey->key_prefix,
                     'api_key_created_by' => $apiKey->created_by,
                 ] : []),
             ]);
+
+            if ($apiKey instanceof ApiKey) {
+                // The package's audit contract: the key's public UUID, lower case, never the bigint.
+                $activity->properties = collect(Audit::withApiKeyId($activity->properties->all(), $apiKey->uuid));
+            }
         });
     }
 

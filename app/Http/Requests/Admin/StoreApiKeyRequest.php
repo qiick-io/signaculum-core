@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin;
 
 use App\Data\ApiKeyData;
-use App\Data\ApiKeyScopesData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Http\Requests\Concerns\ValidatesApiKeyExpiryTrait;
 use App\Models\ApiKey;
+use App\Services\ApiKeyScopeVocabularyService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
+use Qiick\ApiKeys\ScopeSet;
 
 /**
  * Admin → API keys: a new key with a name, at least one scope of this product's vocabulary, a
@@ -83,7 +84,8 @@ final class StoreApiKeyRequest extends FormRequest
 
         return new ApiKeyData(
             name: $this->string('name')->trim()->toString(),
-            scopes: ApiKeyScopesData::highestPerResource($scopes),
+            // Highest per resource: `write` already implies `read` on the same resource.
+            scopes: ScopeSet::parseStored(array_values(array_unique($scopes)), app(ApiKeyScopeVocabularyService::class))->values(),
             expiresAt: $this->validatedExpiresAt(),
             ipAllowlist: $ipAllowlist === [] ? null : $ipAllowlist,
             rateLimitPerMinute: $rateLimitPerMinute === null ? null : (int) $rateLimitPerMinute,

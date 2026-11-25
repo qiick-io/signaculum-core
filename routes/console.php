@@ -27,8 +27,8 @@ Schedule::command('model:prune', [
     '--model' => [EmailLoginCode::class, PushedAuthorizationRequest::class],
 ])->daily();
 
-// API keys expiring in seven days: one warning per key (app-ui docs/api-keys.md, behaviour 5).
-Schedule::command('signaculum:notify-expiring-api-keys')->daily();
+// qiick/laravel-api-keys: one notice per key and expiry, claimed under a lease (api-keys.expiry.*).
+Schedule::command('api-keys:notify-expiring')->daily();
 
 /*
  * LDAP read-only sync (#77). The job no-ops when disabled or when the configured

@@ -193,7 +193,7 @@ describe('rotation', function (): void {
     });
 
     it('records the grace window and the new expiry, also when there is no grace window', function (int $graceHours, ?string $expectedGraceEnd): void {
-        config(['api.key_rotation_grace_hours' => $graceHours]);
+        config(['api-keys.rotation_grace_hours' => $graceHours]);
         $apiKey = issuedRuleKey($this->admin);
 
         app(RotateApiKeyAction::class)->execute($apiKey, $this->admin, apiKeyExpiry());
