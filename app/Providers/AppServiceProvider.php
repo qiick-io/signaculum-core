@@ -336,16 +336,6 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(6)->by((string) $identifier);
         });
 
-        RateLimiter::for('api', function (Request $request) {
-            $apiKey = $request->attributes->get('apiKey');
-            $identifier = is_object($apiKey) && method_exists($apiKey, 'getKey')
-                ? 'api-key:'.$apiKey->getKey()
-                : (string) $request->ip();
-
-            return Limit::perMinute(config()->integer('api-keys.default_rate_limit_per_minute'))
-                ->by($identifier);
-        });
-
         RateLimiter::for('email-login-code', function (Request $request) {
             return Limit::perMinute(5)->by(strtolower((string) $request->input('email', '')).'|'.$request->ip());
         });

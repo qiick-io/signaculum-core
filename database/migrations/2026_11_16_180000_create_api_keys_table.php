@@ -39,6 +39,7 @@ return new class extends Migration
             // Every key has an owner principal, which cannot be deleted under it (conformance
             // C10, laravel-access design §15.4): a principal is deactivated, never deleted.
             $table->foreignUuid('owner_principal_id')
+                ->index()
                 ->constrained('principals')
                 ->restrictOnDelete();
             $table->foreignId('created_by')->nullable()->index()->constrained('users')->nullOnDelete();
@@ -65,7 +66,9 @@ return new class extends Migration
             $table->string('revoked_reason', 32)->nullable();
             $table->text('revocation_note')->nullable();
             $table->index(['credential_kind', 'revoked_at']);
-            $table->timestamps();
+            // Non-null, as the package's reference schema lists them (`timestamps()` allows NULL).
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent();
         });
     }
 

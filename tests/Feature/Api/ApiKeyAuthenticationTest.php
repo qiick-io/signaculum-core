@@ -8,8 +8,10 @@ use App\Enums\ApiKeyScopeEnum;
 use App\Http\Middleware\VerifyCsrfTokenMiddleware;
 use App\Models\User;
 use App\Services\Authorization\EffectivePermissionResolverService;
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter as RateLimiterFacade;
 use Illuminate\Testing\TestResponse;
 use Spatie\Activitylog\Models\Activity;
 
@@ -153,6 +155,19 @@ it('refuses every address when the stored allowlist does not parse', function (s
     'not json' => '127.0.0.1',
     'a map' => '{"office": "127.0.0.1"}',
     'a non-string entry' => '[127]',
+    // The package reads a present JSON null as "no allowlist"; Signaculum keeps that for SQL NULL only.
+    'a JSON null' => 'null',
+]);
+
+it('lets every address through when no allowlist is stored', function (?string $storedAllowlist): void {
+    ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    DB::table('api_keys')->where('id', $apiKey->getKey())->update(['ip_allowlist' => $storedAllowlist]);
+
+    $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+})->with([
+    'SQL NULL' => null,
+    'an empty list' => '[]',
+    'an empty object' => '{}',
 ]);
 
 it('enforces the per-key rate limit', function (): void {
@@ -281,12 +296,59 @@ it('names the key that authorised an admin api write in the activity log', funct
 });
 
 it('treats a stored rate limit of zero as the default, never as unlimited', function (): void {
-    config(['api-keys.default_rate_limit_per_minute' => 1]);
+    config(['api-keys.default_rate_limit_per_minute' => 1, 'api.address_rate_limit_per_minute' => 100]);
     ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
     DB::table('api_keys')->where('id', $apiKey->getKey())->update(['rate_limit_per_minute' => 0]);
 
     $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
-    $this->withToken($plain)->getJson('/api/v1/users')->assertTooManyRequests();
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertTooManyRequests()
+        ->assertHeader('X-RateLimit-Limit', '1');
+});
+
+it('keeps answering when the default per-key limit is switched off', function (): void {
+    config(['api-keys.default_rate_limit_per_minute' => 0]);
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    foreach (range(1, 3) as $request) {
+        $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+    }
+});
+
+it('throttles an address on its own setting, before the key is checked', function (): void {
+    config(['api.address_rate_limit_per_minute' => 2, 'api-keys.default_rate_limit_per_minute' => 100]);
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+    $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertTooManyRequests()
+        ->assertHeader('Retry-After')
+        ->assertHeader('X-RateLimit-Limit', '2')
+        ->assertJsonPath('error', 'rate_limit_exceeded');
+});
+
+it('switches the address throttle off at zero', function (): void {
+    config(['api.address_rate_limit_per_minute' => 0, 'api-keys.default_rate_limit_per_minute' => 100]);
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    foreach (range(1, 3) as $request) {
+        $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+    }
+});
+
+it('answers 503, never 500, when the rate-limit store is unreachable', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    config([
+        'cache.stores.unreachable' => ['driver' => 'database', 'connection' => null, 'table' => 'missing_cache_table', 'lock_table' => 'missing_cache_locks'],
+        'cache.default' => 'unreachable',
+    ]);
+    app()->forgetInstance(RateLimiter::class);
+    RateLimiterFacade::clearResolvedInstance(RateLimiter::class);
+
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertServiceUnavailable()
+        ->assertJsonPath('error', 'service_unavailable');
 });
 
 // qiick/laravel-api-keys issues version 2 tokens: the canonical token plus a 6-character

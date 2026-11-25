@@ -13,8 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - new keys are **token version 2** (`sig_<env>_<id><secret>` plus a 6-character checksum; secret scanners: `\bsig_(?:live|test)_[A-Za-z0-9]{40}(?:[A-Za-z0-9]{6})?\b`);
     - refusal messages are the package's ("The API key is not valid.", "The API key has expired.", …); the `error` codes and `WWW-Authenticate` headers are unchanged, except that a key whose stored scopes no longer parse is now `403 insufficient_scope` instead of `401 invalid_token`;
     - a failed-attempt brake: after 20 wrong guesses a minute from one address, every key from that address is `429`;
+    - the per-address limit in front of key authentication keeps its own setting, `API_ADDRESS_RATE_LIMIT_PER_MINUTE` (60; `0` switches it off), apart from the per-key `API_KEYS_DEFAULT_RATE_LIMIT_PER_MINUTE`;
     - rate limits answer with `Retry-After` and `X-RateLimit-*`, counted on the default cache store (`database` or Redis); an unreachable store answers `503 service_unavailable`;
-    - expiry mails come from `api-keys:notify-expiring` (it replaces `signaculum:notify-expiring-api-keys`): one per key and expiry once the key expires within seven days, again after a rotation;
+    - expiry mails come from `api-keys:notify-expiring` (it replaces `signaculum:notify-expiring-api-keys`): one per key and expiry once the key expires within seven days, again after a rotation, never for a key that has already expired;
     - `last_used_user_agent` is recorded; the `api_keys` table has the package's columns (`token_version`, `previous_key_prefix`, `restrictions`, `rate_limit_per_day` / `_month`, expiry-notice stamps, exposure and revocation details). **Recreate beta databases with `php artisan migrate:fresh --seed`**; keys issued before must be created again.
     - Configuration moved from `config/api.php` to `config/api-keys.php`: `key_prefix`, `key_environment`, `key_rotation_grace_hours`, `key_expiry_warning_days` and `default_rate_limit_per_minute`.
 

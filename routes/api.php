@@ -10,13 +10,14 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\UserLifecycleController;
 use App\Http\Middleware\AuthenticateApiKeyMiddleware;
 use App\Http\Middleware\EnsureApiKeyScopeMiddleware;
+use App\Http\Middleware\ThrottleApiAddressMiddleware;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('openapi.json', OpenApiController::class)->name('api.v1.openapi');
 
     Route::middleware([
-        'throttle:api',
+        ThrottleApiAddressMiddleware::class,
         AuthenticateApiKeyMiddleware::class,
     ])->group(function (): void {
         Route::middleware([EnsureApiKeyScopeMiddleware::class.':users:read'])->group(function (): void {

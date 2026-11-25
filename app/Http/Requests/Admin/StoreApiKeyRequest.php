@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
+use Qiick\ApiKeys\IpAllowlist;
 use Qiick\ApiKeys\ScopeSet;
 
 /**
@@ -121,6 +122,17 @@ final class StoreApiKeyRequest extends FormRequest
 
         $maximumPrefixLength = filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false ? 32 : 128;
 
-        return filter_var(Str::after($entry, '/'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => $maximumPrefixLength]]) !== false;
+        return filter_var(Str::after($entry, '/'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => $maximumPrefixLength]]) !== false
+            && self::isReadByIpAllowlist($entry);
+    }
+
+    /**
+     * Whether qiick/laravel-api-keys' {@see IpAllowlist} can read the entry: it denies the whole
+     * list on one entry it cannot (an IPv4-mapped range below /96, for one), so a list of the
+     * entry and a match-all range lets an address through only when the entry parses.
+     */
+    private static function isReadByIpAllowlist(string $entry): bool
+    {
+        return app(IpAllowlist::class)->allows('192.0.2.1', [$entry, '0.0.0.0/0']);
     }
 }

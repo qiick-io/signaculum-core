@@ -153,8 +153,9 @@ class ApiKey extends Model implements ApiKeyRecord
     }
 
     /**
-     * The package's allowlist rule: a null or empty allowlist allows every address, one that
-     * does not parse allows none (an unreadable restriction is not "no restriction").
+     * The package's allowlist rule on {@see rawIpAllowlist()}: no allowlist or an empty one allows
+     * every address, one that does not parse allows none (an unreadable restriction is not "no
+     * restriction").
      */
     public function allowsIp(string $ipAddress): bool
     {
@@ -253,9 +254,18 @@ class ApiKey extends Model implements ApiKeyRecord
         return $this->getRawOriginal('scopes');
     }
 
+    /**
+     * Only SQL NULL means "no allowlist" here. The package also reads a stored JSON `null` as
+     * unrestricted; Signaculum never writes one, so a row holding it was not written by the
+     * form (repair, import) and is handed on as `false`, which the package denies.
+     */
     public function rawIpAllowlist(): mixed
     {
-        return $this->getRawOriginal('ip_allowlist');
+        $storedAllowlist = $this->getRawOriginal('ip_allowlist');
+
+        return is_string($storedAllowlist) && json_validate($storedAllowlist) && json_decode($storedAllowlist) === null
+            ? false
+            : $storedAllowlist;
     }
 
     public function rawRestrictions(): mixed

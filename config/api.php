@@ -5,6 +5,13 @@ declare(strict_types=1);
 return [
     'max_per_page' => 100,
     'default_per_page' => 25,
+
+    /*
+     * Requests per minute from one client address to the Admin API, counted before the key is
+     * checked (ThrottleApiAddressMiddleware). Separate from the per-key limits in
+     * config/api-keys.php; 0 switches it off.
+     */
+    'address_rate_limit_per_minute' => (int) env('API_ADDRESS_RATE_LIMIT_PER_MINUTE', 60),
     /*
      * API key issuance, verification, rotation, rate limits and expiry notices are configured in
      * config/api-keys.php (qiick/laravel-api-keys). Only the lifetime ceiling stays here: it is

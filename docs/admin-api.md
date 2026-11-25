@@ -29,7 +29,10 @@ rotation and expiry notices are the fleet's, and Signaculum adds its owner rule 
 5. A missing scope is `403` with `"error": "insufficient_scope"` and the `scope` it needed; a key
    whose stored scopes no longer parse is `403 insufficient_scope` too ("The API key holds no
    scopes."); an address outside the key's IP allowlist is `403` (`ip_not_allowed`); the per-key
-   rate limit is `429` (`rate_limit_exceeded`, with `Retry-After` and `X-RateLimit-*`).
+   rate limit is `429` (`rate_limit_exceeded`, with `Retry-After` and `X-RateLimit-*`), and so is
+   more than `API_ADDRESS_RATE_LIMIT_PER_MINUTE` (60) requests from one address in a minute,
+   counted before the key is checked; `0` switches that address limit off, as
+   `API_KEYS_DEFAULT_RATE_LIMIT_PER_MINUTE=0` switches off the default per-key limit only.
    After `API_KEYS_FAILED_ATTEMPTS_PER_MINUTE` (20) wrong guesses from one address in a minute,
    every key from that address, the right one included, is `429` until the minute ends.
    The counters use Laravel's rate limiter on the default cache store (`database` by default,

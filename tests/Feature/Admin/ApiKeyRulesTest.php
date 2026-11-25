@@ -78,6 +78,8 @@ describe('the creation form', function (): void {
         'two prefixes' => '10.0.0.0/8/9',
         'a negative prefix' => '10.0.0.0/-1',
         'an IPv4 prefix past 32' => '10.0.0.0/33',
+        // qiick/laravel-api-keys maps an IPv4-mapped range onto IPv4 only from /96 up.
+        'an IPv4-mapped range below /96' => '::ffff:10.0.0.0/64',
         'an IPv6 prefix past 128' => '2001:db8::/129',
         'a prefix that is not a number' => '10.0.0.0/eight',
     ]);
