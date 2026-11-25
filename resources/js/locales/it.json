@@ -839,7 +839,7 @@
             "title": "Elimina organizzazione",
             "description": "Dismette l’organizzazione: tutti i membri perdono l’accesso, gli inviti in sospeso vengono annullati e le API key dei suoi account vengono revocate. Lo storico di audit resta, e il suo slug non potrà più essere usato.",
             "confirmTitle": "Eliminare questa organizzazione?",
-            "confirmDescription": "Digita il nome dell’organizzazione per confermare. I membri perdono subito l’accesso: i loro accessi vengono revocati e le app collegate ricevono la richiesta di disconnetterli. Lo slug non potrà più essere usato; l’azione non è reversibile."
+            "confirmDescription": "Digita il nome dell’organizzazione per confermare. I membri perdono subito l’accesso: i loro accessi vengono revocati, e le app collegate che supportano il back-channel logout ricevono la richiesta di disconnetterli (le altre chiudono la propria sessione alla scadenza). Lo slug non potrà più essere usato; l’azione non è reversibile."
         },
         "views": {
             "label": "Viste dell'organizzazione",

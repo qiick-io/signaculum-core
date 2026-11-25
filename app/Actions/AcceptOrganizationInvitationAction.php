@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\User;
 use Illuminate\Support\Facades\Date;
@@ -23,9 +24,19 @@ final class AcceptOrganizationInvitationAction
     public function execute(string $plainToken, User $user): OrganizationInvitation
     {
         return DB::transaction(function () use ($plainToken, $user): OrganizationInvitation {
+            $tokenHash = hash('sha256', $plainToken);
+
+            // Lock the organisation before the invitation: DeleteOrganizationAction locks the
+            // organisation, then deletes its invitations, so the opposite order could deadlock.
+            $organizationId = OrganizationInvitation::query()->where('token_hash', $tokenHash)->value('organization_id');
+
+            if ($organizationId !== null) {
+                Organization::query()->whereKey($organizationId)->lockForUpdate()->exists();
+            }
+
             $invitation = OrganizationInvitation::query()
                 ->with('organization')
-                ->where('token_hash', hash('sha256', $plainToken))
+                ->where('token_hash', $tokenHash)
                 ->lockForUpdate()
                 ->first();
 

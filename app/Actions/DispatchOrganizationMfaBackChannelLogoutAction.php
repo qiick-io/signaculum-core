@@ -51,7 +51,8 @@ final class DispatchOrganizationMfaBackChannelLogoutAction
                 ->count();
 
         foreach ($memberUserIds as $memberUserId) {
-            EndOrganizationMemberOidcSessionsJob::dispatch($memberUserId);
+            // After commit: a rolled-back offboarding or MFA change must not sign anyone out.
+            EndOrganizationMemberOidcSessionsJob::dispatch($memberUserId)->afterCommit();
         }
 
         $activity = activity()
