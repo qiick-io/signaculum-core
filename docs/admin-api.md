@@ -32,8 +32,9 @@ rotation and expiry notices are the fleet's, and Signaculum adds its owner rule 
    rate limit is `429` (`rate_limit_exceeded`, with `Retry-After` and `X-RateLimit-*`).
    After `API_KEYS_FAILED_ATTEMPTS_PER_MINUTE` (20) wrong guesses from one address in a minute,
    every key from that address, the right one included, is `429` until the minute ends.
-   The rate-limit counters need an atomic cache: Redis or Memcached (`CACHE_STORE`); the
-   `database` store is supported from `qiick/laravel-api-keys` 0.3.0-beta.2.
+   The counters use Laravel's rate limiter on the default cache store (`database` by default,
+   Redis when configured; `php artisan api-keys:check` names the active one). An unreachable
+   store answers `503 service_unavailable`, never an open door.
 6. **Rotation** issues a new secret for the same key (same prefix, scopes and audit trail). The
    old token keeps working for `api-keys.rotation_grace_hours` (`API_KEYS_ROTATION_GRACE_HOURS`, 24 by default). Revoking ends both.
    Any instance admin with `can-manage-api-keys` may rotate or revoke any Admin API key.

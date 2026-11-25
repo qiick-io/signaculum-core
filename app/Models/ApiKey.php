@@ -158,7 +158,15 @@ class ApiKey extends Model implements ApiKeyRecord
      */
     public function allowsIp(string $ipAddress): bool
     {
-        return app(IpAllowlist::class)->allows($ipAddress, $this->rawIpAllowlist());
+        $storedAllowlist = $this->rawIpAllowlist();
+
+        try {
+            $allowlist = is_string($storedAllowlist) ? json_decode($storedAllowlist, true, flags: JSON_THROW_ON_ERROR) : $storedAllowlist;
+        } catch (\JsonException) {
+            return false;
+        }
+
+        return app(IpAllowlist::class)->allows($ipAddress, $allowlist);
     }
 
     public function getActivitylogOptions(): LogOptions
@@ -236,19 +244,23 @@ class ApiKey extends Model implements ApiKeyRecord
         return $this->metadata ?? [];
     }
 
+    /**
+     * The JSON columns as stored (qiick/laravel-api-keys 0.3.0-beta.2): the package decodes them
+     * and fails closed on a value that is not valid JSON, which the `array` cast would read as null.
+     */
     public function rawScopes(): mixed
     {
-        return $this->rawJsonColumn('scopes');
+        return $this->getRawOriginal('scopes');
     }
 
     public function rawIpAllowlist(): mixed
     {
-        return $this->rawJsonColumn('ip_allowlist');
+        return $this->getRawOriginal('ip_allowlist');
     }
 
     public function rawRestrictions(): mixed
     {
-        return $this->rawJsonColumn('restrictions');
+        return $this->getRawOriginal('restrictions');
     }
 
     /**
@@ -363,24 +375,6 @@ class ApiKey extends Model implements ApiKeyRecord
     public function lastUsedUserAgent(): ?string
     {
         return $this->last_used_user_agent;
-    }
-
-    /**
-     * A JSON column as the package must judge it. The `array` cast reads a value that is not valid
-     * JSON as null, which the package would take for "no restriction"; the raw string is returned
-     * instead, so it fails closed (an unreadable allowlist or restriction allows nothing).
-     */
-    private function rawJsonColumn(string $column): mixed
-    {
-        $storedValue = $this->getAttributes()[$column] ?? null;
-
-        if (! is_string($storedValue)) {
-            return $storedValue;
-        }
-
-        $decodedValue = json_decode($storedValue, true);
-
-        return json_last_error() === JSON_ERROR_NONE ? $decodedValue : $storedValue;
     }
 
     /**

@@ -30,7 +30,6 @@ use App\Services\ApiKeyExpiryRecipientService;
 use App\Services\ApiKeyLifetimeService;
 use App\Services\ApiKeyRepositoryService;
 use App\Services\ApiKeyScopeVocabularyService;
-use App\Services\ApplicationClockService;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\EmailTemplateService;
 use App\Services\InstanceAdminDemotionService;
@@ -118,7 +117,6 @@ class AppServiceProvider extends ServiceProvider
     protected function registerApiKeys(): void
     {
         $this->app->singleton(ApiKeyRepository::class, ApiKeyRepositoryService::class);
-        $this->app->singleton(Clock::class, ApplicationClockService::class);
         $this->app->singleton(KeyAuthorizer::class, ApiKeyAuthorizerService::class);
         $this->app->singleton(ScopeVocabulary::class, ApiKeyScopeVocabularyService::class);
         $this->app->singleton(ExpiryRecipientResolver::class, ApiKeyExpiryRecipientService::class);
