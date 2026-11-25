@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Fortify;
 use Spatie\Permission\Models\Role;
 
@@ -375,7 +376,7 @@ return [
         $user = User::factory()->create(['password' => 'password']);
 
         // Real Fortify enable path (same action as POST /user/two-factor-authentication).
-        app(\Laravel\Fortify\Actions\EnableTwoFactorAuthentication::class)($user);
+        app(EnableTwoFactorAuthentication::class)($user);
 
         $user->refresh();
 

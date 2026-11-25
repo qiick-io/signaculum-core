@@ -14,6 +14,8 @@ use App\Enums\WebhookEventEnum;
 use App\Jobs\DeliverWebhookJob;
 use App\Jobs\EndOrganizationMemberOidcSessionsJob;
 use App\Models\ApiKey;
+use App\Models\ClientSession;
+use App\Models\OidcSession;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\OrganizationMembership;
@@ -22,6 +24,7 @@ use App\Models\User;
 use App\Models\Webhook;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Client;
@@ -249,4 +252,46 @@ test('deleting an organisation twice offboards it once', function () {
     app(DeleteOrganizationAction::class)->execute($staleOrganization);
 
     expect(Activity::query()->where('event', 'organization_deleted')->where('subject_id', $organization->getKey())->count())->toBe(1);
+});
+
+// Offboarding touches only the deleted organisation: a member of another organisation keeps
+// that membership and its active principal (their grants are revoked user-wide, as for MFA).
+test('a member of two organisations keeps the other one when one is deleted', function () {
+    ['organization' => $deletedOrganization, 'owner' => $owner, 'member' => $member] = offboardingOrganization('deleted-corp');
+    $otherOrganization = app(CreateOrganizationAction::class)->execute(new OrganizationData('Other Corp', 'other-corp'), User::factory()->create());
+    app(AddOrganizationMemberAction::class)->execute($otherOrganization, $member, [OrganizationRoleEnum::Member->value]);
+
+    $this->actingAs($owner)->delete(route('organizations.destroy', $deletedOrganization))->assertRedirect();
+
+    $otherPrincipal = Principal::query()->where('organisation_id', $otherOrganization->getKey())->where('user_id', $member->getKey())->sole();
+
+    expect(OrganizationMembership::query()->where('organization_id', $otherOrganization->getKey())->where('user_id', $member->getKey())->exists())->toBeTrue()
+        ->and($otherPrincipal->deactivated_at)->toBeNull()
+        ->and($otherPrincipal->deactivation_reason)->toBeNull();
+});
+
+// Back-channel logout is queued after commit: an offboarding that rolls back signs nobody out.
+test('an offboarding that rolls back signs nobody out', function () {
+    ['organization' => $organization, 'member' => $member] = offboardingOrganization();
+    $client = createOidcClient();
+    $client->forceFill(['backchannel_logout_uri' => 'https://rp.example.test/backchannel-logout'])->save();
+    OidcSession::query()->create([
+        'user_id' => $member->getKey(),
+        'laravel_session_id' => 'laravel-rollback-sid',
+        'oidc_session_id' => 'rollback-sid',
+    ]);
+    ClientSession::query()->create([
+        'user_id' => $member->getKey(),
+        'client_id' => $client->getKey(),
+        'oidc_session_id' => 'rollback-sid',
+    ]);
+    Http::fake();
+    Organization::deleting(fn () => throw new RuntimeException('Simulated failure at the end of the offboarding.'));
+
+    // The sync queue runs a job at once, or at commit when it is dispatched after commit; the
+    // logout token is an HTTP call to the relying party, which no rollback can undo.
+    expect(fn () => app(DeleteOrganizationAction::class)->execute($organization))->toThrow(RuntimeException::class);
+
+    Http::assertNothingSent();
+    expect(Organization::query()->whereKey($organization->getKey())->exists())->toBeTrue();
 });
