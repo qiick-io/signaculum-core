@@ -837,9 +837,9 @@
         },
         "danger": {
             "title": "Delete organisation",
-            "description": "Deletes the organisation and every membership. This cannot be undone.",
+            "description": "Offboards the organisation: every member loses access, pending invitations are cancelled and API keys owned by its accounts are revoked. Its audit history is kept, and its slug cannot be used again.",
             "confirmTitle": "Delete this organisation?",
-            "confirmDescription": "Type the organisation name to confirm permanent deletion."
+            "confirmDescription": "Type the organisation name to confirm. Members lose access at once: their sign-ins are revoked and connected apps are told to sign them out. The slug cannot be used again; this cannot be undone."
         },
         "views": {
             "label": "Organisation views",

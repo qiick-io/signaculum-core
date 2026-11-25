@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * A Signaculum organisation (`id` / `slug` appear on the `qiick.orgs` claim).
@@ -23,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $logo_dark_path
  * @property string|null $brand_color
  * @property string|null $brand_color_dark
+ * @property Carbon|null $deleted_at
  */
 class Organization extends Model
 {
@@ -30,6 +33,9 @@ class Organization extends Model
     use HasFactory;
 
     use HasUuids;
+
+    // Deleted organisations are offboarded and kept as evidence (DeleteOrganizationAction).
+    use SoftDeletes;
 
     /**
      * @var list<string>

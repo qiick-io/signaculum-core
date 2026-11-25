@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\InstanceAdminDemotionReasonEnum;
+use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Models\OidcSession;
 use App\Models\Principal;
 use App\Models\User;
@@ -60,7 +61,10 @@ final class DeactivateUserAction
             Principal::query()
                 ->where('user_id', $user->getKey())
                 ->whereNull('deactivated_at')
-                ->update(['deactivated_at' => now()]);
+                ->update([
+                    'deactivated_at' => now(),
+                    'deactivation_reason' => PrincipalDeactivationReasonEnum::Admin->value,
+                ]);
 
             $accessTokenIds = Passport::token()->newQuery()
                 ->where('user_id', $user->getKey())

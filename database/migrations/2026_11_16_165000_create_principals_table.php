@@ -26,10 +26,14 @@ return new class extends Migration
             $table->string('type', 32);
             // Keep the principal for audit; erasure sets deactivated_at (core-hardening).
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-            // Null only for instance_service (CHECK / SQLite recreate below); cascade with the org.
-            $table->foreignUuid('organisation_id')->nullable()->constrained('organizations')->cascadeOnDelete();
+            // Null only for instance_service (CHECK / SQLite recreate below). Restrict, never
+            // cascade: deleting an organisation is an offboarding job that deactivates its
+            // principals and keeps them as evidence (laravel-access design §15.5, 2026-11-23).
+            $table->foreignUuid('organisation_id')->nullable()->constrained('organizations')->restrictOnDelete();
             $table->string('name');
             $table->timestamp('deactivated_at')->nullable();
+            // PrincipalDeactivationReasonEnum; null while active (laravel-access design §15.2).
+            $table->string('deactivation_reason', 32)->nullable();
             $table->timestamps();
 
             $table->unique(['organisation_id', 'user_id']);
@@ -65,11 +69,12 @@ return new class extends Migration
                     organisation_id varchar(36) null,
                     name varchar(255) not null,
                     deactivated_at datetime null,
+                    deactivation_reason varchar(32) null,
                     created_at datetime null,
                     updated_at datetime null,
                     primary key (id),
                     foreign key (user_id) references users (id) on delete set null,
-                    foreign key (organisation_id) references organizations (id) on delete cascade,
+                    foreign key (organisation_id) references organizations (id) on delete restrict,
                     unique (organisation_id, user_id),
                     check ({$check})
                 )

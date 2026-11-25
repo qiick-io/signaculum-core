@@ -35,6 +35,14 @@ final class AddOrganizationMemberAction
     public function execute(Organization $organization, User $user, array $roles): OrganizationMembership
     {
         $membership = DB::transaction(function () use ($organization, $user, $roles): OrganizationMembership {
+            // Same lock as DeleteOrganizationAction: a request that resolved the organisation
+            // before it was deleted must not add a member to it afterwards.
+            if (! Organization::query()->whereKey($organization->getKey())->lockForUpdate()->exists()) {
+                throw ValidationException::withMessages([
+                    'organization' => __('This organisation no longer exists.'),
+                ]);
+            }
+
             $alreadyMember = OrganizationMembership::query()
                 ->where('organization_id', $organization->getKey())
                 ->where('user_id', $user->getKey())
