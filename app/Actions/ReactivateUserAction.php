@@ -20,8 +20,10 @@ final class ReactivateUserAction
     {
         $user->forceFill(['is_active' => true])->save();
 
+        // whereHas applies the soft-delete scope: a deleted organisation's principal stays offboarded.
         $organisationIds = OrganizationMembership::query()
             ->where('user_id', $user->getKey())
+            ->whereHas('organization')
             ->pluck('organization_id')
             ->all();
 

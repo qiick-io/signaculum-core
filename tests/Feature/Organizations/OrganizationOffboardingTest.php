@@ -4,18 +4,28 @@ declare(strict_types=1);
 
 use App\Actions\AddOrganizationMemberAction;
 use App\Actions\CreateOrganizationAction;
+use App\Actions\DeleteOrganizationAction;
+use App\Actions\ReactivateUserAction;
 use App\Data\OrganizationData;
 use App\Enums\OrganizationRoleEnum;
 use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Enums\PrincipalTypeEnum;
+use App\Enums\WebhookEventEnum;
+use App\Jobs\DeliverWebhookJob;
+use App\Jobs\EndOrganizationMemberOidcSessionsJob;
 use App\Models\ApiKey;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\OrganizationMembership;
 use App\Models\Principal;
 use App\Models\User;
+use App\Models\Webhook;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
+use Laravel\Passport\Client;
+use Laravel\Passport\Passport;
 use Spatie\Activitylog\Models\Activity;
 
 /*
@@ -125,4 +135,118 @@ test('an api key always has an owner principal, which cannot be deleted under it
 
     expect(fn () => DB::table('principals')->where('id', $apiKey->owner_principal_id)->delete())
         ->toThrow(QueryException::class);
+});
+
+/**
+ * A redeemed authorization code grant (access + refresh token) for `$user`.
+ *
+ * @return array{access_token: string, refresh_token: string}
+ */
+function offboardingGrant(User $user, Client $client): array
+{
+    test()->actingAs($user);
+    $pkce = pkcePair();
+    $code = approveAuthorization($client, $pkce['challenge'], ['scope' => 'openid profile email qiick.orgs'])['code'];
+    $response = redeemCode($client, $code, $pkce['verifier'])->assertOk();
+
+    return [
+        'access_token' => (string) $response->json('access_token'),
+        'refresh_token' => (string) $response->json('refresh_token'),
+    ];
+}
+
+// Members lose access at once, as the confirmation dialog says: their OAuth grants die and
+// every relying party with a back-channel logout URI is told (as when the organisation
+// turns MFA on, #163 / #174). Users outside the organisation keep theirs.
+test('deleting an organisation revokes its members oauth grants and fans out back-channel logout', function () {
+    ['organization' => $organization, 'owner' => $owner, 'member' => $member] = offboardingOrganization();
+    $outsider = User::factory()->create();
+    $client = createOidcClient();
+    $memberGrant = offboardingGrant($member, $client);
+    $outsiderGrant = offboardingGrant($outsider, $client);
+
+    Queue::fake();
+
+    $this->actingAs($owner)->delete(route('organizations.destroy', $organization))->assertRedirect();
+
+    expect(Passport::token()->newQuery()->where('user_id', $member->getKey())->where('revoked', false)->exists())->toBeFalse()
+        ->and(Passport::token()->newQuery()->where('user_id', $outsider->getKey())->where('revoked', false)->exists())->toBeTrue();
+
+    $this->post('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $client->getKey(),
+        'client_secret' => $client->plainSecret,
+        'refresh_token' => $memberGrant['refresh_token'],
+    ])->assertStatus(400);
+
+    expect($outsiderGrant['refresh_token'])->not->toBe('');
+
+    Queue::assertPushed(EndOrganizationMemberOidcSessionsJob::class, fn (EndOrganizationMemberOidcSessionsJob $job): bool => $job->userId === $member->getKey());
+    Queue::assertPushed(EndOrganizationMemberOidcSessionsJob::class, fn (EndOrganizationMemberOidcSessionsJob $job): bool => $job->userId === $owner->getKey());
+    Queue::assertNotPushed(EndOrganizationMemberOidcSessionsJob::class, fn (EndOrganizationMemberOidcSessionsJob $job): bool => $job->userId === $outsider->getKey());
+});
+
+// The same integration surface as removing one member: organization.membership_changed with
+// action `removed`, once per member.
+test('deleting an organisation sends a membership removed webhook for every member', function () {
+    ['organization' => $organization, 'owner' => $owner, 'member' => $member] = offboardingOrganization();
+    Webhook::query()->create([
+        'url' => 'https://hooks.example.com/signaculum',
+        'secret' => 'test-signing-secret-value',
+        'events' => [WebhookEventEnum::OrganizationMembershipChanged->value],
+        'is_active' => true,
+    ]);
+
+    Queue::fake();
+
+    $this->actingAs($owner)->delete(route('organizations.destroy', $organization))->assertRedirect();
+
+    foreach ([$owner, $member] as $removedUser) {
+        Queue::assertPushed(DeliverWebhookJob::class, fn (DeliverWebhookJob $job): bool => $job->eventType === WebhookEventEnum::OrganizationMembershipChanged->value
+            && $job->data['organization_id'] === $organization->getKey()
+            && $job->data['user_id'] === $removedUser->subject
+            && $job->data['action'] === 'removed');
+    }
+});
+
+// A request that resolved the organisation before it was deleted must not add a member to it
+// afterwards: membership writes lock the organisation row and refuse a deleted one.
+test('a member cannot be added to an organisation deleted in the meantime', function () {
+    ['organization' => $organization, 'owner' => $owner] = offboardingOrganization();
+    $staleOrganization = Organization::query()->findOrFail($organization->getKey());
+    $this->actingAs($owner)->delete(route('organizations.destroy', $organization))->assertRedirect();
+
+    expect(fn () => app(AddOrganizationMemberAction::class)->execute($staleOrganization, User::factory()->create(), [OrganizationRoleEnum::Member->value]))
+        ->toThrow(ValidationException::class);
+
+    expect(OrganizationMembership::query()->where('organization_id', $organization->getKey())->exists())->toBeFalse();
+});
+
+// Defence in depth for rows left by a race before the lock existed: reactivating a user never
+// revives their principal in a deleted organisation.
+test('reactivating a user does not revive a principal of a deleted organisation', function () {
+    ['organization' => $organization, 'owner' => $owner, 'member' => $member] = offboardingOrganization();
+    $this->actingAs($owner)->delete(route('organizations.destroy', $organization))->assertRedirect();
+    OrganizationMembership::query()->create([
+        'organization_id' => $organization->getKey(),
+        'user_id' => $member->getKey(),
+        'roles' => [OrganizationRoleEnum::Member->value],
+    ]);
+
+    app(ReactivateUserAction::class)->execute($member);
+
+    $principal = Principal::query()->where('organisation_id', $organization->getKey())->where('user_id', $member->getKey())->sole();
+
+    expect($principal->deactivated_at)->not->toBeNull()
+        ->and($principal->deactivation_reason)->toBe(PrincipalDeactivationReasonEnum::Offboarded);
+});
+
+test('deleting an organisation twice offboards it once', function () {
+    ['organization' => $organization, 'owner' => $owner] = offboardingOrganization();
+    $staleOrganization = Organization::query()->findOrFail($organization->getKey());
+
+    app(DeleteOrganizationAction::class)->execute($organization);
+    app(DeleteOrganizationAction::class)->execute($staleOrganization);
+
+    expect(Activity::query()->where('event', 'organization_deleted')->where('subject_id', $organization->getKey())->count())->toBe(1);
 });

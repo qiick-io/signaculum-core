@@ -11,10 +11,12 @@ use App\Models\OrganizationMembership;
 use App\Models\User;
 
 /**
- * After an organisation turns MFA on (#174), queue one job per member that ends their
- * open OIDC sessions and fans out back-channel logout to clients with a URI.
+ * After an organisation turns MFA on (#174), or while it is being deleted (#289), queue one
+ * job per member that ends their open OIDC sessions and fans out back-channel logout to
+ * clients with a URI.
  *
- * Runs only on the false → true transition (wired from UpdateOrganizationAction).
+ * Runs on the MFA false → true transition (UpdateOrganizationAction) and inside the
+ * offboarding of DeleteOrganizationAction, before the memberships are removed.
  * Organisation creation never sets `is_mfa_required` (DB default false; create form has
  * no MFA field), so create-with-true is out of scope here. Owner is included. The
  * acting admin's Signaculum browser session is left alone; only RP sessions are ended.

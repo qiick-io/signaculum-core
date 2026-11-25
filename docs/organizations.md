@@ -20,6 +20,7 @@ Signed-in users manage organisations they belong to under **Organisations**:
 - **Members** — list, add/remove roles, leave (guards prevent removing the last owner).
 - **Invitations** — email invite with a hashed token, expiry (default seven days, `OIDC_ORG_INVITATION_TTL_DAYS`), resend and revoke.
 - **Settings** — name / slug, optional MFA requirement, branding and other org settings.
+- **Delete** (owner, or `can-manage-organizations`) — an offboarding, not a database cascade (#289). Under a lock on the organisation row it revokes every member's access tokens, refresh tokens and unredeemed authorization codes and queues back-channel logout for their open OIDC sessions (as when MFA is turned on), deactivates the organisation's principals as `offboarded`, revokes the API keys they own, removes memberships and pending invitations, sends one `organization.membership_changed` webhook (`removed`) per member, and soft-deletes the organisation. Principals and audit rows stay as evidence, the slug cannot be used again, and there is no restore: a mistaken delete needs a new organisation with a new slug. Adding a member takes the same lock and refuses a deleted organisation.
 
 Instance admins may also create organisations as part of day-to-day ops; invitations are rate-limited.
 
