@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a9afa9415ec78471bd2434584fbe3bd7",
+    "content-hash": "e0565cfbc40c406436e4230117b1a1f4",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -2410,16 +2410,16 @@
         },
         {
             "name": "league/commonmark",
-            "version": "2.10.8",
+            "version": "2.10.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/thephpleague/commonmark.git",
-                "reference": "681e662a40c805c567f52d603b64d55282ea356c"
+                "reference": "ab5ff8c80fd69abaeb4d57d7711d389248f219e4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/681e662a40c805c567f52d603b64d55282ea356c",
-                "reference": "681e662a40c805c567f52d603b64d55282ea356c",
+                "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/ab5ff8c80fd69abaeb4d57d7711d389248f219e4",
+                "reference": "ab5ff8c80fd69abaeb4d57d7711d389248f219e4",
                 "shasum": ""
             },
             "require": {
@@ -2513,8 +2513,8 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-11-24T15:44:47+00:00",
-            "published-time": "2026-11-24T15:45:01+00:00"
+            "time": "2026-11-25T20:08:31+00:00",
+            "published-time": "2026-11-25T20:11:11+00:00"
         },
         {
             "name": "league/config",
@@ -4948,16 +4948,16 @@
         },
         {
             "name": "qiick/laravel-api-keys",
-            "version": "v0.3.0-beta.2",
+            "version": "v0.3.0-beta.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/qiick-io/laravel-api-keys.git",
-                "reference": "2184986c4f9155328646783311cb7a65ca3acd44"
+                "reference": "565e8821403528d2570273c08e715919a51582a6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/qiick-io/laravel-api-keys/zipball/2184986c4f9155328646783311cb7a65ca3acd44",
-                "reference": "2184986c4f9155328646783311cb7a65ca3acd44",
+                "url": "https://api.github.com/repos/qiick-io/laravel-api-keys/zipball/565e8821403528d2570273c08e715919a51582a6",
+                "reference": "565e8821403528d2570273c08e715919a51582a6",
                 "shasum": ""
             },
             "require": {
@@ -5014,8 +5014,8 @@
                 "issues": "https://github.com/qiick-io/laravel-api-keys/issues",
                 "source": "https://github.com/qiick-io/laravel-api-keys"
             },
-            "time": "2026-11-25T14:28:48+00:00",
-            "published-time": "2026-11-25T14:31:41+00:00"
+            "time": "2026-11-26T11:44:14+00:00",
+            "published-time": "2026-11-26T11:45:16+00:00"
         },
         {
             "name": "ramsey/collection",
@@ -11098,7 +11098,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-15T19:58:26+00:00"
+            "time": "2026-11-15T19:58:26+00:00",
+            "published-time": "2026-11-15T19:58:39+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",

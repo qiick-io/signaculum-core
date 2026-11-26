@@ -12,7 +12,6 @@ use App\Services\ApiKeyScopeVocabularyService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 use Qiick\ApiKeys\IpAllowlist;
@@ -105,34 +104,11 @@ final class StoreApiKeyRequest extends FormRequest
     }
 
     /**
-     * An address, or an address and a prefix length that fits its family (0-32 for IPv4,
-     * 0-128 for IPv6). Anything after the first `/` is the prefix, so `10.0.0.0/8/9` is refused.
+     * An address or a CIDR range by qiick/laravel-api-keys' own rules ({@see IpAllowlist::isValidEntry()}):
+     * the verifier denies the whole list on one entry it cannot read, so the form refuses it first.
      */
     private function isIpAddressOrRange(string $entry): bool
     {
-        $address = Str::before($entry, '/');
-
-        if (filter_var($address, FILTER_VALIDATE_IP) === false) {
-            return false;
-        }
-
-        if (! str_contains($entry, '/')) {
-            return true;
-        }
-
-        $maximumPrefixLength = filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false ? 32 : 128;
-
-        return filter_var(Str::after($entry, '/'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => $maximumPrefixLength]]) !== false
-            && self::isReadByIpAllowlist($entry);
-    }
-
-    /**
-     * Whether qiick/laravel-api-keys' {@see IpAllowlist} can read the entry: it denies the whole
-     * list on one entry it cannot (an IPv4-mapped range below /96, for one), so a list of the
-     * entry and a match-all range lets an address through only when the entry parses.
-     */
-    private static function isReadByIpAllowlist(string $entry): bool
-    {
-        return app(IpAllowlist::class)->allows('192.0.2.1', [$entry, '0.0.0.0/0']);
+        return app(IpAllowlist::class)->isValidEntry($entry);
     }
 }

@@ -156,8 +156,9 @@ it('refuses every address when the stored allowlist does not parse', function (s
     'not json' => '127.0.0.1',
     'a map' => '{"office": "127.0.0.1"}',
     'a non-string entry' => '[127]',
-    // The package reads a present JSON null as "no allowlist"; Signaculum keeps that for SQL NULL only.
+    // Only SQL NULL means "no allowlist": a JSON null or an object, empty included, denies.
     'a JSON null' => 'null',
+    'an empty object' => '{}',
 ]);
 
 it('lets every address through when no allowlist is stored', function (?string $storedAllowlist): void {
@@ -168,7 +169,6 @@ it('lets every address through when no allowlist is stored', function (?string $
 })->with([
     'SQL NULL' => null,
     'an empty list' => '[]',
-    'an empty object' => '{}',
 ]);
 
 it('enforces the per-key rate limit', function (): void {

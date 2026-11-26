@@ -76,6 +76,7 @@ final class RotateApiKeyAction
                 'expires_at' => $expiresAt,
                 'expiry_notified_at' => null,
                 'expiry_notice_claimed_at' => null,
+                'expiry_notice_claim_token' => null,
             ])->save();
 
             activity('api-keys')

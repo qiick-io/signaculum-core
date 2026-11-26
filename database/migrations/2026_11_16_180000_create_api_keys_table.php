@@ -55,6 +55,8 @@ return new class extends Migration
             $table->dateTime('expires_at')->index();
             $table->timestamp('expiry_notified_at')->nullable();
             $table->timestamp('expiry_notice_claimed_at')->nullable();
+            // The run holding the lease (qiick/laravel-api-keys 0.3.0-beta.3 claim contract).
+            $table->string('expiry_notice_claim_token', 64)->nullable();
             $table->timestamp('last_used_at')->nullable();
             $table->string('last_used_ip', 45)->nullable();
             $table->string('last_used_user_agent', 512)->nullable();

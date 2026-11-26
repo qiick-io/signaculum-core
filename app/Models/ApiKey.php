@@ -58,6 +58,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property Carbon $expires_at
  * @property Carbon|null $expiry_notified_at
  * @property Carbon|null $expiry_notice_claimed_at
+ * @property string|null $expiry_notice_claim_token
  * @property Carbon|null $last_used_at
  * @property string|null $last_used_ip
  * @property string|null $last_used_user_agent
@@ -71,7 +72,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Hidden(['key_hash', 'previous_key_hash'])]
+#[Hidden(['key_hash', 'previous_key_hash', 'expiry_notice_claim_token'])]
 class ApiKey extends Model implements ApiKeyRecord
 {
     use HasUuids, LogsApplicationActivityTrait, RejectsInvalidUuidRouteKeysTrait;
@@ -153,27 +154,32 @@ class ApiKey extends Model implements ApiKeyRecord
     }
 
     /**
-     * The package's allowlist rule on {@see rawIpAllowlist()}: no allowlist or an empty one allows
-     * every address, one that does not parse allows none (an unreadable restriction is not "no
-     * restriction").
+     * The package's allowlist rule on the stored JSON (qiick/laravel-api-keys 0.3.0-beta.3): SQL
+     * NULL or an empty list allows every address; anything else must be a list of valid entries,
+     * so a JSON `null`, an object (`{}` included) or a value that does not parse allows none.
      */
     public function allowsIp(string $ipAddress): bool
     {
         $storedAllowlist = $this->rawIpAllowlist();
 
+        if ($storedAllowlist === null) {
+            return true;
+        }
+
         try {
-            $allowlist = is_string($storedAllowlist) ? json_decode($storedAllowlist, true, flags: JSON_THROW_ON_ERROR) : $storedAllowlist;
+            // Objects stay objects here, so `{}` is not mistaken for an empty list.
+            $allowlist = is_string($storedAllowlist) ? json_decode($storedAllowlist, false, flags: JSON_THROW_ON_ERROR) : $storedAllowlist;
         } catch (\JsonException) {
             return false;
         }
 
-        return app(IpAllowlist::class)->allows($ipAddress, $allowlist);
+        return is_array($allowlist) && app(IpAllowlist::class)->allows($ipAddress, $allowlist);
     }
 
     public function getActivitylogOptions(): LogOptions
     {
         return $this->applicationActivityLogOptions()
-            ->logExcept(['key_hash', 'previous_key_hash']);
+            ->logExcept(['key_hash', 'previous_key_hash', 'expiry_notice_claim_token']);
     }
 
     public function id(): string|int
@@ -254,18 +260,9 @@ class ApiKey extends Model implements ApiKeyRecord
         return $this->getRawOriginal('scopes');
     }
 
-    /**
-     * Only SQL NULL means "no allowlist" here. The package also reads a stored JSON `null` as
-     * unrestricted; Signaculum never writes one, so a row holding it was not written by the
-     * form (repair, import) and is handed on as `false`, which the package denies.
-     */
     public function rawIpAllowlist(): mixed
     {
-        $storedAllowlist = $this->getRawOriginal('ip_allowlist');
-
-        return is_string($storedAllowlist) && json_validate($storedAllowlist) && json_decode($storedAllowlist) === null
-            ? false
-            : $storedAllowlist;
+        return $this->getRawOriginal('ip_allowlist');
     }
 
     public function rawRestrictions(): mixed

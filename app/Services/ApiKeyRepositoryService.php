@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\ApiKey;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Qiick\ApiKeys\Contracts\ApiKeyRecord;
 use Qiick\ApiKeys\Contracts\ApiKeyRepository;
@@ -17,19 +16,11 @@ use Qiick\ApiKeys\ExpiryNoticeClaimSql;
  * package verifies tokens and runs the expiry notices, the product owns the rows.
  *
  * Side effects: `recordUsage()` writes `last_used_*` without touching `updated_at` (quiet save,
- * so no activity entry); the expiry methods write the claim lease and the notified stamp as
- * compare-and-set updates that also match the selected expiry and this run's own claim.
+ * so no activity entry); the expiry methods write the claim lease and the notified stamp with
+ * the package's compare-and-set statements, bound to the run's claim token and the selected expiry.
  */
 final class ApiKeyRepositoryService implements ApiKeyRepository
 {
-    /**
-     * The lease each claim of this run wrote, so that only its owner stamps or releases it: a
-     * run whose lease ran out may finish after another run took the same notice over.
-     *
-     * @var array<string, string>
-     */
-    private array $claimedAtByPublicId = [];
-
     /**
      * The key itself, or the key whose previous prefix is still inside its grace window.
      *
@@ -78,37 +69,32 @@ final class ApiKeyRepositoryService implements ApiKeyRepository
             ->lazyById();
     }
 
-    /**
-     * The package's claim lease ({@see ExpiryNoticeClaimSql}), bound to the expiry
-     * the notice was selected for: a rotation in between sets a new expiry, which earns its own
-     * notice, so the old run can no longer claim, stamp or release the row.
-     */
-    public function claimExpiryNotice(ApiKeyRecord $record, \DateTimeImmutable $now, int $leaseSeconds): bool
+    public function claimExpiryNotice(ApiKeyRecord $record, \DateTimeImmutable $now, int $leaseSeconds, string $claimToken): bool
     {
         $leaseCutoff = $now->sub(new \DateInterval('PT'.$leaseSeconds.'S'));
-        $hasClaimed = $this->selectedNotice($record)
-            ->where(fn (Builder $claimQuery) => $claimQuery
-                ->whereNull('expiry_notice_claimed_at')
-                ->orWhere('expiry_notice_claimed_at', '<', self::stored($leaseCutoff)))
-            ->update(['expiry_notice_claimed_at' => self::stored($now)]) === 1;
 
-        if ($hasClaimed) {
-            $this->claimedAtByPublicId[$record->publicId()] = self::stored($now);
-        }
-
-        return $hasClaimed;
+        return DB::update(ExpiryNoticeClaimSql::claim(), [
+            self::stored($now),
+            $claimToken,
+            $record->publicId(),
+            ...self::selectedExpiryWindow($record),
+            self::stored($leaseCutoff),
+        ]) === 1;
     }
 
-    public function markExpiryNotified(ApiKeyRecord $record, \DateTimeImmutable $notifiedAt): void
+    public function markExpiryNotified(ApiKeyRecord $record, \DateTimeImmutable $notifiedAt, string $claimToken): bool
     {
-        $this->ownClaim($record)?->update(['expiry_notified_at' => self::stored($notifiedAt), 'expiry_notice_claimed_at' => null]);
-        unset($this->claimedAtByPublicId[$record->publicId()]);
+        return DB::update(ExpiryNoticeClaimSql::markNotified(), [
+            self::stored($notifiedAt),
+            $record->publicId(),
+            ...self::selectedExpiryWindow($record),
+            $claimToken,
+        ]) === 1;
     }
 
-    public function releaseExpiryNotice(ApiKeyRecord $record): void
+    public function releaseExpiryNotice(ApiKeyRecord $record, string $claimToken): void
     {
-        $this->ownClaim($record)?->update(['expiry_notice_claimed_at' => null]);
-        unset($this->claimedAtByPublicId[$record->publicId()]);
+        DB::update(ExpiryNoticeClaimSql::release(), [$record->publicId(), ...self::selectedExpiryWindow($record), $claimToken]);
     }
 
     /**
@@ -122,28 +108,17 @@ final class ApiKeyRepositoryService implements ApiKeyRepository
     }
 
     /**
-     * The row while it still awaits the notice of the expiry it was selected with.
+     * The package's `expires_at` bounds for the expiry the record was selected with: a rotation
+     * in between moves the expiry, so the old run can no longer claim, stamp or release the row.
+     * Every Signaculum key has an expiry (`expires_at` is NOT NULL).
+     *
+     * @return array{0: string, 1: string}
      */
-    private function selectedNotice(ApiKeyRecord $record): Builder
+    private static function selectedExpiryWindow(ApiKeyRecord $record): array
     {
-        $expiresAt = $record->expiresAt();
-        $noticeQuery = DB::table('api_keys')
-            ->where('uuid', $record->publicId())
-            ->whereNull('expiry_notified_at');
+        [$expiresFrom, $expiresUntil] = ExpiryNoticeClaimSql::expiryWindow($record->expiresAt() ?? new \DateTimeImmutable('@0'));
 
-        return $expiresAt === null
-            ? $noticeQuery->whereNull('expires_at')
-            : $noticeQuery->where('expires_at', self::stored($expiresAt));
-    }
-
-    /**
-     * {@see selectedNotice()} while it still holds the lease this run claimed; null without one.
-     */
-    private function ownClaim(ApiKeyRecord $record): ?Builder
-    {
-        $claimedAt = $this->claimedAtByPublicId[$record->publicId()] ?? null;
-
-        return $claimedAt === null ? null : $this->selectedNotice($record)->where('expiry_notice_claimed_at', $claimedAt);
+        return [self::stored($expiresFrom), self::stored($expiresUntil)];
     }
 
     /**

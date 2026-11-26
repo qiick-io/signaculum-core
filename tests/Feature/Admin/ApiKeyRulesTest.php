@@ -148,6 +148,7 @@ describe('a stored key', function (): void {
         'no matching entry' => [['192.0.2.0/24'], false],
         'an entry that is not text' => [['10.0.0.0/8', 10], false],
         'a map instead of a list' => [['office' => '10.0.0.0/8'], false],
+        'an empty object' => [new stdClass, false],
         'not a list at all' => ['10.0.0.0/8', false],
     ]);
 

@@ -167,40 +167,43 @@ it('never warns about a key that has already expired', function (): void {
 });
 
 // The notifier claims, sends, then stamps: a rotation in between gives the key a new expiry,
-// which the old run's stamp or release must never touch.
+// which the old run's stamp must never mark as notified.
 it('keeps the notice of the new expiry when a rotation lands while the old one is being sent', function (): void {
     $owner = User::factory()->instanceAdmin()->create();
     $apiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(6))->apiKey;
-    $notifier = new ApiKeyRepositoryService;
-    $selectedRecord = collect($notifier->expiringUnnotified(CarbonImmutable::now()->addDays(7)->toDateTimeImmutable()))->sole();
+    $repository = new ApiKeyRepositoryService;
+    $selectedRecord = collect($repository->expiringUnnotified(CarbonImmutable::now()->addDays(7)->toDateTimeImmutable()))->sole();
 
-    expect($notifier->claimExpiryNotice($selectedRecord, CarbonImmutable::now()->toDateTimeImmutable(), 300))->toBeTrue();
+    expect($repository->claimExpiryNotice($selectedRecord, CarbonImmutable::now()->toDateTimeImmutable(), 300, 'old-run'))->toBeTrue();
 
     app(RotateApiKeyAction::class)->execute($apiKey, $owner, CarbonImmutable::now()->addDays(5));
-    $notifier->markExpiryNotified($selectedRecord, CarbonImmutable::now()->toDateTimeImmutable());
 
-    expect($apiKey->refresh()->expiry_notified_at)->toBeNull();
+    expect($repository->markExpiryNotified($selectedRecord, CarbonImmutable::now()->toDateTimeImmutable(), 'old-run'))->toBeFalse()
+        ->and($apiKey->refresh()->expiry_notified_at)->toBeNull();
 
     $this->artisan('api-keys:notify-expiring')->assertSuccessful();
     Notification::assertSentToTimes($owner, ApiKeyExpiringNotification::class, 1);
 });
 
-it('never lets a stale notifier release a newer claim', function (): void {
+// Two runs can claim within the same second: only the claim token tells them apart.
+it('never lets a stale run stamp or release the claim of the run that took over', function (): void {
     $owner = User::factory()->instanceAdmin()->create();
     $apiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(6))->apiKey;
-    $staleNotifier = new ApiKeyRepositoryService;
-    $currentNotifier = new ApiKeyRepositoryService;
-    $staleRecord = collect($staleNotifier->expiringUnnotified(CarbonImmutable::now()->addDays(7)->toDateTimeImmutable()))->sole();
+    $repository = new ApiKeyRepositoryService;
+    $record = collect($repository->expiringUnnotified(CarbonImmutable::now()->addDays(7)->toDateTimeImmutable()))->sole();
+    $now = CarbonImmutable::now()->toDateTimeImmutable();
 
-    expect($staleNotifier->claimExpiryNotice($staleRecord, CarbonImmutable::now()->toDateTimeImmutable(), 60))->toBeTrue();
+    expect($repository->claimExpiryNotice($record, $now, 60, 'stale-run'))->toBeTrue();
 
     // The stale claim's lease runs out and another run takes the same expiry over.
     $this->travel(2)->minutes();
-    $currentRecord = collect($currentNotifier->expiringUnnotified(CarbonImmutable::now()->addDays(7)->toDateTimeImmutable()))->sole();
+    $takeOverAt = CarbonImmutable::now()->toDateTimeImmutable();
 
-    expect($currentNotifier->claimExpiryNotice($currentRecord, CarbonImmutable::now()->toDateTimeImmutable(), 60))->toBeTrue();
+    expect($repository->claimExpiryNotice($record, $takeOverAt, 60, 'current-run'))->toBeTrue();
 
-    $staleNotifier->releaseExpiryNotice($staleRecord);
+    $repository->releaseExpiryNotice($record, 'stale-run');
 
-    expect($apiKey->refresh()->expiry_notice_claimed_at?->toDateTimeString())->toBe(now()->toDateTimeString());
+    expect($repository->markExpiryNotified($record, $takeOverAt, 'stale-run'))->toBeFalse()
+        ->and($apiKey->refresh()->expiry_notice_claim_token)->toBe('current-run')
+        ->and($repository->markExpiryNotified($record, $takeOverAt, 'current-run'))->toBeTrue();
 });
