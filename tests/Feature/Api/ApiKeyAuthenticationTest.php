@@ -7,13 +7,13 @@ use App\Data\ApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Http\Middleware\VerifyCsrfTokenMiddleware;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter as RateLimiterFacade;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Qiick\Access\EffectivePermissionResolver;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -110,7 +110,7 @@ it('keeps a key valid when its creating admin loses permission if another instan
     instanceAdmin();
 
     $creator->syncRoles([]);
-    app(EffectivePermissionResolverService::class)->forget($creator);
+    app(EffectivePermissionResolver::class)->forget($creator);
 
     $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
 });
@@ -118,6 +118,15 @@ it('keeps a key valid when its creating admin loses permission if another instan
 it('refuses a key when no active instance admin remains', function (): void {
     ['plain' => $plain, 'admin' => $admin] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
     $admin->forceFill(['is_active' => false])->save();
+
+    assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key owner may not use the API.');
+});
+
+// The owner must be active by qiick/laravel-access' own rule (PrincipalDirectory::isActive()),
+// which also ends it at its expiry, not only when it is deactivated.
+it('refuses a key whose instance service principal has expired', function (): void {
+    ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    DB::table('principals')->where('id', $apiKey->owner_principal_id)->update(['expires_at' => now()->subMinute()]);
 
     assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key owner may not use the API.');
 });

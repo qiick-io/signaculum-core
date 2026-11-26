@@ -6,7 +6,7 @@ namespace App\Policies;
 
 use App\Enums\PermissionEnum;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Authorizes instance settings (general, localization, security, appearance, LDAP, webhooks, email templates).
@@ -14,7 +14,7 @@ use App\Services\Authorization\EffectivePermissionResolverService;
 class SettingPolicy
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
     ) {}
 
     public function update(User $user): bool

@@ -43,6 +43,11 @@ final class AddOrganizationMemberAction
                 ]);
             }
 
+            // The user-row lock the principal reads the account state under, taken before the
+            // membership insert: that insert's foreign key takes a key-share lock on the same row,
+            // and two adds for one user would each wait on the other's (a PostgreSQL deadlock).
+            User::query()->whereKey($user->getKey())->lockForUpdate()->first();
+
             $alreadyMember = OrganizationMembership::query()
                 ->where('organization_id', $organization->getKey())
                 ->where('user_id', $user->getKey())

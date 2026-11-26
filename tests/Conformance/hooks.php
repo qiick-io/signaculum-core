@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Actions\CreateApiKeyAction;
+use App\Data\ApiKeyData;
 use App\Data\LdapSettingsData;
 use App\Enums\ApiErrorCodeEnum;
 use App\Enums\ApiKeyScopeEnum;
@@ -13,7 +15,7 @@ use App\Models\OrganizationMembership;
 use App\Models\SigningKey;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Services\Authorization\EffectivePermissionResolverService;
+use App\Services\Authorization\SuperAdminGuardService;
 use App\Services\InitialSuperAdminPasswordService;
 use App\Services\LdapSettingsService;
 use App\Services\SigningKeyService;
@@ -34,6 +36,9 @@ use Laravel\Fortify\Fortify;
 use Qiick\Outbound\Delivery\WebhookDeliveryCoordinator;
 use Qiick\Outbound\Models\WebhookEndpointSecret;
 use Qiick\Outbound\Ssrf\RemoteUrlGuard;
+use Qiick\Access\EffectivePermissionResolver;
+use Qiick\Standards\Conformance\Support\ConformanceBehaviourProbe;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -54,7 +59,7 @@ return [
         $group->roles()->attach($readerRole->getKey());
         $group->users()->attach($user->getKey());
 
-        $resolver = app(EffectivePermissionResolverService::class);
+        $resolver = app(EffectivePermissionResolver::class);
         $permission = PermissionEnum::CanShowUsers->value;
 
         if (! $resolver->hasPermission($user, $permission)) {
@@ -362,7 +367,7 @@ return [
         syncPermissions();
 
         $superAdmin = User::factory()->instanceAdmin()->create();
-        $resolver = app(EffectivePermissionResolverService::class);
+        $resolver = app(EffectivePermissionResolver::class);
 
         if (! $resolver->isSuperAdmin($superAdmin)) {
             throw new RuntimeException('Instance super-admin must resolve with zero organisations.');
@@ -483,5 +488,102 @@ return [
         } finally {
             $currentEncrypter->previousKeys([]);
         }
+    },
+
+    // C71 (qiick/laravel-access): a role change clears the resolver through Spatie's events.
+    'assertRoleDetachClearsResolver' => static function (ConformanceBehaviourProbe $probe): void {
+        syncPermissions();
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleEnum::Reader->value);
+        $resolver = app(EffectivePermissionResolver::class);
+
+        if (! $resolver->hasPermission($user, PermissionEnum::CanShowUsers->value)) {
+            throw new RuntimeException('Expected the reader role to grant can-show-users.');
+        }
+
+        $user->removeRole(RoleEnum::Reader->value);
+
+        if ($resolver->hasPermission($user, PermissionEnum::CanShowUsers->value)) {
+            throw new RuntimeException('Detaching a role must clear the resolver without a manual forget().');
+        }
+
+        $probe->pass();
+    },
+
+    // C71: an Admin API key acting as a super-admin gets no super-admin authority (REST policy).
+    'assertApiActorDeniedSuperAdmin' => static function (ConformanceBehaviourProbe $probe): void {
+        syncPermissions();
+
+        $superAdminIssuer = User::factory()->instanceAdmin()->create();
+        $superAdminTarget = User::factory()->instanceAdmin()->create(['email' => 'conformance-super@example.com']);
+        $issuedApiKey = app(CreateApiKeyAction::class)->execute(
+            $superAdminIssuer,
+            new ApiKeyData('Conformance key', [ApiKeyScopeEnum::UsersWrite->value], expiresAt: apiKeyExpiry()),
+        );
+
+        $status = test()->withToken($issuedApiKey->plainTextToken)
+            ->patchJson('/api/v1/users/'.$superAdminTarget->subject, ['first_name' => 'Changed', 'last_name' => 'Changed', 'email' => 'changed@example.com'])
+            ->status();
+
+        if ($status !== 403 || $superAdminTarget->fresh()?->email !== 'conformance-super@example.com') {
+            throw new RuntimeException("An API key acting as a super-admin changed another super-admin (HTTP {$status}).");
+        }
+
+        $probe->pass();
+    },
+
+    // C73: an expired group membership grants nothing, super-admin included.
+    'assertExpiredMembershipGrantsNothing' => static function (ConformanceBehaviourProbe $probe): void {
+        syncPermissions();
+
+        $user = User::factory()->create();
+        $group = UserGroup::factory()->create(['name' => 'conformance-expired-'.uniqid()]);
+        $group->roles()->attach([
+            Role::findByName(RoleEnum::Reader->value, 'web')->getKey(),
+            Role::findByName(RoleEnum::SuperAdmin->value, 'web')->getKey(),
+        ]);
+        $group->users()->attach($user->getKey(), ['expires_at' => now()->subMinute()]);
+        $resolver = app(EffectivePermissionResolver::class);
+        $resolver->forget($user);
+
+        if ($resolver->hasPermission($user, PermissionEnum::CanShowUsers->value) || $resolver->isSuperAdmin($user)) {
+            throw new RuntimeException('An expired group membership still grants permissions or super-admin.');
+        }
+
+        if (app(SuperAdminGuardService::class)->hasSuperAdminUser([$user->getKey()])) {
+            throw new RuntimeException('The last-super-admin rule counts an expired group membership.');
+        }
+
+        $probe->pass();
+    },
+
+    // C74: group activity entries carry public UUIDs only, never the bigint id.
+    'assertAccessActivityUuidOnly' => static function (ConformanceBehaviourProbe $probe): void {
+        syncPermissions();
+
+        $group = UserGroup::factory()->create(['name' => 'conformance-audit-'.uniqid()]);
+        $group->forceFill(['name' => 'conformance-audit-renamed-'.uniqid()])->save();
+        $group->delete();
+
+        $entries = Activity::query()->where('subject_type', $group->getMorphClass())->where('subject_id', $group->getKey())->get();
+
+        if ($entries->count() < 2) {
+            throw new RuntimeException('Expected activity entries for the group changes.');
+        }
+
+        foreach ($entries as $entry) {
+            foreach (['attributes', 'old'] as $section) {
+                $values = (array) ($entry->properties?->get($section) ?? []);
+
+                foreach ($values as $key => $value) {
+                    if (($key === 'id' || str_ends_with((string) $key, '_id')) && is_int($value)) {
+                        throw new RuntimeException("Group activity property {$section}.{$key} carries a bigint id.");
+                    }
+                }
+            }
+        }
+
+        $probe->pass();
     },
 ];

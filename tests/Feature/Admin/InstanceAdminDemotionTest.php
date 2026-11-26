@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use LdapRecord\Laravel\Testing\DirectoryEmulator;
+use Qiick\Access\EffectivePermissionResolver;
 
 mutates(InstanceAdminDemotionService::class, NotifyAdminsOfDemotedApiKeyCreatorListener::class, ApiKeyCreatorDemotedNotification::class);
 
@@ -138,6 +139,9 @@ describe('every demotion path raises the event once', function (): void {
 
     it('raises it when the account is deactivated through the Admin API', function (): void {
         ['plain' => $plainTextToken] = adminApiKey([ApiKeyScopeEnum::UsersWrite->value]);
+        // A key never acts on a super-admin, so the creator is an instance admin by the admin role.
+        $this->creator->syncRoles([RoleEnum::Admin->value]);
+        app(EffectivePermissionResolver::class)->forget();
         Event::fake([InstanceAdminDemotedEvent::class]);
 
         $this->withToken($plainTextToken)

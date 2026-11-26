@@ -14,7 +14,6 @@ use App\Http\Resources\UserGroupResource;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\Authorization\SuperAdminGuardService;
 use App\Services\InstanceAdminDemotionService;
 use Closure;
@@ -25,6 +24,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Admin list, create, edit and soft-delete for user groups and their memberships.
@@ -122,7 +122,7 @@ class UserGroupController extends Controller
         // sync() takes the ids as values, whatever the keys or their string form.
         $group->users()->sync($validated['user_ids'] ?? []);
         $group->roles()->sync($validated['role_ids'] ?? []);
-        app(EffectivePermissionResolverService::class)->forget();
+        app(EffectivePermissionResolver::class)->forget();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group created.')]);
 

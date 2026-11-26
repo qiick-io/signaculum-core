@@ -10,8 +10,8 @@ use App\Enums\RoleEnum;
 use App\Models\ApiKey;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\Authorization\SuperAdminGuardService;
+use Qiick\Access\EffectivePermissionResolver;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -31,7 +31,7 @@ it('refuses an admin promoting themselves to super-admin via instance-admin', fu
         ])
         ->assertForbidden();
 
-    expect(app(EffectivePermissionResolverService::class)->isSuperAdmin($admin->fresh()))->toBeFalse();
+    expect(app(EffectivePermissionResolver::class)->isSuperAdmin($admin->fresh()))->toBeFalse();
 });
 
 it('refuses an admin editing a super-admin password email activation two-factor or unlock', function (): void {
@@ -92,6 +92,44 @@ it('refuses an admin patching a super-admin through the API', function (): void 
     expect($superAdmin->fresh()->email)->toBe('api-super@example.com');
 });
 
+// A scoped key never carries super-admin authority, whoever it acts as: the Gate excludes API
+// actors from the super-admin pass, and the product's protected-account check must too.
+it('refuses a key acting as a super-admin every write to another super-admin', function (string $method, string $path, array $payload): void {
+    $superAdminIssuer = User::factory()->instanceAdmin()->create();
+    $superAdmin = User::factory()->instanceAdmin()->create([
+        'email' => 'api-super@example.com',
+        'two_factor_secret' => encrypt('secret'),
+        'two_factor_confirmed_at' => now(),
+    ]);
+    ['plain' => $plain] = adminApiKeyFor($superAdminIssuer, [ApiKeyScopeEnum::UsersWrite->value]);
+
+    $this->withToken($plain)
+        ->json($method, '/api/v1/users/'.$superAdmin->subject.$path, $payload)
+        ->assertForbidden();
+
+    $superAdmin->refresh();
+
+    expect($superAdmin->email)->toBe('api-super@example.com')
+        ->and($superAdmin->is_active)->toBeTrue()
+        ->and($superAdmin->two_factor_confirmed_at)->not->toBeNull();
+})->with([
+    'update' => ['PATCH', '', ['first_name' => 'Nope', 'last_name' => 'Nope', 'email' => 'nope@example.com', 'password' => 'Brand-new-password-9']],
+    'deactivate' => ['POST', '/deactivate', []],
+    'reset two-factor' => ['POST', '/reset-two-factor', []],
+]);
+
+it('lets a key acting as a super-admin still manage an ordinary account', function (): void {
+    $superAdminIssuer = User::factory()->instanceAdmin()->create();
+    $member = User::factory()->create(['email' => 'member@example.com']);
+    ['plain' => $plain] = adminApiKeyFor($superAdminIssuer, [ApiKeyScopeEnum::UsersWrite->value]);
+
+    $this->withToken($plain)
+        ->patchJson('/api/v1/users/'.$member->subject, ['first_name' => 'Ada', 'last_name' => 'Lovelace', 'email' => 'ada@example.com'])
+        ->assertOk();
+
+    expect($member->fresh()->email)->toBe('ada@example.com');
+});
+
 it('stops granting group permissions after the group is soft-deleted', function (): void {
     $user = User::factory()->create();
     $group = UserGroup::factory()->create(['name' => 'Temp ops']);
@@ -100,7 +138,7 @@ it('stops granting group permissions after the group is soft-deleted', function 
     $group->roles()->attach($adminRole->id);
     $group->users()->attach($user->id);
 
-    $resolver = app(EffectivePermissionResolverService::class);
+    $resolver = app(EffectivePermissionResolver::class);
 
     expect($resolver->hasPermission($user, PermissionEnum::CanEditUsers->value))->toBeTrue();
 
@@ -200,9 +238,9 @@ it('refuses deactivating and deleting a user who is super-admin only through a g
     $group = UserGroup::factory()->create(['name' => 'Sole owners']);
     $group->roles()->attach(Role::findByName(RoleEnum::SuperAdmin->value)->id);
     $group->users()->attach($groupOnly->id);
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
-    expect(app(EffectivePermissionResolverService::class)->isSuperAdmin($groupOnly))->toBeTrue()
+    expect(app(EffectivePermissionResolver::class)->isSuperAdmin($groupOnly))->toBeTrue()
         ->and(app(SuperAdminGuardService::class)->countActiveSuperAdmins())->toBe(1);
 
     $this->actingAs($groupOnly)
@@ -227,7 +265,7 @@ it('refuses deleting the only super-admin group and stripping its role', functio
 
     $group->roles()->attach($superAdminRole->id);
     $group->users()->attach($member->id);
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
     $this->actingAs($member)
         ->delete(route('admin.groups.destroy', $group))
@@ -280,9 +318,9 @@ it('refuses emptying the only super-admin group members and writes nothing', fun
 
     $group->roles()->attach($superAdminRole->id);
     $group->users()->attach($member->id);
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
-    expect(app(EffectivePermissionResolverService::class)->isSuperAdmin($member))->toBeTrue()
+    expect(app(EffectivePermissionResolver::class)->isSuperAdmin($member))->toBeTrue()
         ->and(app(SuperAdminGuardService::class)->countActiveSuperAdmins())->toBe(1);
 
     // Member is super-admin via the group, so Gate::before lets them update it; emptying must still refuse.
@@ -299,7 +337,7 @@ it('refuses emptying the only super-admin group members and writes nothing', fun
     expect($group->name)->toBe('Owners')
         ->and($group->description)->toBe('keep me')
         ->and($group->users()->pluck('users.id')->all())->toBe([$member->id])
-        ->and(app(EffectivePermissionResolverService::class)->isSuperAdmin($member->fresh()))->toBeTrue();
+        ->and(app(EffectivePermissionResolver::class)->isSuperAdmin($member->fresh()))->toBeTrue();
 });
 
 /**
@@ -319,3 +357,46 @@ function adminApiKeyFor(User $owner, array $scopes): array
         'apiKey' => $issued->apiKey,
     ];
 }
+
+// The last-super-admin rule counts exactly who the package resolver treats as a super-admin:
+// a direct holder, or a member of a live instance group whose membership has not expired.
+it('does not count an expired or non-instance group membership as a remaining super-admin', function (array $groupAttributes, ?string $membershipExpiresAt): void {
+    $directSuperAdmin = User::factory()->instanceAdmin()->create();
+    $groupMember = User::factory()->create();
+    $group = UserGroup::factory()->create($groupAttributes);
+    $group->roles()->attach(Role::findByName(RoleEnum::SuperAdmin->value)->id);
+    $group->users()->attach($groupMember->id, ['expires_at' => $membershipExpiresAt]);
+    app(EffectivePermissionResolver::class)->forget();
+    $superAdminGuard = app(SuperAdminGuardService::class);
+
+    expect(app(EffectivePermissionResolver::class)->isSuperAdmin($groupMember))->toBeFalse()
+        ->and($superAdminGuard->countActiveSuperAdmins())->toBe(1)
+        ->and($superAdminGuard->isLastActiveSuperAdmin($directSuperAdmin))->toBeTrue()
+        ->and($superAdminGuard->wouldLeaveNoActiveSuperAdminAfterGroupUpdate($group, null, null))->toBeFalse();
+
+    $directSuperAdmin->syncRoles([]);
+    app(EffectivePermissionResolver::class)->forget();
+
+    expect($superAdminGuard->countActiveSuperAdmins())->toBe(0);
+})->with([
+    'an expired membership' => [[], '2026-01-01 00:00:00'],
+    'a non-instance group' => [['is_instance' => false], null],
+]);
+
+// sync() keeps a retained member's expires_at: an expired member kept in the list still grants
+// nothing, so it cannot stand in for the last effective super-admin removed by the same edit.
+it('does not count a retained expired member when a group edit removes the last super-admin', function (): void {
+    $groupSuperAdmin = User::factory()->create();
+    $expiredMember = User::factory()->create();
+    $group = UserGroup::factory()->create();
+    $group->roles()->attach(Role::findByName(RoleEnum::SuperAdmin->value)->id);
+    $group->users()->attach($groupSuperAdmin->id);
+    $group->users()->attach($expiredMember->id, ['expires_at' => now()->subDay()]);
+    app(EffectivePermissionResolver::class)->forget();
+    $superAdminGuard = app(SuperAdminGuardService::class);
+
+    expect($superAdminGuard->countActiveSuperAdmins())->toBe(1)
+        ->and($superAdminGuard->wouldLeaveNoActiveSuperAdminAfterGroupUpdate($group, [$expiredMember->id], null))->toBeTrue()
+        ->and($superAdminGuard->wouldLeaveNoActiveSuperAdminAfterGroupUpdate($group, [$groupSuperAdmin->id, $expiredMember->id], null))->toBeFalse()
+        ->and($superAdminGuard->wouldLeaveNoActiveSuperAdminAfterGroupUpdate($group, [User::factory()->create()->id], null))->toBeFalse();
+});

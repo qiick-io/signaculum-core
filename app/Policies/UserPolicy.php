@@ -7,8 +7,8 @@ namespace App\Policies;
 use App\Enums\PermissionEnum;
 use App\Enums\RoleEnum;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\Authorization\SuperAdminGuardService;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Authorizes IdP user administration. Super-admins are protected from delegated
@@ -18,7 +18,7 @@ use App\Services\Authorization\SuperAdminGuardService;
 class UserPolicy
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
         private readonly SuperAdminGuardService $superAdminGuard,
     ) {}
 

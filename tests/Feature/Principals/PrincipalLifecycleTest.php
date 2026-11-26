@@ -17,6 +17,9 @@ use App\Models\Principal;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Qiick\Access\Principals\DeactivationReason;
+use Qiick\Access\Principals\PrincipalDirectory;
+use Qiick\ApiKeys\RevocationReason;
 
 /**
  * Fleet principals: one human principal per organisation membership; Admin API
@@ -67,7 +70,7 @@ test('joining an organisation creates a user principal for that organisation', f
         ->first();
 
     expect($ownerPrincipal)->not->toBeNull()
-        ->and($ownerPrincipal?->type)->toBe(PrincipalTypeEnum::User)
+        ->and($ownerPrincipal?->type)->toBe(PrincipalTypeEnum::User->value)
         ->and($ownerPrincipal?->organisation_id)->toBe($organization->getKey())
         ->and($memberPrincipal)->not->toBeNull()
         ->and($memberPrincipal?->deactivated_at)->toBeNull();
@@ -214,4 +217,122 @@ test('reactivating a user clears principals.deactivated_at only for current memb
 
     expect($user->refresh()->is_active)->toBeTrue()
         ->and($principal->refresh()->deactivated_at)->toBeNull();
+});
+
+// Reactivating a user undoes only what deactivating the user did (`admin`). A principal
+// deactivated for another reason (here with its owner, or expired) stays inactive, even in an
+// organisation the user still belongs to: that decision was not the user deactivation's.
+test('reactivating a user does not revive a principal deactivated for another reason', function (string $otherReason): void {
+    User::factory()->instanceAdmin()->create();
+    $user = User::factory()->create();
+    $organization = Organization::factory()->create();
+    app(AddOrganizationMemberAction::class)->execute($organization, $user, [OrganizationRoleEnum::Member->value]);
+    $principal = Principal::query()->where('user_id', $user->getKey())->where('organisation_id', $organization->getKey())->firstOrFail();
+    Principal::query()->whereKey($principal->getKey())->update(['deactivated_at' => now(), 'deactivation_reason' => $otherReason]);
+
+    app(DeactivateUserAction::class)->execute($user);
+    app(ReactivateUserAction::class)->execute($user->refresh());
+
+    expect($principal->refresh()->deactivated_at)->not->toBeNull()
+        ->and($principal->deactivation_reason?->value)->toBe($otherReason);
+})->with(['owner deactivated' => 'owner_deactivated', 'expired' => 'expired']);
+
+// qiick/laravel-access: a deactivated principal's API keys stop, through the PrincipalDeactivated
+// listener, including every Admin API key when the instance_service principal is deactivated.
+test('deactivating the instance service principal revokes the Admin API keys it owns', function (): void {
+    ['apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    $instancePrincipal = Principal::query()->whereKey($apiKey->owner_principal_id)->firstOrFail();
+
+    app(PrincipalDirectory::class)->deactivate($instancePrincipal, DeactivationReason::Admin);
+
+    expect($apiKey->refresh()->revoked_at)->not->toBeNull()
+        ->and($apiKey->revokedReason())->toBe(RevocationReason::Owner);
+});
+
+// A membership principal is active exactly while the account is active and the membership
+// exists, whatever order deactivation, removal, reactivation and rejoining happen in.
+test('a deactivated user removed from an organisation gets an active principal back on reactivation and rejoining', function (string $order): void {
+    User::factory()->instanceAdmin()->create();
+    $member = User::factory()->create();
+    $organization = Organization::factory()->create();
+    app(AddOrganizationMemberAction::class)->execute($organization, $member, [OrganizationRoleEnum::Member->value]);
+    $principal = Principal::query()->where('user_id', $member->getKey())->where('organisation_id', $organization->getKey())->firstOrFail();
+
+    app(DeactivateUserAction::class)->execute($member);
+    app(RemoveOrganizationMemberAction::class)->execute($organization, $member);
+
+    $steps = [
+        'reactivate' => fn () => app(ReactivateUserAction::class)->execute($member->refresh()),
+        'rejoin' => fn () => app(AddOrganizationMemberAction::class)->execute($organization, $member->refresh(), [OrganizationRoleEnum::Member->value]),
+    ];
+    [$first, $second] = $order === 'reactivate first' ? ['reactivate', 'rejoin'] : ['rejoin', 'reactivate'];
+
+    $steps[$first]();
+
+    // Only one of the two conditions holds yet: the principal stays inactive.
+    expect($principal->refresh()->deactivated_at)->not->toBeNull();
+
+    $steps[$second]();
+
+    expect($principal->refresh()->deactivated_at)->toBeNull()
+        ->and($principal->deactivation_reason)->toBeNull();
+})->with(['reactivate first', 'rejoin first']);
+
+test('reactivating a user never revives the principal of a membership removed meanwhile', function (): void {
+    User::factory()->instanceAdmin()->create();
+    $member = User::factory()->create();
+    $organization = Organization::factory()->create();
+    app(AddOrganizationMemberAction::class)->execute($organization, $member, [OrganizationRoleEnum::Member->value]);
+    $principal = Principal::query()->where('user_id', $member->getKey())->where('organisation_id', $organization->getKey())->firstOrFail();
+
+    app(DeactivateUserAction::class)->execute($member);
+    app(RemoveOrganizationMemberAction::class)->execute($organization, $member);
+    app(ReactivateUserAction::class)->execute($member->refresh());
+
+    expect($principal->refresh()->deactivated_at)->not->toBeNull()
+        ->and($principal->deactivation_reason)->toBe(DeactivationReason::Offboarded);
+});
+
+// The account state is read under a lock on the user row, never from the caller's copy: a
+// deactivation that committed after the member was loaded still leaves the new principal inactive.
+test('a membership created from a stale copy of a since deactivated account gets an inactive principal', function (): void {
+    User::factory()->instanceAdmin()->create();
+    $member = User::factory()->create();
+    $staleMember = User::query()->findOrFail($member->getKey());
+    $organization = Organization::factory()->create();
+
+    app(DeactivateUserAction::class)->execute($member);
+
+    expect($staleMember->is_active)->toBeTrue();
+
+    app(AddOrganizationMemberAction::class)->execute($organization, $staleMember, [OrganizationRoleEnum::Member->value]);
+    $principal = Principal::query()->where('user_id', $member->getKey())->where('organisation_id', $organization->getKey())->firstOrFail();
+
+    expect($principal->deactivated_at)->not->toBeNull()
+        ->and($principal->deactivation_reason)->toBe(DeactivationReason::Admin);
+});
+
+// Deactivation and reactivation write the state on the row they locked, not on the caller's copy:
+// a copy that already holds the target value would make Eloquent skip the write.
+test('reactivating from a stale copy that still reads active writes the account state', function (): void {
+    User::factory()->instanceAdmin()->create();
+    $member = User::factory()->create();
+    $staleMember = User::query()->findOrFail($member->getKey());
+
+    app(DeactivateUserAction::class)->execute($member);
+    app(ReactivateUserAction::class)->execute($staleMember);
+
+    expect(User::query()->whereKey($member->getKey())->value('is_active'))->toBeTruthy();
+});
+
+test('deactivating from a stale copy that already reads inactive writes the account state', function (): void {
+    User::factory()->instanceAdmin()->create();
+    $member = User::factory()->create();
+    app(DeactivateUserAction::class)->execute($member);
+    $staleMember = User::query()->findOrFail($member->getKey());
+
+    app(ReactivateUserAction::class)->execute($member->refresh());
+    app(DeactivateUserAction::class)->execute($staleMember);
+
+    expect(User::query()->whereKey($member->getKey())->value('is_active'))->toBeFalsy();
 });

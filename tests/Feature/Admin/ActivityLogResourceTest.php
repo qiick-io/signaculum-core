@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\EnsureInstanceServicePrincipalAction;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\Activity;
 use App\Models\Principal;
@@ -53,7 +54,7 @@ it('shows a user causer, the subject and every recorded field', function (): voi
 });
 
 it('shows the Admin API service account as the causer, without an email', function (): void {
-    $principal = Principal::query()->create(['type' => 'instance_service', 'name' => 'Instance Admin API']);
+    $principal = app(EnsureInstanceServicePrincipalAction::class)->execute();
 
     activity()->causedBy($principal)->event('created')->log('Created through the API');
 

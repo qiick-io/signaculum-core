@@ -8,7 +8,6 @@ use App\Actions\DeleteOrganizationAction;
 use App\Actions\ReactivateUserAction;
 use App\Data\OrganizationData;
 use App\Enums\OrganizationRoleEnum;
-use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Enums\PrincipalTypeEnum;
 use App\Enums\WebhookEventEnum;
 use App\Jobs\EndOrganizationMemberOidcSessionsJob;
@@ -27,6 +26,7 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
+use Qiick\Access\Principals\DeactivationReason;
 use Qiick\Outbound\Models\WebhookDelivery;
 use Spatie\Activitylog\Models\Activity;
 
@@ -84,7 +84,7 @@ test('deleting an organisation offboards it and keeps the evidence', function ()
         ->and(OrganizationInvitation::query()->where('organization_id', $organization->getKey())->exists())->toBeFalse()
         ->and($principals)->toHaveCount(2)
         ->and($principals->every(fn (Principal $principal): bool => $principal->deactivated_at !== null))->toBeTrue()
-        ->and($principals->every(fn (Principal $principal): bool => $principal->deactivation_reason === PrincipalDeactivationReasonEnum::Offboarded))->toBeTrue()
+        ->and($principals->every(fn (Principal $principal): bool => $principal->deactivation_reason === DeactivationReason::Offboarded))->toBeTrue()
         ->and(Activity::query()->where('event', 'organization_deleted')->where('subject_id', $organization->getKey())->exists())->toBeTrue();
 });
 
@@ -126,7 +126,7 @@ test('removing a member deactivates their principal as offboarded', function () 
         ->sole();
 
     expect($principal->deactivated_at)->not->toBeNull()
-        ->and($principal->deactivation_reason)->toBe(PrincipalDeactivationReasonEnum::Offboarded);
+        ->and($principal->deactivation_reason)->toBe(DeactivationReason::Offboarded);
 });
 
 test('an api key always has an owner principal, which cannot be deleted under it', function () {
@@ -264,7 +264,7 @@ test('reactivating a user does not revive a principal of a deleted organisation'
     $principal = Principal::query()->where('organisation_id', $organization->getKey())->where('user_id', $member->getKey())->sole();
 
     expect($principal->deactivated_at)->not->toBeNull()
-        ->and($principal->deactivation_reason)->toBe(PrincipalDeactivationReasonEnum::Offboarded);
+        ->and($principal->deactivation_reason)->toBe(DeactivationReason::Offboarded);
 });
 
 test('deleting an organisation twice offboards it once', function () {

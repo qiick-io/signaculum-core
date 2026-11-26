@@ -6,7 +6,7 @@ namespace App\Policies;
 
 use App\Enums\PermissionEnum;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Authorizes the instance activity log.
@@ -14,7 +14,7 @@ use App\Services\Authorization\EffectivePermissionResolverService;
 class ActivityPolicy
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
     ) {}
 
     public function viewAny(User $user): bool

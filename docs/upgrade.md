@@ -65,6 +65,37 @@ For `1.0.0-beta.1` (first tagged release):
 - Email-code login and outbound webhooks need a **queue worker**. Mail (verification, reset, invitations, email codes) and webhook delivery are queued.
 - Admin REST API keys are created under Admin → API keys after upgrade; there is no seed key.
 
+## Beta database cutover (`1.0.0-beta.2`)
+
+`1.0.0-beta.2` replaces several tables with those of the fleet packages (`qiick/laravel-access`: groups and `principals`; `qiick/laravel-api-keys`: `api_keys`) by editing their `create_` migrations, as allowed before the first stable release. A beta.1 database cannot be migrated forward: `signaculum:upgrade` or `RUN_MIGRATIONS=true` would run the new `create_` migrations against tables that already exist and stop. Production refuses `migrate:fresh`, so the cutover recreates the database instead. Nothing in it is carried over.
+
+**What is lost and what to keep**
+
+- Lost with the database: users and their passkeys and two-factor enrolments, organisations, groups, OIDC applications (client ids and secrets), consents and tokens, Admin API keys, webhooks, settings, the activity log, and the `id_token` signing keys (`signing_keys`).
+- Keep: `APP_KEY` and `storage/oauth-*.key` (Passport), and your `.env`. Relying parties must be registered again and given their new client credentials; they fetch the new signing key from `/.well-known/jwks.json` (one with a cached JWKS fails until it refreshes). Admin API keys and webhook endpoints are issued again.
+
+**Steps**
+
+1. Back up the beta.1 database (and `storage/`), then stop the app and its queue worker.
+2. Recreate an empty database:
+    - SQLite: move `database/database.sqlite` aside and create an empty file (`touch database/database.sqlite`).
+    - PostgreSQL / MySQL: drop the database and create it again, empty, with the same name and owner.
+    - Docker: stop the stack and remove the volume that holds `database/` (for SQLite) or recreate the database on the server; keep the `storage/` volume.
+3. Put the beta.2 code in place and install dependencies, as in the steps above.
+4. Build the empty schema and the first administrator (with `INITIAL_SUPER_ADMIN_*` set in `.env`):
+
+    ```bash
+    php artisan migrate --force
+    php artisan signaculum:sync-permissions
+    php artisan db:seed --class=CreateSuperAdminSeeder --force
+    php artisan signaculum:rotate-signing-key
+    php artisan optimize:clear
+    ```
+
+    With Docker, `RUN_MIGRATIONS=true` runs the first two on boot; run the last three with `docker compose exec signaculum php artisan …`.
+
+5. Start the app and the queue worker, sign in as the administrator, and register the applications, organisations, API keys and webhooks again.
+
 ## After upgrade
 
 - Confirm `GET /health/ready` returns 200.

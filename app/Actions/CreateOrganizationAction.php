@@ -25,6 +25,11 @@ final class CreateOrganizationAction
     public function execute(OrganizationData $organizationData, User $creator): Organization
     {
         return DB::transaction(function () use ($organizationData, $creator): Organization {
+            // The user-row lock taken before the owner membership insert, as in
+            // AddOrganizationMemberAction: the insert's foreign key takes a key-share lock on the
+            // same row, and two creations by one user would each wait on the other's.
+            User::query()->whereKey($creator->getKey())->lockForUpdate()->first();
+
             $organization = Organization::query()->create([
                 'name' => $organizationData->name,
                 'slug' => $organizationData->slug,

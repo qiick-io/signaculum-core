@@ -13,6 +13,7 @@
         "usesSpatieTeams": false,
         "hasOrganisations": true,
         "hasUserGroups": true,
+        "usesLaravelAccess": true,
         "hasPrincipals": true,
         "hasApiKeys": true,
         "hasSettings": true,
@@ -21,12 +22,45 @@
         "membershipTable": "organization_user",
         "openApiPath": "resources/openapi/admin-v1.json"
     },
+    "access": {
+        "direct_checks": [
+            {
+                "site": "App\\Http\\Controllers\\OrganizationController::index",
+                "reason": "Scopes the organisation list: holders of can-manage-organizations see every organisation, others only their own; a list filter, not an authorization decision",
+                "decision": "knowledge/decisions/2026-11-22-laravel-access-package",
+                "review_by": "2027-05-01"
+            },
+            {
+                "site": "App\\Services\\ApiKeyAuthorizerService::actingAdminFor",
+                "reason": "Chooses which instance admin an Admin API key acts as, before an actor is bound; the key's own scopes then gate the request",
+                "decision": "knowledge/decisions/2026-11-22-signaculum-instance-service-principal",
+                "review_by": "2027-05-01"
+            },
+            {
+                "site": "App\\Services\\WebhookEndpointNoticeRecipientsService::mayReceiveNotices",
+                "reason": "Chooses who receives the automatic webhook-disable mail, which names the endpoint host: holders of can-manage-settings with an active account, decided afresh at queueing and again at send; a recipient filter, not a request authorization",
+                "decision": "knowledge/decisions/2026-11-22-laravel-access-package",
+                "review_by": "2027-05-01"
+            },
+            {
+                "site": "App\\Services\\InstanceAdminPresenceService::isActiveInstanceAdmin",
+                "reason": "Defines who counts as an active instance admin for Admin API key validity and expiry notices (can-manage-api-keys held, account active)",
+                "decision": "knowledge/decisions/2026-11-22-signaculum-instance-service-principal",
+                "review_by": "2027-05-01"
+            }
+        ]
+    },
     "divergences": {
         "C2": {
             "reason": "The database requires an organisation for every principal except the singleton instance_service principal that owns instance-wide Admin API keys. PrincipalOrganisationConstraintTest covers that exception and its database constraints.",
             "decision": "https://github.com/qiick-io/signaculum-core/issues/229",
             "review_by": "2027-02-01",
             "issue": "https://github.com/qiick-io/signaculum-core/issues/299"
+        },
+        "C71": {
+            "reason": "The synced C71 probe calls Gate::forUser() with a non-Authenticatable Spatie-shaped actor, and qiick/laravel-access 0.1.0-beta.2 GateBefore::__invoke() type-hints ?Authenticatable, so the probe dies with a TypeError before the product hooks run. Both C71 hooks (assertRoleDetachClearsResolver, assertApiActorDeniedSuperAdmin) are implemented and pass; the config half of C71 holds. Lift once the suite or the package accepts that actor.",
+            "decision": "knowledge/decisions/2026-11-22-laravel-access-package",
+            "review_by": "2027-01-15"
         },
         "C3": {
             "reason": "Signaculum is the IdP: identities are local users; users.subject is the public UUID and there is no user_identities / oidc_sub table (permanent exemption)",

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\InstanceAdminDemotionReasonEnum;
-use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Models\OidcSession;
 use App\Models\Principal;
 use App\Models\User;
@@ -15,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Passport;
+use Qiick\Access\Principals\DeactivationReason;
+use Qiick\Access\Principals\PrincipalDirectory;
 
 /**
  * Deactivate an IdP account: refuse further login, revoke Passport tokens, clear
@@ -29,6 +30,7 @@ final class DeactivateUserAction
         private readonly DispatchBackChannelLogoutAction $dispatchBackChannelLogoutAction,
         private readonly SuperAdminGuardService $superAdminGuard,
         private readonly InstanceAdminDemotionService $instanceAdminDemotionService,
+        private readonly PrincipalDirectory $principalDirectory,
     ) {}
 
     /**
@@ -56,15 +58,18 @@ final class DeactivateUserAction
     private function deactivate(User $user): void
     {
         DB::transaction(function () use ($user): void {
-            $user->forceFill(['is_active' => false])->save();
+            // The lock a new membership's principal reads the account state under. Every write
+            // goes to the locked row, never to the caller's copy, which may already read `false`
+            // and make Eloquent skip the write.
+            $lockedUser = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            $lockedUser->forceFill(['is_active' => false])->save();
 
+            // Through the directory, so owned principals follow and PrincipalDeactivated revokes keys.
             Principal::query()
                 ->where('user_id', $user->getKey())
                 ->whereNull('deactivated_at')
-                ->update([
-                    'deactivated_at' => now(),
-                    'deactivation_reason' => PrincipalDeactivationReasonEnum::Admin->value,
-                ]);
+                ->get()
+                ->each(fn (Principal $principal) => $this->principalDirectory->deactivate($principal, DeactivationReason::Admin));
 
             $accessTokenIds = Passport::token()->newQuery()
                 ->where('user_id', $user->getKey())
@@ -78,19 +83,21 @@ final class DeactivateUserAction
                 ->where('user_id', $user->getKey())
                 ->delete();
 
-            $user->setRememberToken(Str::random(60));
-            $user->save();
+            $lockedUser->setRememberToken(Str::random(60));
+            $lockedUser->save();
 
             // Every open client session gets its logout token, each with its own `sid`
             // (Back-Channel Logout 1.0 §2.4), including those that never wrote an OidcSession row.
             // The jobs are queued only once this transaction commits, so a failure here rolls the
             // whole deactivation back without notifying any relying party, and the admin retries.
-            $this->dispatchBackChannelLogoutAction->execute($user);
+            $this->dispatchBackChannelLogoutAction->execute($lockedUser);
 
             OidcSession::query()
                 ->where('user_id', $user->getKey())
                 ->whereNull('ended_at')
                 ->update(['ended_at' => now()]);
         });
+
+        $user->refresh();
     }
 }

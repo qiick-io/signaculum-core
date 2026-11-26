@@ -2,121 +2,29 @@
 
 declare(strict_types=1);
 
-use App\Enums\PrincipalTypeEnum;
 use App\Models\Organization;
-use App\Models\Principal;
 use App\Models\User;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Qiick\Access\Testing\AssertsPrincipalsSchema;
 
 /**
- * Database CHECK + singleton: organisation_id is null iff type is instance_service (#229 nits).
- *
- * Pack catalogue C9 (`tests/Conformance/catalog.php`) is synced from app-ui and still
- * describes the pre-#229 shape. Intended C9 wording until the pack lands it:
- * "principals.id UUID; user_id nullable; unique(organisation_id, user_id);
- * organisation_id required except singleton instance_service (NULL org);
- * deactivated_at; membership-scoped human principals"
- * (decision 2026-11-22-principal-organisation-required-in-multi-tenant-products).
+ * The `principals` schema is qiick/laravel-access' (design §15), with Signaculum's settings:
+ * organisations required, `instance_service` the only instance type, and a restrict foreign key
+ * to `organizations` added by Signaculum's own migration. The package's probe proves it on the
+ * migrated database (§15.6, P9): one principal per membership, the organisation rule both ways,
+ * the instance singleton, a user with principals cannot be deleted, and an organisation with
+ * principals cannot be deleted.
  */
-test('a user principal without organisation_id is rejected by the database', function (): void {
-    $user = User::factory()->create();
+test('the principals schema enforces the package rules with organisations required', function (): void {
+    $probe = new AssertsPrincipalsSchema(
+        DB::connection(),
+        fn (): int => User::factory()->create()->id,
+        fn (): string => (string) Organization::factory()->create()->getKey(),
+        fn (string $organisationId) => DB::table('organizations')->where('id', $organisationId)->delete(),
+    );
 
-    expect(fn () => Principal::query()->create([
-        'type' => PrincipalTypeEnum::User,
-        'user_id' => $user->getKey(),
-        'organisation_id' => null,
-        'name' => 'Orphan',
-    ]))->toThrow(QueryException::class);
-});
+    $probe->assertShape();
+    $probe->assertConstraints();
 
-test('a service principal without organisation_id is rejected by the database', function (): void {
-    expect(fn () => Principal::query()->create([
-        'type' => PrincipalTypeEnum::Service,
-        'user_id' => null,
-        'organisation_id' => null,
-        'name' => 'Bad service',
-    ]))->toThrow(QueryException::class);
-});
-
-test('an instance_service principal may have a null organisation_id', function (): void {
-    $principal = Principal::query()->create([
-        'type' => PrincipalTypeEnum::InstanceService,
-        'user_id' => null,
-        'organisation_id' => null,
-        'name' => 'Instance Admin API',
-    ]);
-
-    expect($principal->organisation_id)->toBeNull()
-        ->and($principal->type)->toBe(PrincipalTypeEnum::InstanceService);
-});
-
-test('an instance_service principal with an organisation_id is rejected by the database', function (): void {
-    $organization = Organization::factory()->create();
-
-    expect(fn () => Principal::query()->create([
-        'type' => PrincipalTypeEnum::InstanceService,
-        'user_id' => null,
-        'organisation_id' => $organization->getKey(),
-        'name' => 'Bad instance service',
-    ]))->toThrow(QueryException::class);
-});
-
-test('a second instance_service principal is rejected by the database', function (): void {
-    Principal::query()->create([
-        'type' => PrincipalTypeEnum::InstanceService,
-        'user_id' => null,
-        'organisation_id' => null,
-        'name' => 'Instance Admin API',
-    ]);
-
-    expect(fn () => Principal::query()->create([
-        'type' => PrincipalTypeEnum::InstanceService,
-        'user_id' => null,
-        'organisation_id' => null,
-        'name' => 'Duplicate instance service',
-    ]))->toThrow(QueryException::class);
-});
-
-test('a user principal with an organisation_id is accepted', function (): void {
-    $user = User::factory()->create();
-    $organization = Organization::factory()->create();
-
-    $principal = Principal::query()->create([
-        'type' => PrincipalTypeEnum::User,
-        'user_id' => $user->getKey(),
-        'organisation_id' => $organization->getKey(),
-        'name' => 'Member',
-    ]);
-
-    expect($principal->organisation_id)->toBe($organization->getKey());
-});
-
-test('updating a user principal organisation_id to null is rejected by the database', function (): void {
-    $user = User::factory()->create();
-    $organization = Organization::factory()->create();
-
-    $principal = Principal::query()->create([
-        'type' => PrincipalTypeEnum::User,
-        'user_id' => $user->getKey(),
-        'organisation_id' => $organization->getKey(),
-        'name' => 'Member',
-    ]);
-
-    expect(fn () => DB::table('principals')->where('id', $principal->getKey())->update([
-        'organisation_id' => null,
-    ]))->toThrow(QueryException::class);
-});
-
-test('flipping type to user while organisation_id stays null is rejected by the database', function (): void {
-    $principal = Principal::query()->create([
-        'type' => PrincipalTypeEnum::InstanceService,
-        'user_id' => null,
-        'organisation_id' => null,
-        'name' => 'Instance Admin API',
-    ]);
-
-    expect(fn () => DB::table('principals')->where('id', $principal->getKey())->update([
-        'type' => PrincipalTypeEnum::User->value,
-    ]))->toThrow(QueryException::class);
+    expect(true)->toBeTrue();
 });

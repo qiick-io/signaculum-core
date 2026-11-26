@@ -351,9 +351,7 @@ class ApiKey extends Model implements ApiKeyRecord
 
     public function ownerKind(): ?string
     {
-        $type = $this->ownerPrincipal?->type;
-
-        return $type instanceof \BackedEnum ? (string) $type->value : $type;
+        return $this->ownerPrincipal?->type;
     }
 
     public function createdByIdentifier(): string|int|null

@@ -220,13 +220,14 @@ it('deactivates a user through the api', function (): void {
 it('refuses to deactivate the last instance admin', function (): void {
     ['plain' => $plain, 'admin' => $admin] = adminApiKey([ApiKeyScopeEnum::UsersWrite->value]);
 
-    // The key's own owner is the only instance admin on this instance.
+    // The key's own owner is the only instance admin on this instance. A key never acts on a
+    // super-admin at all (no super-admin authority for API actors), so the refusal comes before
+    // the last-admin rule, which the console path still enforces with a 422.
     expect(User::role('super-admin')->count())->toBe(1);
 
     $this->withToken($plain)
         ->postJson('/api/v1/users/'.$admin->subject.'/deactivate')
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['user']);
+        ->assertForbidden();
 
     expect($admin->fresh()?->is_active)->toBeTrue();
 });

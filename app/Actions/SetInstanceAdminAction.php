@@ -7,11 +7,11 @@ namespace App\Actions;
 use App\Enums\InstanceAdminDemotionReasonEnum;
 use App\Enums\RoleEnum;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\Authorization\SuperAdminGuardService;
 use App\Services\InstanceAdminDemotionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Grants or revokes the `super-admin` role (replaces the former `is_instance_admin` flag).
@@ -23,7 +23,7 @@ use Illuminate\Validation\ValidationException;
 final class SetInstanceAdminAction
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
         private readonly SuperAdminGuardService $superAdminGuard,
         private readonly InstanceAdminDemotionService $instanceAdminDemotionService,
     ) {}

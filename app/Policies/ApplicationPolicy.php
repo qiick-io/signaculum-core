@@ -6,8 +6,8 @@ namespace App\Policies;
 
 use App\Enums\PermissionEnum;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use Laravel\Passport\Client;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Authorizes OAuth application (Passport client) administration.
@@ -15,7 +15,7 @@ use Laravel\Passport\Client;
 class ApplicationPolicy
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
     ) {}
 
     public function viewAny(User $actor): bool

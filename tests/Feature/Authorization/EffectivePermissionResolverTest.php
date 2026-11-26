@@ -6,7 +6,7 @@ use App\Enums\PermissionEnum;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Services\Authorization\EffectivePermissionResolverService;
+use Qiick\Access\EffectivePermissionResolver;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
@@ -21,7 +21,7 @@ it('grants a permission through a group role', function (): void {
     $group->roles()->attach($adminRole->id);
     $group->users()->attach($user->id);
 
-    $resolver = app(EffectivePermissionResolverService::class);
+    $resolver = app(EffectivePermissionResolver::class);
 
     expect($resolver->hasPermission($user, PermissionEnum::CanShowUsers->value))->toBeTrue()
         ->and($resolver->roleNamesFor($user))->toContain(RoleEnum::Admin->value);
@@ -29,7 +29,7 @@ it('grants a permission through a group role', function (): void {
 
 it('denies a permission when the user has neither direct nor group roles', function (): void {
     $user = User::factory()->create();
-    $resolver = app(EffectivePermissionResolverService::class);
+    $resolver = app(EffectivePermissionResolver::class);
 
     expect($resolver->hasPermission($user, PermissionEnum::CanShowUsers->value))->toBeFalse();
 });

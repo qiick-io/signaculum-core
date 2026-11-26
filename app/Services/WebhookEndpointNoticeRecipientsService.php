@@ -6,7 +6,7 @@ namespace App\Services;
 
 use App\Enums\PermissionEnum;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
+use Qiick\Access\EffectivePermissionResolver;
 use Qiick\Outbound\Contracts\WebhookEndpointNoticeRecipientsContract;
 use Qiick\Outbound\Models\WebhookEndpoint;
 
@@ -19,7 +19,7 @@ use Qiick\Outbound\Models\WebhookEndpoint;
 final class WebhookEndpointNoticeRecipientsService implements WebhookEndpointNoticeRecipientsContract
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
     ) {}
 
     /**

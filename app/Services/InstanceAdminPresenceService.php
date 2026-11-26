@@ -6,9 +6,9 @@ namespace App\Services;
 
 use App\Enums\PermissionEnum;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Who the active instance admins are: the active users who may manage Admin API keys.
@@ -19,7 +19,7 @@ use Illuminate\Support\LazyCollection;
 final class InstanceAdminPresenceService
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
     ) {}
 
     public function hasActiveInstanceAdmin(): bool

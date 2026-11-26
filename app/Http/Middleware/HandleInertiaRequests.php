@@ -9,12 +9,12 @@ use App\Models\Activity;
 use App\Models\Client;
 use App\Models\Setting;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\ImpersonationService;
 use App\Services\OrganizationBrandingService;
 use App\Services\SettingsRepositoryService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Shares Inertia props every page needs (auth user, branding, locale, flash)
@@ -62,7 +62,7 @@ class HandleInertiaRequests extends Middleware
             'projectAppearance' => fn (): array => app(OrganizationBrandingService::class)->effectiveAppearance($request),
             'auth' => (function () use ($request): array {
                 $user = $request->user();
-                $permissionResolver = app(EffectivePermissionResolverService::class);
+                $permissionResolver = app(EffectivePermissionResolver::class);
 
                 return [
                     'user' => $user,

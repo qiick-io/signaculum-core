@@ -6,10 +6,10 @@ use App\Actions\SetInstanceAdminAction;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\Authorization\SuperAdminGuardService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
+use Qiick\Access\EffectivePermissionResolver;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
@@ -48,13 +48,13 @@ it('detects when removing a group would drop the last active super-admin path', 
     $group = UserGroup::factory()->create();
     $group->roles()->attach($superAdminRole->id);
     $group->users()->attach($member->id);
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
     expect($guard->wouldRemoveLastActiveSuperAdminViaGroups([]))->toBeFalse()
         ->and($guard->wouldRemoveLastActiveSuperAdminViaGroups([$group->id]))->toBeTrue();
 
     $second = User::factory()->instanceAdmin()->create();
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
     expect($guard->wouldRemoveLastActiveSuperAdminViaGroups([$group->id]))->toBeFalse()
         ->and($guard->countActiveSuperAdmins())->toBe(2)
@@ -79,7 +79,7 @@ it('keeps a remaining path when swapping members of a super-admin group', functi
     $group = UserGroup::factory()->create();
     $group->roles()->attach($superAdminRole->id);
     $group->users()->attach($outgoing->id);
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
     expect($guard->wouldLeaveNoActiveSuperAdminAfterGroupUpdate(
         $group,
@@ -103,7 +103,7 @@ it('refuses SetInstanceAdminAction for a non-super-admin actor and the last revo
 
     $keeper = User::factory()->instanceAdmin()->create();
     $action->execute($sole, false, $keeper);
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
     expect($sole->fresh()->isSuperAdmin())->toBeFalse()
         ->and($keeper->fresh()->isSuperAdmin())->toBeTrue();

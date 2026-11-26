@@ -7,8 +7,8 @@ namespace App\Policies;
 use App\Enums\PermissionEnum;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\Authorization\SuperAdminGuardService;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Admin decisions on instance user groups (externa-core abilities, Signaculum permissions).
@@ -20,7 +20,7 @@ use App\Services\Authorization\SuperAdminGuardService;
 final class UserGroupPolicy
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
         private readonly SuperAdminGuardService $superAdminGuard,
     ) {}
 
