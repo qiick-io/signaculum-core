@@ -84,6 +84,56 @@ final class SchemaInspector
         return $this->schema()->getForeignKeys($table);
     }
 
+    /**
+     * Every foreign key in the migrated database that no index can serve: its
+     * columns are not the leading columns (in any order) of an index, unique
+     * index or primary key of its table. PostgreSQL and SQLite never index a
+     * foreign key by themselves; MySQL and MariaDB do, so a gap shows there
+     * only when the index was dropped. Without the index a delete or update of
+     * the parent row scans the whole child table, holding its locks.
+     *
+     * @return list<string> `table(column, …) -> referenced_table`, sorted
+     */
+    public function foreignKeysWithoutIndex(): array
+    {
+        $unindexedForeignKeys = [];
+
+        foreach ($this->schema()->getTableListing(schemaQualified: false) as $table) {
+            $indexedColumnLists = array_map(
+                static fn (array $index): array => array_values($index['columns'] ?? []),
+                $this->indexes($table),
+            );
+
+            foreach ($this->foreignKeys($table) as $foreignKey) {
+                $foreignKeyColumns = array_values($foreignKey['columns'] ?? []);
+                $isServedByAnIndex = false;
+
+                foreach ($indexedColumnLists as $indexedColumns) {
+                    $leadingColumns = array_slice($indexedColumns, 0, count($foreignKeyColumns));
+
+                    if (count($leadingColumns) === count($foreignKeyColumns)
+                        && array_diff($foreignKeyColumns, $leadingColumns) === []) {
+                        $isServedByAnIndex = true;
+                        break;
+                    }
+                }
+
+                if (! $isServedByAnIndex) {
+                    $unindexedForeignKeys[] = sprintf(
+                        '%s(%s) -> %s',
+                        $table,
+                        implode(', ', $foreignKeyColumns),
+                        $foreignKey['foreign_table'] ?? '?',
+                    );
+                }
+            }
+        }
+
+        sort($unindexedForeignKeys);
+
+        return $unindexedForeignKeys;
+    }
+
     public function hasUniqueIndexCovering(string $table, string ...$columns): bool
     {
         $wanted = array_values($columns);
@@ -101,6 +151,44 @@ final class SchemaInspector
         }
 
         return false;
+    }
+
+    /**
+     * True when any index (unique or not) covers exactly these columns in order.
+     */
+    public function hasIndexCovering(string $table, string ...$columns): bool
+    {
+        $wanted = array_values($columns);
+
+        foreach ($this->indexes($table) as $index) {
+            $indexed = array_values($index['columns'] ?? []);
+
+            if ($indexed === $wanted) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Column names present on the table.
+     *
+     * @return list<string>
+     */
+    public function columnNames(string $table): array
+    {
+        $names = [];
+
+        foreach ($this->columns($table) as $definition) {
+            $name = $definition['name'] ?? null;
+
+            if (is_string($name)) {
+                $names[] = $name;
+            }
+        }
+
+        return $names;
     }
 
     public function columnTypeContains(string $table, string $column, string $needle): bool
@@ -210,7 +298,71 @@ final class SchemaInspector
      */
     public function statement(string $sql, array $bindings = []): void
     {
+        $this->connection()->statement($sql, $bindings);
+    }
+
+    /**
+     * The connection the inspector talks to.
+     */
+    public function connection(): \Illuminate\Database\Connection
+    {
         $name = $this->connectionName ?? (string) config('database.default');
-        DB::connection($name)->statement($sql, $bindings);
+
+        return DB::connection($name);
+    }
+
+    /**
+     * Run a check in its own transaction (or SAVEPOINT when already inside one)
+     * so a failure cannot abort the outer Pest / RefreshDatabase transaction
+     * and blind later checks — the PostgreSQL abort that hid C37.
+     *
+     * Rolls back database side effects on this connection only. File writes,
+     * config mutations, queued jobs and an explicit commit() of the outer
+     * transaction are outside this guarantee.
+     *
+     * @template TReturn
+     *
+     * @param  callable(): TReturn  $callback
+     * @return TReturn
+     */
+    public function isolate(callable $callback): mixed
+    {
+        $connection = $this->connection();
+
+        if ($connection->transactionLevel() === 0) {
+            $connection->beginTransaction();
+
+            try {
+                $result = $callback();
+                $connection->rollBack();
+
+                return $result;
+            } catch (\Throwable $exception) {
+                $connection->rollBack();
+
+                throw $exception;
+            }
+        }
+
+        $savepoint = 'conformance_'.bin2hex(random_bytes(4));
+        $pdo = $connection->getPdo();
+        $pdo->exec('SAVEPOINT '.$savepoint);
+
+        try {
+            $result = $callback();
+            $pdo->exec('ROLLBACK TO SAVEPOINT '.$savepoint);
+            $pdo->exec('RELEASE SAVEPOINT '.$savepoint);
+
+            return $result;
+        } catch (\Throwable $exception) {
+            try {
+                $pdo->exec('ROLLBACK TO SAVEPOINT '.$savepoint);
+                $pdo->exec('RELEASE SAVEPOINT '.$savepoint);
+            } catch (\Throwable) {
+                // Connection may already be unusable; rethrow the original.
+            }
+
+            throw $exception;
+        }
     }
 }

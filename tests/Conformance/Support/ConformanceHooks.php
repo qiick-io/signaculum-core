@@ -16,6 +16,7 @@ namespace Qiick\Standards\Conformance\Support;
  *     apiPrefix?: string,
  *     openApiPath?: string,
  *     usesSpatieTeams?: bool,
+ *     usesLaravelAccess?: bool,
  *     hasOrganisations?: bool,
  *     hasUserGroups?: bool,
  *     hasPrincipals?: bool,
@@ -35,7 +36,7 @@ final class ConformanceHooks
 {
     /**
      * @param ConformanceConfig $config
-     * @param array<string, callable(): void> $callables
+     * @param array<string, callable(ConformanceBehaviourProbe|null): void> $callables
      */
     public function __construct(
         private readonly array $config,
@@ -119,6 +120,50 @@ final class ConformanceHooks
         }
 
         $callback();
+    }
+
+    /**
+     * Require a behaviour hook that receives a probe and must call {@see ConformanceBehaviourProbe::pass()}
+     * after exercising the real product path. An empty no-op stays red.
+     *
+     * @param non-empty-string $key
+     */
+    public function requireProved(string $key): void
+    {
+        $callback = $this->callables[$key] ?? null;
+
+        if (! is_callable($callback)) {
+            throw new \RuntimeException(
+                "Conformance hook \"{$key}\" is required. Implement it in tests/Conformance/hooks.php or declare a divergence for this check.",
+            );
+        }
+
+        $probe = new ConformanceBehaviourProbe();
+        $callback($probe);
+
+        if (! $probe->hasPassed()) {
+            throw new \RuntimeException(
+                "Conformance hook \"{$key}\" did not prove the behaviour (call \$probe->pass() after exercising it).",
+            );
+        }
+    }
+
+    /**
+     * The key of a users row created by the product's `fixtureUser` hook, for
+     * products whose user model has no factory; null when there is no hook.
+     * The hook returns the created model or its key.
+     */
+    public function fixtureUserKey(): int|string|null
+    {
+        $callback = $this->callables['fixtureUser'] ?? null;
+
+        if (! is_callable($callback)) {
+            return null;
+        }
+
+        $created = $callback();
+
+        return $created instanceof \Illuminate\Database\Eloquent\Model ? $created->getKey() : $created;
     }
 
     public function hasCallable(string $key): bool
