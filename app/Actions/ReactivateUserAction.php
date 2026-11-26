@@ -30,8 +30,9 @@ final class ReactivateUserAction
         DB::transaction(function () use ($user): void {
             // The same user-row lock as deactivation and a new membership's principal, so the
             // account and its principals change together.
-            User::query()->whereKey($user->getKey())->lockForUpdate()->first();
-            $user->forceFill(['is_active' => true])->save();
+            // The transition is written on the locked row, never on the caller's copy, which may
+            // already read `true` and make Eloquent skip the write.
+            User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail()->forceFill(['is_active' => true])->save();
 
             // One statement, bound to the memberships that exist when it runs: a removal committed
             // meanwhile (which also marks the principal `offboarded`) is never revived. whereHas
@@ -47,5 +48,7 @@ final class ReactivateUserAction
                 ->where('deactivation_reason', DeactivationReason::Admin->value)
                 ->update(['deactivated_at' => null, 'deactivation_reason' => null]);
         });
+
+        $user->refresh();
     }
 }

@@ -58,9 +58,11 @@ final class DeactivateUserAction
     private function deactivate(User $user): void
     {
         DB::transaction(function () use ($user): void {
-            // The lock a new membership's principal reads the account state under.
-            User::query()->whereKey($user->getKey())->lockForUpdate()->first();
-            $user->forceFill(['is_active' => false])->save();
+            // The lock a new membership's principal reads the account state under. Every write
+            // goes to the locked row, never to the caller's copy, which may already read `false`
+            // and make Eloquent skip the write.
+            $lockedUser = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            $lockedUser->forceFill(['is_active' => false])->save();
 
             // Through the directory, so owned principals follow and PrincipalDeactivated revokes keys.
             Principal::query()
@@ -81,19 +83,21 @@ final class DeactivateUserAction
                 ->where('user_id', $user->getKey())
                 ->delete();
 
-            $user->setRememberToken(Str::random(60));
-            $user->save();
+            $lockedUser->setRememberToken(Str::random(60));
+            $lockedUser->save();
 
             // Every open client session gets its logout token, each with its own `sid`
             // (Back-Channel Logout 1.0 §2.4), including those that never wrote an OidcSession row.
             // The jobs are queued only once this transaction commits, so a failure here rolls the
             // whole deactivation back without notifying any relying party, and the admin retries.
-            $this->dispatchBackChannelLogoutAction->execute($user);
+            $this->dispatchBackChannelLogoutAction->execute($lockedUser);
 
             OidcSession::query()
                 ->where('user_id', $user->getKey())
                 ->whereNull('ended_at')
                 ->update(['ended_at' => now()]);
         });
+
+        $user->refresh();
     }
 }

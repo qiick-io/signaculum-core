@@ -37,6 +37,12 @@
                 "review_by": "2027-05-01"
             },
             {
+                "site": "App\\Services\\WebhookEndpointNoticeRecipientsService::mayReceiveNotices",
+                "reason": "Chooses who receives the automatic webhook-disable mail, which names the endpoint host: holders of can-manage-settings with an active account, decided afresh at queueing and again at send; a recipient filter, not a request authorization",
+                "decision": "knowledge/decisions/2026-11-22-laravel-access-package",
+                "review_by": "2027-05-01"
+            },
+            {
                 "site": "App\\Services\\InstanceAdminPresenceService::isActiveInstanceAdmin",
                 "reason": "Defines who counts as an active instance admin for Admin API key validity and expiry notices (can-manage-api-keys held, account active)",
                 "decision": "knowledge/decisions/2026-11-22-signaculum-instance-service-principal",

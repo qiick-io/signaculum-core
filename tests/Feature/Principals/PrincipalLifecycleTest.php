@@ -311,3 +311,28 @@ test('a membership created from a stale copy of a since deactivated account gets
     expect($principal->deactivated_at)->not->toBeNull()
         ->and($principal->deactivation_reason)->toBe(DeactivationReason::Admin);
 });
+
+// Deactivation and reactivation write the state on the row they locked, not on the caller's copy:
+// a copy that already holds the target value would make Eloquent skip the write.
+test('reactivating from a stale copy that still reads active writes the account state', function (): void {
+    User::factory()->instanceAdmin()->create();
+    $member = User::factory()->create();
+    $staleMember = User::query()->findOrFail($member->getKey());
+
+    app(DeactivateUserAction::class)->execute($member);
+    app(ReactivateUserAction::class)->execute($staleMember);
+
+    expect(User::query()->whereKey($member->getKey())->value('is_active'))->toBeTruthy();
+});
+
+test('deactivating from a stale copy that already reads inactive writes the account state', function (): void {
+    User::factory()->instanceAdmin()->create();
+    $member = User::factory()->create();
+    app(DeactivateUserAction::class)->execute($member);
+    $staleMember = User::query()->findOrFail($member->getKey());
+
+    app(ReactivateUserAction::class)->execute($member->refresh());
+    app(DeactivateUserAction::class)->execute($staleMember);
+
+    expect(User::query()->whereKey($member->getKey())->value('is_active'))->toBeFalsy();
+});
