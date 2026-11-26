@@ -8,8 +8,11 @@ use App\Enums\ApiKeyScopeEnum;
 use App\Http\Middleware\VerifyCsrfTokenMiddleware;
 use App\Models\User;
 use App\Services\Authorization\EffectivePermissionResolverService;
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter as RateLimiterFacade;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Spatie\Activitylog\Models\Activity;
 
@@ -29,7 +32,7 @@ it('refuses a request without a key', function (): void {
 });
 
 it('refuses a token that does not have the token shape', function (): void {
-    assertInvalidToken($this->withToken('sk_'.str_repeat('a', 40))->getJson('/api/v1/users'), 'Invalid API key.');
+    assertInvalidToken($this->withToken('sk_'.str_repeat('a', 40))->getJson('/api/v1/users'), 'The API key is not valid.');
 });
 
 it('answers an unknown key and a wrong secret for a real key the same way', function (): void {
@@ -38,8 +41,8 @@ it('answers an unknown key and a wrong secret for a real key the same way', func
     $unknownKey = $this->withToken('sig_test_Unknown1'.str_repeat('a', 32))->getJson('/api/v1/users');
     $wrongSecret = $this->withToken($apiKey->key_prefix.str_repeat('a', 32))->getJson('/api/v1/users');
 
-    assertInvalidToken($unknownKey, 'Invalid API key.');
-    assertInvalidToken($wrongSecret, 'Invalid API key.');
+    assertInvalidToken($unknownKey, 'The API key is not valid.');
+    assertInvalidToken($wrongSecret, 'The API key is not valid.');
     expect($wrongSecret->getContent())->toBe($unknownKey->getContent());
 });
 
@@ -47,7 +50,7 @@ it('refuses an expired key', function (): void {
     ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
     $apiKey->forceFill(['expires_at' => now()->subSecond()])->saveQuietly();
 
-    assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key has expired.');
+    assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'The API key has expired.');
 });
 
 it('refuses a revoked key on the very next request', function (): void {
@@ -57,7 +60,7 @@ it('refuses a revoked key on the very next request', function (): void {
 
     app(RevokeApiKeyAction::class)->execute($apiKey, $admin);
 
-    assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key has been revoked.');
+    assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'The API key has been revoked.');
 });
 
 /**
@@ -71,7 +74,7 @@ it('refuses a revoked key on the very next request', function (): void {
  * - mysql: SQLSTATE[22032] 3140 Invalid JSON text: "Invalid value." at position 0
  * - mariadb: SQLSTATE[23000] 4025 CONSTRAINT `api_keys.scopes` failed
  */
-it('refuses a key whose stored scopes no longer parse', function (string $storedScopes): void {
+it('refuses a key whose stored scopes no longer parse as holding no scopes', function (string $storedScopes): void {
     if (DB::getDriverName() !== 'sqlite' && ! json_validate($storedScopes)) {
         $this->markTestSkipped('A non-JSON scopes value is only storable on SQLite.');
     }
@@ -79,7 +82,11 @@ it('refuses a key whose stored scopes no longer parse', function (string $stored
     ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
     DB::table('api_keys')->where('id', $apiKey->getKey())->update(['scopes' => $storedScopes]);
 
-    assertInvalidToken($this->withToken($plain)->getJson('/api/v1/users'), 'API key has no valid scopes.');
+    // qiick/laravel-api-keys: scopes fail closed as `403 insufficient_scope`, never 401.
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertForbidden()
+        ->assertHeader('WWW-Authenticate', 'Bearer error="insufficient_scope"')
+        ->assertExactJson(['message' => 'The API key holds no scopes.', 'error' => 'insufficient_scope']);
 })->with([
     'empty list' => '[]',
     'json null' => 'null',
@@ -149,6 +156,19 @@ it('refuses every address when the stored allowlist does not parse', function (s
     'not json' => '127.0.0.1',
     'a map' => '{"office": "127.0.0.1"}',
     'a non-string entry' => '[127]',
+    // Only SQL NULL means "no allowlist": a JSON null or an object, empty included, denies.
+    'a JSON null' => 'null',
+    'an empty object' => '{}',
+]);
+
+it('lets every address through when no allowlist is stored', function (?string $storedAllowlist): void {
+    ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    DB::table('api_keys')->where('id', $apiKey->getKey())->update(['ip_allowlist' => $storedAllowlist]);
+
+    $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+})->with([
+    'SQL NULL' => null,
+    'an empty list' => '[]',
 ]);
 
 it('enforces the per-key rate limit', function (): void {
@@ -195,7 +215,7 @@ it('keeps the old secret working through the grace window after a rotation, then
 
     $this->travel(24)->hours();
 
-    assertInvalidToken($this->withToken($oldToken)->getJson('/api/v1/users'), 'Invalid API key.');
+    assertInvalidToken($this->withToken($oldToken)->getJson('/api/v1/users'), 'The API key is not valid.');
     $this->withToken($newToken)->getJson('/api/v1/users')->assertOk();
 });
 
@@ -207,7 +227,7 @@ it('ends the grace window when a rotated key is revoked', function (): void {
 
     // The replaced secret no longer matches anything, so it is simply an invalid key.
     expect($apiKey->fresh()?->previous_key_hash)->toBeNull();
-    assertInvalidToken($this->withToken($oldToken)->getJson('/api/v1/users'), 'Invalid API key.');
+    assertInvalidToken($this->withToken($oldToken)->getJson('/api/v1/users'), 'The API key is not valid.');
 });
 
 it('records when and from where a key was last used, at most once a minute per address', function (): void {
@@ -277,10 +297,107 @@ it('names the key that authorised an admin api write in the activity log', funct
 });
 
 it('treats a stored rate limit of zero as the default, never as unlimited', function (): void {
-    config(['api.default_rate_limit_per_minute' => 1]);
+    config(['api-keys.default_rate_limit_per_minute' => 1, 'api.address_rate_limit_per_minute' => 100]);
     ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
     DB::table('api_keys')->where('id', $apiKey->getKey())->update(['rate_limit_per_minute' => 0]);
 
     $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
-    $this->withToken($plain)->getJson('/api/v1/users')->assertTooManyRequests();
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertTooManyRequests()
+        ->assertHeader('X-RateLimit-Limit', '1');
+});
+
+it('keeps answering when the default per-key limit is switched off', function (): void {
+    config(['api-keys.default_rate_limit_per_minute' => 0]);
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    foreach (range(1, 3) as $request) {
+        $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+    }
+});
+
+it('throttles an address on its own setting, before the key is checked', function (): void {
+    config(['api.address_rate_limit_per_minute' => 2, 'api-keys.default_rate_limit_per_minute' => 100]);
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+    $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertTooManyRequests()
+        ->assertHeader('Retry-After')
+        ->assertHeader('X-RateLimit-Limit', '2')
+        ->assertJsonPath('error', 'rate_limit_exceeded');
+});
+
+// The address throttle runs before route-model binding: a lookup of a record that does not exist
+// counts like any other request, so guessing ids is throttled before authentication too.
+it('counts requests for missing records against the address throttle', function (): void {
+    config(['api.address_rate_limit_per_minute' => 2, 'api-keys.default_rate_limit_per_minute' => 100]);
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    $this->withToken($plain)->getJson('/api/v1/users/'.Str::uuid())->assertNotFound();
+    $this->withToken($plain)->getJson('/api/v1/users/'.Str::uuid())->assertNotFound();
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertTooManyRequests()
+        ->assertJsonPath('error', 'rate_limit_exceeded');
+});
+
+it('switches the address throttle off at zero', function (): void {
+    config(['api.address_rate_limit_per_minute' => 0, 'api-keys.default_rate_limit_per_minute' => 100]);
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    foreach (range(1, 3) as $request) {
+        $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+    }
+});
+
+it('answers 503, never 500, when the rate-limit store is unreachable', function (): void {
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    config([
+        'cache.stores.unreachable' => ['driver' => 'database', 'connection' => null, 'table' => 'missing_cache_table', 'lock_table' => 'missing_cache_locks'],
+        'cache.default' => 'unreachable',
+    ]);
+    app()->forgetInstance(RateLimiter::class);
+    RateLimiterFacade::clearResolvedInstance(RateLimiter::class);
+
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertServiceUnavailable()
+        ->assertJsonPath('error', 'service_unavailable');
+});
+
+// qiick/laravel-api-keys issues version 2 tokens: the canonical token plus a 6-character
+// checksum, in the shape secret scanners match (README, "Token shape").
+it('issues checksummed tokens that secret scanners can match', function (): void {
+    ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    expect($plain)->toMatch('/^sig_(?:live|test)_[A-Za-z0-9]{40}[A-Za-z0-9]{6}$/')
+        ->and($apiKey->refresh()->token_version)->toBe(2);
+
+    $this->withToken($plain)->getJson('/api/v1/users')->assertOk();
+});
+
+// The failed-attempt brake: after `api-keys.failed_attempts_per_minute` wrong guesses from one
+// address, even the right key is answered 429, so guessing reveals nothing more in that minute.
+it('brakes an address after too many wrong guesses, the right key included', function (): void {
+    config(['api-keys.failed_attempts_per_minute' => 3]);
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+    $wrongKey = substr($plain, 0, -6).'aaaaaa';
+
+    foreach (range(1, 3) as $guess) {
+        $this->withToken($wrongKey)->getJson('/api/v1/users')->assertUnauthorized();
+    }
+
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertStatus(429)
+        ->assertHeader('Retry-After')
+        ->assertJsonPath('error', 'rate_limit_exceeded');
+});
+
+it('records the user agent of the last use, truncated', function (): void {
+    ['plain' => $plain, 'apiKey' => $apiKey] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    $this->withToken($plain)->withHeader('User-Agent', 'nightly-sync/'.str_repeat('x', 600))->getJson('/api/v1/users')->assertOk();
+
+    expect($apiKey->refresh()->last_used_user_agent)->toStartWith('nightly-sync/')
+        ->and(mb_strlen((string) $apiKey->last_used_user_agent))->toBe(512);
 });

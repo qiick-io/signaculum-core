@@ -23,8 +23,12 @@ final class ApiKeyExpiringNotification extends Notification implements ShouldQue
 {
     use Queueable;
 
+    /**
+     * Built by `api-keys:notify-expiring` (qiick/laravel-api-keys) with the record and its expiry.
+     */
     public function __construct(
         public readonly ApiKey $apiKey,
+        public readonly \DateTimeImmutable $expiresAt,
     ) {}
 
     /**
@@ -46,7 +50,7 @@ final class ApiKeyExpiringNotification extends Notification implements ShouldQue
             'prefix' => $this->apiKey->key_prefix,
             'app' => app(SettingsRepositoryService::class)->appName(),
             // ISO date: unambiguous in every locale.
-            'date' => $this->apiKey->expires_at->toDateString(),
+            'date' => $this->expiresAt->format('Y-m-d'),
         ];
 
         return (new MailMessage)

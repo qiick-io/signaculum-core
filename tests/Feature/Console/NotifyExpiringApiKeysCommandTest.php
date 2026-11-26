@@ -3,17 +3,20 @@
 declare(strict_types=1);
 
 use App\Actions\CreateApiKeyAction;
+use App\Actions\RotateApiKeyAction;
 use App\Data\ApiKeyData;
 use App\Data\IssuedApiKeyData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Models\User;
 use App\Notifications\ApiKeyExpiringNotification;
+use App\Services\ApiKeyRepositoryService;
 use App\Services\Authorization\EffectivePermissionResolverService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Notification;
 
 /**
- * `signaculum:notify-expiring-api-keys` warns once, seven days ahead, and never carries a secret.
+ * `api-keys:notify-expiring` (qiick/laravel-api-keys) warns once per key and expiry, as soon as the
+ * key expires within `api-keys.expiry.notice_days` (seven), and never carries a secret.
  */
 function keyExpiringAt(User $owner, CarbonImmutable $expiresAt): IssuedApiKeyData
 {
@@ -30,14 +33,14 @@ beforeEach(function (): void {
 
 it('warns the owner of a key that expires in seven days, once', function (): void {
     $owner = User::factory()->instanceAdmin()->create();
-    keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHours(12));
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->subHours(12));
 
-    $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
 
     Notification::assertSentToTimes($owner, ApiKeyExpiringNotification::class, 1);
 
     $this->travel(1)->day();
-    $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
 
     Notification::assertSentToTimes($owner, ApiKeyExpiringNotification::class, 1);
 });
@@ -46,31 +49,32 @@ it('also warns the issuer when someone else owns the key, and no other admin', f
     $owner = User::factory()->instanceAdmin()->create();
     $issuer = User::factory()->instanceAdmin()->create();
     $otherAdmin = User::factory()->instanceAdmin()->create();
-    keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour())->apiKey->forceFill(['created_by' => $issuer->getKey()])->save();
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(6))->apiKey->forceFill(['created_by' => $issuer->getKey()])->save();
 
-    $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
 
     Notification::assertSentTo($owner, ApiKeyExpiringNotification::class);
     Notification::assertSentTo($issuer, ApiKeyExpiringNotification::class);
     Notification::assertNotSentTo($otherAdmin, ApiKeyExpiringNotification::class);
 });
 
-it('skips keys outside the window and revoked keys', function (): void {
+it('skips keys that expire later and revoked keys, and warns a key already inside the window', function (): void {
     $owner = User::factory()->instanceAdmin()->create();
-    keyExpiringAt($owner, CarbonImmutable::now()->addDays(3));
+    $soonKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(3))->apiKey;
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(9));
-    keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour())->apiKey->forceFill(['revoked_at' => now()])->save();
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(6))->apiKey->forceFill(['revoked_at' => now()])->save();
 
-    $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
 
-    Notification::assertNothingSent();
+    Notification::assertSentToTimes($owner, ApiKeyExpiringNotification::class, 1);
+    Notification::assertSentTo($owner, ApiKeyExpiringNotification::class, static fn (ApiKeyExpiringNotification $notification): bool => $notification->apiKey->is($soonKey));
 });
 
 it('names the key by its public prefix and never includes the secret', function (): void {
     $owner = User::factory()->instanceAdmin()->create(['locale' => 'en']);
-    $issuedApiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour());
+    $issuedApiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(6));
 
-    $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
 
     Notification::assertSentTo($owner, ApiKeyExpiringNotification::class, function (ApiKeyExpiringNotification $notification) use ($owner, $issuedApiKey): bool {
         $mail = $notification->toMail($owner);
@@ -85,9 +89,9 @@ it('names the key by its public prefix and never includes the secret', function 
 
 it('writes the warning in the recipient\'s language', function (string $locale): void {
     $owner = User::factory()->instanceAdmin()->create(['locale' => $locale]);
-    $issuedApiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour());
+    $issuedApiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(6));
 
-    $mail = (new ApiKeyExpiringNotification($issuedApiKey->apiKey))->toMail($owner);
+    $mail = (new ApiKeyExpiringNotification($issuedApiKey->apiKey, $issuedApiKey->apiKey->expires_at->toDateTimeImmutable()))->toMail($owner);
 
     expect($mail->subject)->toBe(trans('api_keys.expiring.subject', ['name' => 'Nightly sync'], $locale))
         ->and($mail->subject)->not->toContain('api_keys.');
@@ -98,11 +102,11 @@ it('warns the other instance admins when the issuer is no longer one', function 
     $otherAdmin = User::factory()->instanceAdmin()->create();
     $inactiveAdmin = User::factory()->instanceAdmin()->create(['is_active' => false]);
     $regularUser = User::factory()->create();
-    keyExpiringAt($issuer, CarbonImmutable::now()->addDays(7)->addHour());
+    keyExpiringAt($issuer, CarbonImmutable::now()->addDays(6));
     $issuer->syncRoles([]);
     app(EffectivePermissionResolverService::class)->forget();
 
-    $this->artisan('signaculum:notify-expiring-api-keys')->assertSuccessful();
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
 
     Notification::assertSentToTimes($otherAdmin, ApiKeyExpiringNotification::class, 1);
     Notification::assertNotSentTo([$issuer, $inactiveAdmin, $regularUser], ApiKeyExpiringNotification::class);
@@ -110,23 +114,23 @@ it('warns the other instance admins when the issuer is no longer one', function 
 
 it('counts the keys it warned about', function (): void {
     $owner = User::factory()->instanceAdmin()->create();
-    keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHour());
-    keyExpiringAt($owner, CarbonImmutable::now()->addDays(7)->addHours(2));
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(6));
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(5));
     keyExpiringAt($owner, CarbonImmutable::now()->addDays(20));
 
-    $this->artisan('signaculum:notify-expiring-api-keys')
-        ->expectsOutputToContain('Notified about 2 expiring API key(s).')
+    $this->artisan('api-keys:notify-expiring')
+        ->expectsOutputToContain('Expiry notices sent: 2')
         ->assertSuccessful();
 });
 
-it('warns at least one day ahead whatever the configured warning', function (int $configuredDays): void {
-    config(['api.key_expiry_warning_days' => $configuredDays]);
+it('warns as many days ahead as configured', function (): void {
+    config(['api-keys.expiry.notice_days' => 1]);
     $owner = User::factory()->instanceAdmin()->create();
-    $tomorrowsKey = keyExpiringAt($owner, CarbonImmutable::now()->addDay()->addHour())->apiKey;
-    keyExpiringAt($owner, CarbonImmutable::now()->addHour());
+    $tomorrowsKey = keyExpiringAt($owner, CarbonImmutable::now()->addDay()->subHour())->apiKey;
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(3));
 
-    $this->artisan('signaculum:notify-expiring-api-keys')
-        ->expectsOutputToContain('Notified about 1 expiring API key(s).')
+    $this->artisan('api-keys:notify-expiring')
+        ->expectsOutputToContain('Expiry notices sent: 1')
         ->assertSuccessful();
 
     Notification::assertSentTo(
@@ -134,4 +138,72 @@ it('warns at least one day ahead whatever the configured warning', function (int
         ApiKeyExpiringNotification::class,
         static fn (ApiKeyExpiringNotification $notification): bool => $notification->apiKey->is($tomorrowsKey),
     );
-})->with(['zero' => 0, 'one' => 1]);
+});
+
+// A rotation sets a new expiry, which earns its own notice: RotateApiKeyAction clears the stamp.
+it('warns again about the new expiry after a rotation', function (): void {
+    $owner = User::factory()->instanceAdmin()->create();
+    $apiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(6))->apiKey;
+
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
+    Notification::assertSentToTimes($owner, ApiKeyExpiringNotification::class, 1);
+
+    app(RotateApiKeyAction::class)->execute($apiKey, $owner, CarbonImmutable::now()->addDays(5));
+
+    expect($apiKey->refresh()->expiry_notified_at)->toBeNull();
+
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
+    Notification::assertSentToTimes($owner, ApiKeyExpiringNotification::class, 2);
+});
+
+it('never warns about a key that has already expired', function (): void {
+    $owner = User::factory()->instanceAdmin()->create();
+    keyExpiringAt($owner, CarbonImmutable::now()->addDays(3))->apiKey
+        ->forceFill(['expires_at' => CarbonImmutable::now()->subDay()])->save();
+
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
+// The notifier claims, sends, then stamps: a rotation in between gives the key a new expiry,
+// which the old run's stamp must never mark as notified.
+it('keeps the notice of the new expiry when a rotation lands while the old one is being sent', function (): void {
+    $owner = User::factory()->instanceAdmin()->create();
+    $apiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(6))->apiKey;
+    $repository = new ApiKeyRepositoryService;
+    $selectedRecord = collect($repository->expiringUnnotified(CarbonImmutable::now()->addDays(7)->toDateTimeImmutable()))->sole();
+
+    expect($repository->claimExpiryNotice($selectedRecord, CarbonImmutable::now()->toDateTimeImmutable(), 300, 'old-run'))->toBeTrue();
+
+    app(RotateApiKeyAction::class)->execute($apiKey, $owner, CarbonImmutable::now()->addDays(5));
+
+    expect($repository->markExpiryNotified($selectedRecord, CarbonImmutable::now()->toDateTimeImmutable(), 'old-run'))->toBeFalse()
+        ->and($apiKey->refresh()->expiry_notified_at)->toBeNull();
+
+    $this->artisan('api-keys:notify-expiring')->assertSuccessful();
+    Notification::assertSentToTimes($owner, ApiKeyExpiringNotification::class, 1);
+});
+
+// Two runs can claim within the same second: only the claim token tells them apart.
+it('never lets a stale run stamp or release the claim of the run that took over', function (): void {
+    $owner = User::factory()->instanceAdmin()->create();
+    $apiKey = keyExpiringAt($owner, CarbonImmutable::now()->addDays(6))->apiKey;
+    $repository = new ApiKeyRepositoryService;
+    $record = collect($repository->expiringUnnotified(CarbonImmutable::now()->addDays(7)->toDateTimeImmutable()))->sole();
+    $now = CarbonImmutable::now()->toDateTimeImmutable();
+
+    expect($repository->claimExpiryNotice($record, $now, 60, 'stale-run'))->toBeTrue();
+
+    // The stale claim's lease runs out and another run takes the same expiry over.
+    $this->travel(2)->minutes();
+    $takeOverAt = CarbonImmutable::now()->toDateTimeImmutable();
+
+    expect($repository->claimExpiryNotice($record, $takeOverAt, 60, 'current-run'))->toBeTrue();
+
+    $repository->releaseExpiryNotice($record, 'stale-run');
+
+    expect($repository->markExpiryNotified($record, $takeOverAt, 'stale-run'))->toBeFalse()
+        ->and($apiKey->refresh()->expiry_notice_claim_token)->toBe('current-run')
+        ->and($repository->markExpiryNotified($record, $takeOverAt, 'current-run'))->toBeTrue();
+});

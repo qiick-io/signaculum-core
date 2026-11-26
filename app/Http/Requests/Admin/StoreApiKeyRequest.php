@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin;
 
 use App\Data\ApiKeyData;
-use App\Data\ApiKeyScopesData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Http\Requests\Concerns\ValidatesApiKeyExpiryTrait;
 use App\Models\ApiKey;
+use App\Services\ApiKeyScopeVocabularyService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
+use Qiick\ApiKeys\IpAllowlist;
+use Qiick\ApiKeys\ScopeSet;
 
 /**
  * Admin → API keys: a new key with a name, at least one scope of this product's vocabulary, a
@@ -83,7 +84,8 @@ final class StoreApiKeyRequest extends FormRequest
 
         return new ApiKeyData(
             name: $this->string('name')->trim()->toString(),
-            scopes: ApiKeyScopesData::highestPerResource($scopes),
+            // Highest per resource: `write` already implies `read` on the same resource.
+            scopes: ScopeSet::parseStored(array_values(array_unique($scopes)), app(ApiKeyScopeVocabularyService::class))->values(),
             expiresAt: $this->validatedExpiresAt(),
             ipAllowlist: $ipAllowlist === [] ? null : $ipAllowlist,
             rateLimitPerMinute: $rateLimitPerMinute === null ? null : (int) $rateLimitPerMinute,
@@ -102,23 +104,11 @@ final class StoreApiKeyRequest extends FormRequest
     }
 
     /**
-     * An address, or an address and a prefix length that fits its family (0-32 for IPv4,
-     * 0-128 for IPv6). Anything after the first `/` is the prefix, so `10.0.0.0/8/9` is refused.
+     * An address or a CIDR range by qiick/laravel-api-keys' own rules ({@see IpAllowlist::isValidEntry()}):
+     * the verifier denies the whole list on one entry it cannot read, so the form refuses it first.
      */
     private function isIpAddressOrRange(string $entry): bool
     {
-        $address = Str::before($entry, '/');
-
-        if (filter_var($address, FILTER_VALIDATE_IP) === false) {
-            return false;
-        }
-
-        if (! str_contains($entry, '/')) {
-            return true;
-        }
-
-        $maximumPrefixLength = filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false ? 32 : 128;
-
-        return filter_var(Str::after($entry, '/'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => $maximumPrefixLength]]) !== false;
+        return app(IpAllowlist::class)->isValidEntry($entry);
     }
 }

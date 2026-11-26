@@ -78,6 +78,8 @@ describe('the creation form', function (): void {
         'two prefixes' => '10.0.0.0/8/9',
         'a negative prefix' => '10.0.0.0/-1',
         'an IPv4 prefix past 32' => '10.0.0.0/33',
+        // qiick/laravel-api-keys maps an IPv4-mapped range onto IPv4 only from /96 up.
+        'an IPv4-mapped range below /96' => '::ffff:10.0.0.0/64',
         'an IPv6 prefix past 128' => '2001:db8::/129',
         'a prefix that is not a number' => '10.0.0.0/eight',
     ]);
@@ -146,6 +148,7 @@ describe('a stored key', function (): void {
         'no matching entry' => [['192.0.2.0/24'], false],
         'an entry that is not text' => [['10.0.0.0/8', 10], false],
         'a map instead of a list' => [['office' => '10.0.0.0/8'], false],
+        'an empty object' => [new stdClass, false],
         'not a list at all' => ['10.0.0.0/8', false],
     ]);
 
@@ -193,7 +196,7 @@ describe('rotation', function (): void {
     });
 
     it('records the grace window and the new expiry, also when there is no grace window', function (int $graceHours, ?string $expectedGraceEnd): void {
-        config(['api.key_rotation_grace_hours' => $graceHours]);
+        config(['api-keys.rotation_grace_hours' => $graceHours]);
         $apiKey = issuedRuleKey($this->admin);
 
         app(RotateApiKeyAction::class)->execute($apiKey, $this->admin, apiKeyExpiry());

@@ -8,12 +8,14 @@ use App\Data\IssuedApiKeyData;
 use App\Models\ApiKey;
 use App\Models\User;
 use App\Services\ApiKeyLifetimeService;
-use App\Services\ApiKeySecretService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
+use Qiick\ApiKeys\Contracts\Clock;
+use Qiick\ApiKeys\RotationService;
+use Qiick\ApiKeys\TokenCodec;
 
 /**
  * Issues a new secret for an existing key: same row, `uuid`, `key_prefix`, scopes and audit
@@ -30,7 +32,9 @@ use InvalidArgumentException;
 final class RotateApiKeyAction
 {
     public function __construct(
-        private readonly ApiKeySecretService $apiKeySecretService,
+        private readonly RotationService $rotationService,
+        private readonly TokenCodec $tokenCodec,
+        private readonly Clock $clock,
         private readonly ApiKeyLifetimeService $apiKeyLifetimeService,
     ) {}
 
@@ -45,23 +49,34 @@ final class RotateApiKeyAction
         $rotatedAt = CarbonImmutable::now();
         $expiresAt = $this->apiKeyLifetimeService->allowedExpiry($expiresAt, $rotatedAt);
 
-        return DB::transaction(function () use ($apiKey, $actor, $expiresAt, $rotatedAt): IssuedApiKeyData {
+        return DB::transaction(function () use ($apiKey, $actor, $expiresAt): IssuedApiKeyData {
             // Re-read under a lock so a concurrent revoke or rotation is seen, not overwritten.
             $lockedApiKey = ApiKey::query()->lockForUpdate()->whereKey($apiKey->getKey())->firstOrFail();
 
             Gate::forUser($actor)->authorize('update', $lockedApiKey);
 
-            $rotation = $this->apiKeySecretService->rotate(
-                $lockedApiKey->key_prefix,
-                $lockedApiKey->key_hash,
-                $rotatedAt,
+            $rotation = $this->rotationService->rotate(
+                $lockedApiKey,
+                $this->tokenCodec,
+                $this->clock,
+                RotationService::normalizeGraceHours(config('api-keys.rotation_grace_hours'), $this->rotationService->maxGraceHours()),
+                $expiresAt->toDateTimeImmutable(),
             );
 
+            // The package's contract: write every field the rotation returns, unconditionally.
+            // A new expiry earns a new expiry notice, so the notice stamps are cleared too.
             $lockedApiKey->forceFill([
-                'key_hash' => $rotation->secret->keyHash,
+                'key_prefix' => $rotation->newKeyPrefix,
+                'key_hash' => $rotation->newKeyHash,
+                'token_version' => $rotation->tokenVersion,
+                'previous_key_prefix' => $rotation->previousKeyPrefix,
                 'previous_key_hash' => $rotation->previousKeyHash,
                 'previous_key_valid_until' => $rotation->previousKeyValidUntil,
+                'last_rotated_at' => $rotation->lastRotatedAt,
                 'expires_at' => $expiresAt,
+                'expiry_notified_at' => null,
+                'expiry_notice_claimed_at' => null,
+                'expiry_notice_claim_token' => null,
             ])->save();
 
             activity('api-keys')
@@ -71,12 +86,12 @@ final class RotateApiKeyAction
                 ->withProperties([
                     'name' => $lockedApiKey->name,
                     'scopes' => $lockedApiKey->scopes,
-                    'previous_key_valid_until' => $rotation->previousKeyValidUntil?->toIso8601String(),
+                    'previous_key_valid_until' => $rotation->previousKeyValidUntil?->format(DATE_ATOM),
                     'expires_at' => $expiresAt->toIso8601String(),
                 ])
                 ->log('API key rotated');
 
-            return new IssuedApiKeyData($lockedApiKey, $rotation->secret->plainTextToken);
+            return new IssuedApiKeyData($lockedApiKey, $rotation->newPlainText);
         });
     }
 }

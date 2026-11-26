@@ -7,31 +7,47 @@ OpenAPI 3.1: `GET /api/v1/openapi.json` (hand-written; no generator package).
 
 ## Authentication
 
+Keys run on [`qiick/laravel-api-keys`](https://github.com/qiick-io/laravel-api-keys) (`^0.3@beta`,
+configured in `config/api-keys.php`): token format, verification order, refusals, rate limits,
+rotation and expiry notices are the fleet's, and Signaculum adds its owner rule and lifetime cap.
+
 1. Create a key as an instance admin in **Admin → API keys**. The token is shown once.
    Keys are owned by the singleton `instance_service` principal (`organisation_id` null);
    `created_by` records the issuing admin and is distinct from that owner (#229).
 2. Send `Authorization: Bearer sig_live_…` (`sig_test_…` outside production).
-3. The token is `sig_<live|test>_<id><secret>`: the public part `sig_<env>_<id>` (8-character id)
-   is what the UI, the activity log and support threads show; the 32-character secret is never
-   stored. Only the SHA-256 of the full token is kept. Secret scanners match the qiick fleet
-   pattern `^(ext|exc|ins|sig)_(live|test)_[A-Za-z0-9]{40,}$`.
-4. Every refusal of a key is `401` with `WWW-Authenticate: Bearer error="invalid_token"` and
-   `{"message": "…", "error": "invalid_token"}`: missing, unknown, expired or revoked key, a key
-   whose scopes no longer parse, a key whose `instance_service` principal is missing or
+3. The token is `sig_<live|test>_<id><secret><checksum>`: the public part `sig_<env>_<id>`
+   (8-character id) is what the UI, the activity log and support threads show; the 32-character
+   secret is never stored, and a 6-character checksum lets scanners drop typos (token version 2).
+   Only the SHA-256 of the full token is kept. Secret scanners match
+   `\bsig_(?:live|test)_[A-Za-z0-9]{40}(?:[A-Za-z0-9]{6})?\b`.
+4. A key that cannot authenticate is `401` with `WWW-Authenticate: Bearer error="invalid_token"`
+   and `{"message": "…", "error": "invalid_token"}`: missing, unknown, expired or revoked key, a key
+   whose `instance_service` principal is missing or
    deactivated, or when **no active instance admin** (someone with `can-manage-api-keys`)
    remains on the instance. Demoting or deactivating the creating admin alone does **not**
    revoke the key while another instance admin is still active; revocation stays manual.
-5. A missing scope is `403` with `"error": "insufficient_scope"` and the `scope` it needed; an
-   address outside the key's IP allowlist is `403`; the per-key rate limit is `429`.
+5. A missing scope is `403` with `"error": "insufficient_scope"` and the `scope` it needed; a key
+   whose stored scopes no longer parse is `403 insufficient_scope` too ("The API key holds no
+   scopes."); an address outside the key's IP allowlist is `403` (`ip_not_allowed`); the per-key
+   rate limit is `429` (`rate_limit_exceeded`, with `Retry-After` and `X-RateLimit-*`), and so is
+   more than `API_ADDRESS_RATE_LIMIT_PER_MINUTE` (60) requests from one address in a minute,
+   counted before the key is checked; `0` switches that address limit off, as
+   `API_KEYS_DEFAULT_RATE_LIMIT_PER_MINUTE=0` switches off the default per-key limit only.
+   After `API_KEYS_FAILED_ATTEMPTS_PER_MINUTE` (20) wrong guesses from one address in a minute,
+   every key from that address, the right one included, is `429` until the minute ends.
+   The counters use Laravel's rate limiter on the default cache store (`database` by default,
+   Redis when configured; `php artisan api-keys:check` names the active one). An unreachable
+   store answers `503 service_unavailable`, never an open door.
 6. **Rotation** issues a new secret for the same key (same prefix, scopes and audit trail). The
-   old token keeps working for `api.key_rotation_grace_hours` (24 by default). Revoking ends both.
+   old token keeps working for `api-keys.rotation_grace_hours` (`API_KEYS_ROTATION_GRACE_HOURS`, 24 by default). Revoking ends both.
    Any instance admin with `can-manage-api-keys` may rotate or revoke any Admin API key.
    A rotation sets a new `expires_at` (see 9), so it never extends a key past the maximum.
 7. Keys are managed in the signed-in admin UI only: no API key can create, rotate or widen a key,
    and an API key never establishes a web session (it has its own `api-key` guard).
-8. Creators get a mail seven days before a key expires (`signaculum:notify-expiring-api-keys`,
-   scheduled daily) while they are still active instance admins; when the creator is not, every
-   active instance admin gets it.
+8. Creators get one mail per key and expiry once the key expires within seven days
+   (`api-keys:notify-expiring`, scheduled daily; `API_KEYS_EXPIRY_NOTICE_DAYS`) while they are still
+   active instance admins; when the creator is not, every active instance admin gets it. A rotation
+   sets a new expiry, which gets its own mail.
 9. **Every key expires.** `expires_at` is required at creation and at rotation, in the future and
    at most `api.key_max_lifetime_days` (`API_KEY_MAX_LIFETIME_DAYS`, 90 by default) after the
    creation or rotation; the limit itself is allowed. A request without an expiry or past the

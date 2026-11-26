@@ -6,6 +6,7 @@ namespace App\Services;
 
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
+use Qiick\ApiKeys\Contracts\LifetimePolicy;
 use RuntimeException;
 
 /**
@@ -15,7 +16,7 @@ use RuntimeException;
  * A key that never expires outlives the people who issued it; the bound forces each key back
  * to an instance admin, who rotates or replaces it, at least once per lifetime.
  */
-final class ApiKeyLifetimeService
+final class ApiKeyLifetimeService implements LifetimePolicy
 {
     /**
      * The ceiling set by the decision: configuration may shorten the lifetime, never extend it.
@@ -40,6 +41,17 @@ final class ApiKeyLifetimeService
         }
 
         return $lifetimeDays;
+    }
+
+    /**
+     * qiick/laravel-api-keys' lifetime check on rotation ({@see LifetimePolicy}): every key
+     * expires, within the configured maximum lifetime from `$now`.
+     */
+    public function allowsExpiry(?\DateTimeImmutable $expiresAt, \DateTimeImmutable $now): bool
+    {
+        return $expiresAt !== null
+            && $expiresAt > $now
+            && $expiresAt <= CarbonImmutable::instance($now)->addDays($this->maximumLifetimeDays());
     }
 
     /**

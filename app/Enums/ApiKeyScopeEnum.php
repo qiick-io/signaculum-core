@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-use App\Data\ApiKeyScopesData;
+use App\Services\ApiKeyScopeVocabularyService;
 
 /**
  * Capability scopes for Signaculum Admin REST API keys, in the shared qiick vocabulary
- * `^[a-z][a-z0-9-]*:(read|write)$` where `write` implies `read` ({@see ApiKeyScopesData}).
+ * `^[a-z][a-z0-9-]*:(read|write)$` where `write` implies `read`
+ * (qiick/laravel-api-keys `ScopeSet`, through {@see ApiKeyScopeVocabularyService}).
  *
  * There is deliberately no scope for API keys themselves: key management is a session-only
  * action, so no key can mint or widen a key. Wire values are stable; document them in
