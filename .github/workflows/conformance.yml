@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   conformance:
-    uses: qiick-io/app-ui/.github/workflows/conformance.yml@f613af9febfce3b6d7f7f41785e9845a610080c7
+    uses: qiick-io/app-ui/.github/workflows/conformance.yml@0d97ae1429a856411c76e6de1ec258cae0eabab6
     with:
       php-version: '8.4'
       composer-command: composer install --no-interaction --prefer-dist --no-progress

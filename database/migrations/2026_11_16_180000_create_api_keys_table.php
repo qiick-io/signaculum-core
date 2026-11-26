@@ -23,13 +23,14 @@ return new class extends Migration
             $table->string('key_prefix', 32)->unique();
             $table->string('key_hash', 64);
             // Never cascade-erase keys with the user; revoke or reassign first (core-hardening).
-            $table->foreignId('owner_id')->constrained('users')->restrictOnDelete();
+            $table->foreignId('owner_id')->index()->constrained('users')->restrictOnDelete();
             // Every key has an owner principal, which cannot be deleted under it (conformance
             // C10, laravel-access design §15.4): a principal is deactivated, never deleted.
             $table->foreignUuid('owner_principal_id')
+                ->index()
                 ->constrained('principals')
                 ->restrictOnDelete();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by')->nullable()->index()->constrained('users')->nullOnDelete();
             $table->json('scopes');
             $table->json('ip_allowlist')->nullable();
             $table->unsignedInteger('rate_limit_per_minute')->nullable();
