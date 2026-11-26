@@ -18,7 +18,7 @@ return new class extends Migration
     {
         Schema::create('oidc_sessions', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->index()->constrained()->cascadeOnDelete();
             $table->string('laravel_session_id')->unique();
             $table->string('oidc_session_id', 64)->unique();
             $table->timestamp('ended_at')->nullable();

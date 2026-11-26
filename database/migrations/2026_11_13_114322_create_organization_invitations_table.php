@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('email');
             $table->json('roles');
             $table->string('token_hash', 64)->unique();
-            $table->foreignId('invited_by_user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('invited_by_user_id')->index()->constrained('users')->cascadeOnDelete();
             $table->timestamp('expires_at');
             $table->timestamp('accepted_at')->nullable();
             $table->timestamps();

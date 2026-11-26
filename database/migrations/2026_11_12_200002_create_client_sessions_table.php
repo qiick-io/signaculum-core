@@ -17,7 +17,7 @@ return new class extends Migration
         Schema::create('client_sessions', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignUuid('client_id')->constrained('oauth_clients')->cascadeOnDelete();
+            $table->foreignUuid('client_id')->index()->constrained('oauth_clients')->cascadeOnDelete();
             $table->string('oidc_session_id', 64)->index();
             $table->timestamp('ended_at')->nullable();
             $table->timestamps();

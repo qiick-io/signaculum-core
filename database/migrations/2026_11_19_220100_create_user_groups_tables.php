@@ -26,7 +26,7 @@ return new class extends Migration
         Schema::create('user_group_user', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_group_id')->constrained('user_groups')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('user_id')->index()->constrained('users')->cascadeOnDelete();
             $table->timestamps();
 
             $table->unique(['user_group_id', 'user_id']);
@@ -35,7 +35,7 @@ return new class extends Migration
         Schema::create('user_group_role', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_group_id')->constrained('user_groups')->cascadeOnDelete();
-            $table->foreignId('role_id')->constrained(config('permission.table_names.roles', 'roles'))->cascadeOnDelete();
+            $table->foreignId('role_id')->index()->constrained(config('permission.table_names.roles', 'roles'))->cascadeOnDelete();
             $table->timestamps();
 
             $table->unique(['user_group_id', 'role_id']);
