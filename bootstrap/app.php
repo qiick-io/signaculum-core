@@ -13,6 +13,7 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocaleMiddleware;
 use App\Http\Middleware\SetSecurityHeadersMiddleware;
+use App\Http\Middleware\ThrottleApiAddressMiddleware;
 use App\Http\Middleware\VerifyCsrfTokenMiddleware;
 use App\Http\Responses\RenderHttpErrorResponse;
 use Illuminate\Auth\AuthenticationException;
@@ -50,6 +51,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Before route-model binding: a user without the permission learns nothing about which
         // records exist (403 for a missing id as for an existing one).
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureUserHasPermissionMiddleware::class);
+
+        // Before route-model binding too: an Admin API lookup of a missing record still counts
+        // against the address throttle, so id guessing is throttled before any query.
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: ThrottleApiAddressMiddleware::class);
 
         // The UserInfo body token (RFC 6750 §2.2) must reach the header before Passport's guard reads it.
         $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: AcceptFormBodyAccessTokenMiddleware::class);

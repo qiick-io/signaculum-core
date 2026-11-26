@@ -12,6 +12,7 @@ use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter as RateLimiterFacade;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Spatie\Activitylog\Models\Activity;
 
@@ -325,6 +326,19 @@ it('throttles an address on its own setting, before the key is checked', functio
         ->assertTooManyRequests()
         ->assertHeader('Retry-After')
         ->assertHeader('X-RateLimit-Limit', '2')
+        ->assertJsonPath('error', 'rate_limit_exceeded');
+});
+
+// The address throttle runs before route-model binding: a lookup of a record that does not exist
+// counts like any other request, so guessing ids is throttled before authentication too.
+it('counts requests for missing records against the address throttle', function (): void {
+    config(['api.address_rate_limit_per_minute' => 2, 'api-keys.default_rate_limit_per_minute' => 100]);
+    ['plain' => $plain] = adminApiKey([ApiKeyScopeEnum::UsersRead->value]);
+
+    $this->withToken($plain)->getJson('/api/v1/users/'.Str::uuid())->assertNotFound();
+    $this->withToken($plain)->getJson('/api/v1/users/'.Str::uuid())->assertNotFound();
+    $this->withToken($plain)->getJson('/api/v1/users')
+        ->assertTooManyRequests()
         ->assertJsonPath('error', 'rate_limit_exceeded');
 });
 
