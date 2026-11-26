@@ -37,6 +37,7 @@ use App\Services\PendingAuthorizationService;
 use App\Services\SettingsRepositoryService;
 use App\Services\TokenFamilyService;
 use App\Services\WebhookDispatcherService;
+use App\Services\WebhookEndpointNoticeRecipientsService;
 use Carbon\CarbonImmutable;
 use DateInterval;
 use Illuminate\Auth\Events\Failed;
@@ -79,6 +80,7 @@ use Qiick\ApiKeys\FailedAttemptLimiter;
 use Qiick\ApiKeys\IpAllowlist;
 use Qiick\ApiKeys\TokenCodec;
 use Qiick\ApiKeys\UsageRecorder;
+use Qiick\Outbound\Contracts\WebhookEndpointNoticeRecipientsContract;
 use Spatie\Activitylog\Facades\Activity;
 use Spatie\Permission\Events\PermissionAttachedEvent;
 use Spatie\Permission\Events\PermissionDetachedEvent;
@@ -106,6 +108,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(EffectivePermissionResolverService::class);
         // One instance per process, so a tracked change nested in another is reported once.
         $this->app->singleton(InstanceAdminDemotionService::class);
+        $this->app->bind(WebhookEndpointNoticeRecipientsContract::class, WebhookEndpointNoticeRecipientsService::class);
 
         $this->registerApiKeys();
     }

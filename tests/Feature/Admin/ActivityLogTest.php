@@ -3,7 +3,11 @@
 declare(strict_types=1);
 
 use App\Actions\CreateApiKeyAction;
+use App\Actions\CreateWebhookAction;
+use App\Actions\DeleteWebhookAction;
+use App\Actions\UpdateWebhookAction;
 use App\Data\ApiKeyData;
+use App\Data\WebhookData;
 use App\Enums\ApiKeyScopeEnum;
 use App\Enums\WebhookEventEnum;
 use App\Http\Resources\ActivityLogResource;
@@ -12,7 +16,6 @@ use App\Models\Client;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Models\Webhook;
 use App\Services\SettingsRepositoryService;
 use App\Traits\LogsApplicationActivityTrait;
 use Illuminate\Console\Scheduling\Schedule;
@@ -21,6 +24,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
+use Qiick\Outbound\Models\WebhookEndpoint;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -144,12 +148,11 @@ it('stores and reads back the subject of every logged model, integer and UUID ke
         'api key' => app(CreateApiKeyAction::class)
             ->execute($admin, new ApiKeyData('Morph check', [ApiKeyScopeEnum::UsersRead->value], expiresAt: apiKeyExpiry()))
             ->apiKey,
-        'webhook' => Webhook::query()->create([
-            'url' => 'https://hooks.example.com/signaculum',
-            'secret' => 'test-signing-secret-value',
-            'events' => [WebhookEventEnum::UserCreated->value],
-            'is_active' => true,
-        ]),
+        'webhook' => (function (): WebhookEndpoint {
+            fakeWebhookNetwork();
+
+            return app(CreateWebhookAction::class)->execute(new WebhookData('https://hooks.example.com/signaculum', [WebhookEventEnum::UserCreated->value], true))->endpoint;
+        })(),
     ];
 
     foreach ($loggedModels as $modelLabel => $loggedModel) {
@@ -184,6 +187,8 @@ it('requires an explicit subject label arm for every activity-logged model', fun
         ->filter(fn (string $class): bool => class_exists($class)
             && in_array(LogsApplicationActivityTrait::class, class_uses_recursive($class), true))
         ->push(Organization::class)
+        // qiick/laravel-outbound endpoints, logged by the webhook actions.
+        ->push(WebhookEndpoint::class)
         ->unique()
         ->sort()
         ->values()
@@ -198,7 +203,7 @@ it('requires an explicit subject label arm for every activity-logged model', fun
             Client::class => (new Client)->forceFill(['name' => 'Externa', 'id' => '00000000-0000-0000-0000-000000000001']),
             ApiKey::class => (new ApiKey)->forceFill(['name' => 'CI key', 'id' => 1]),
             Organization::class => Organization::factory()->make(['name' => 'Acme', 'slug' => 'acme']),
-            Webhook::class => (new Webhook)->forceFill(['url' => 'https://hooks.example.com/label', 'id' => 1]),
+            WebhookEndpoint::class => (new WebhookEndpoint)->forceFill(['url' => 'https://hooks.example.com/label', 'id' => 1]),
             UserGroup::class => UserGroup::factory()->make(['name' => 'Operators']),
             default => throw new RuntimeException(
                 "Add a subject fixture and ActivityLogResource::subjectLabel() arm for {$modelClass}.",
@@ -213,18 +218,15 @@ it('renders the activity log with webhook create update and delete without expos
     $admin = activityAdmin();
     $this->actingAs($admin);
 
-    $webhookSecret = 'webhook-signing-secret-must-never-appear';
     $webhookUrl = 'https://hooks.example.com/signaculum-activity';
+    fakeWebhookNetwork();
 
-    $webhook = Webhook::query()->create([
-        'url' => $webhookUrl,
-        'secret' => $webhookSecret,
-        'events' => [WebhookEventEnum::UserCreated->value],
-        'is_active' => true,
-    ]);
+    $issuedWebhook = app(CreateWebhookAction::class)->execute(new WebhookData($webhookUrl, [WebhookEventEnum::UserCreated->value], true));
+    $webhook = $issuedWebhook->endpoint;
+    $webhookSecret = $issuedWebhook->plainSecret;
 
     // Flip is_active so an update is logged; url stays the readable label on the live subject.
-    $webhook->update(['is_active' => false]);
+    app(UpdateWebhookAction::class)->execute($webhook, new WebhookData($webhookUrl, [WebhookEventEnum::UserCreated->value], false));
 
     // Subject must still exist so the page resolves a label under Model::shouldBeStrict (#171).
     $response = $this->get(route('admin.activity-logs.index'))->assertOk();
@@ -237,7 +239,7 @@ it('renders the activity log with webhook create update and delete without expos
             'activityLogs.data',
             function ($rows) use ($webhookUrl): bool {
                 $webhookRows = collect($rows)->filter(
-                    fn ($row): bool => ($row['subject']['type'] ?? null) === 'Webhook'
+                    fn ($row): bool => ($row['subject']['type'] ?? null) === 'WebhookEndpoint'
                         && ($row['subject']['label'] ?? null) === $webhookUrl,
                 );
 
@@ -246,7 +248,7 @@ it('renders the activity log with webhook create update and delete without expos
             },
         ));
 
-    $webhook->delete();
+    app(DeleteWebhookAction::class)->execute($webhook);
 
     $afterDelete = $this->get(route('admin.activity-logs.index'))->assertOk();
 

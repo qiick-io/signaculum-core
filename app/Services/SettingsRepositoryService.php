@@ -122,6 +122,15 @@ final class SettingsRepositoryService
     }
 
     /**
+     * Drops the values this instance read, so the next read sees what is stored now: this is a
+     * singleton, and another request or process may have saved since.
+     */
+    public function forgetReadValues(): void
+    {
+        $this->values = null;
+    }
+
+    /**
      * Only the given keys, for one settings page.
      *
      * @param  list<string>  $keys

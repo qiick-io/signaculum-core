@@ -11,11 +11,11 @@ use App\Models\Organization;
 use App\Models\Principal;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Models\Webhook;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use LogicException;
+use Qiick\Outbound\Models\WebhookEndpoint;
 
 /**
  * An activity log entry for the activity log page, as in qiick-io/excubia-app.
@@ -83,7 +83,7 @@ final class ActivityLogResource extends JsonResource
      * A readable label for the subject, chosen explicitly per logged model (#171).
      *
      * Guessing attributes like `name` breaks under Model::shouldBeStrict() for models
-     * that lack that column (Webhook). Unknown subjects throw so a new logged model
+     * that lack that column (webhook endpoints). Unknown subjects throw so a new logged model
      * fails a coverage test instead of the activity log page.
      *
      * @throws LogicException when the subject class has no label arm
@@ -97,7 +97,7 @@ final class ActivityLogResource extends JsonResource
             Organization::class,
             UserGroup::class => trim((string) $subject->name),
             // url is the admin-facing identity; secret must never appear in the label.
-            Webhook::class => trim((string) $subject->url),
+            WebhookEndpoint::class => trim((string) $subject->url),
             default => throw new LogicException(
                 'No activity subject label for '.$subject::class.'; add an arm in ActivityLogResource::subjectLabel().',
             ),

@@ -35,3 +35,9 @@ Schedule::command('api-keys:notify-expiring')->daily();
  * interval since last_synced_at has not elapsed.
  */
 Schedule::job(new SyncLdapUsersJob)->everyMinute()->name('ldap:sync');
+
+// qiick/laravel-outbound: a first attempt goes out from SendWebhookDeliveriesJob right after
+// the event; this run sends the retries (due by `next_attempt_at`, so they survive a queue
+// loss) and anything a lost job left behind. Once a minute, on one server: no polling cost.
+Schedule::command('outbound:webhooks:work')->everyMinute()->withoutOverlapping()->onOneServer();
+Schedule::command('outbound:webhooks:prune')->daily()->onOneServer();

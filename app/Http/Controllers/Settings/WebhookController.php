@@ -15,11 +15,12 @@ use App\Http\Requests\Settings\StoreWebhookRequest;
 use App\Http\Requests\Settings\UpdateWebhookPrivateUrlsSettingRequest;
 use App\Http\Requests\Settings\UpdateWebhookRequest;
 use App\Http\Resources\WebhookResource;
-use App\Models\Webhook;
 use App\Services\SettingsRepositoryService;
+use App\Services\WebhookEndpointUrlService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Qiick\Outbound\Models\WebhookEndpoint;
 
 /**
  * Settings → Webhooks: instance-admin CRUD for outbound event endpoints.
@@ -34,8 +35,8 @@ final class WebhookController extends Controller
 
     public function index(): Response
     {
-        $webhooks = Webhook::query()
-            ->with(['deliveries' => static fn ($query) => $query
+        $webhooks = WebhookEndpoint::query()
+            ->with(['subscriptions', 'deliveries' => static fn ($query) => $query
                 ->orderByDesc('created_at')
                 ->orderByDesc('id')])
             ->orderByDesc('created_at')
@@ -52,13 +53,9 @@ final class WebhookController extends Controller
 
     public function store(StoreWebhookRequest $request, CreateWebhookAction $createWebhookAction): RedirectResponse
     {
-        $webhook = $createWebhookAction->execute($request->toData());
+        $issuedWebhook = $createWebhookAction->execute($request->toData());
 
-        $plainSecret = $webhook->getAttribute('plain_secret');
-
-        if (is_string($plainSecret)) {
-            $request->session()->flash('plain_text_webhook_secret', $plainSecret);
-        }
+        $request->session()->flash('plain_text_webhook_secret', $issuedWebhook->plainSecret);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Webhook created.')]);
 
@@ -67,7 +64,7 @@ final class WebhookController extends Controller
 
     public function update(
         UpdateWebhookRequest $request,
-        Webhook $webhook,
+        WebhookEndpoint $webhook,
         UpdateWebhookAction $updateWebhookAction,
     ): RedirectResponse {
         $updateWebhookAction->execute($webhook, $request->toData());
@@ -79,7 +76,7 @@ final class WebhookController extends Controller
 
     public function destroy(
         DeleteWebhookRequest $request,
-        Webhook $webhook,
+        WebhookEndpoint $webhook,
         DeleteWebhookAction $deleteWebhookAction,
     ): RedirectResponse {
         $deleteWebhookAction->execute($webhook);
@@ -91,9 +88,10 @@ final class WebhookController extends Controller
 
     public function updatePrivateUrlsSetting(
         UpdateWebhookPrivateUrlsSettingRequest $request,
+        WebhookEndpointUrlService $webhookEndpointUrlService,
     ): RedirectResponse {
         $values = $request->settings();
-        $this->settings->save($values);
+        $webhookEndpointUrlService->savePrivateHostsSetting($values['webhooks_allow_private_urls']);
         $this->logInstanceSettingsUpdate($request, 'webhooks', $values);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Settings saved.')]);

@@ -11,7 +11,6 @@ use App\Enums\OrganizationRoleEnum;
 use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Enums\PrincipalTypeEnum;
 use App\Enums\WebhookEventEnum;
-use App\Jobs\DeliverWebhookJob;
 use App\Jobs\EndOrganizationMemberOidcSessionsJob;
 use App\Models\ApiKey;
 use App\Models\ClientSession;
@@ -21,7 +20,6 @@ use App\Models\OrganizationInvitation;
 use App\Models\OrganizationMembership;
 use App\Models\Principal;
 use App\Models\User;
-use App\Models\Webhook;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -29,6 +27,7 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
+use Qiick\Outbound\Models\WebhookDelivery;
 use Spatie\Activitylog\Models\Activity;
 
 /*
@@ -193,23 +192,47 @@ test('deleting an organisation revokes its members oauth grants and fans out bac
 // action `removed`, once per member.
 test('deleting an organisation sends a membership removed webhook for every member', function () {
     ['organization' => $organization, 'owner' => $owner, 'member' => $member] = offboardingOrganization();
-    Webhook::query()->create([
-        'url' => 'https://hooks.example.com/signaculum',
-        'secret' => 'test-signing-secret-value',
-        'events' => [WebhookEventEnum::OrganizationMembershipChanged->value],
-        'is_active' => true,
-    ]);
-
-    Queue::fake();
+    existingWebhook(['events' => [WebhookEventEnum::OrganizationMembershipChanged->value]]);
 
     $this->actingAs($owner)->delete(route('organizations.destroy', $organization))->assertRedirect();
 
+    $bodies = WebhookDelivery::query()
+        ->where('event_type', WebhookEventEnum::OrganizationMembershipChanged->value)
+        ->get()
+        ->map(fn (WebhookDelivery $delivery): array => json_decode((string) $delivery->payload, true, flags: JSON_THROW_ON_ERROR)['data']);
+
+    expect($bodies)->toHaveCount(2);
+
     foreach ([$owner, $member] as $removedUser) {
-        Queue::assertPushed(DeliverWebhookJob::class, fn (DeliverWebhookJob $job): bool => $job->eventType === WebhookEventEnum::OrganizationMembershipChanged->value
-            && $job->data['organization_id'] === $organization->getKey()
-            && $job->data['user_id'] === $removedUser->subject
-            && $job->data['action'] === 'removed');
+        expect($bodies->contains(fn (array $data): bool => $data['organization_id'] === $organization->getKey()
+            && $data['user_id'] === $removedUser->subject
+            && $data['action'] === 'removed'))->toBeTrue();
     }
+});
+
+// The deliveries are stored in the offboarding transaction (an outbox): a failure while storing
+// them rolls the whole offboarding back, so a retry still finds the organisation and sends all.
+test('a failure while storing the membership webhooks rolls the offboarding back', function () {
+    ['organization' => $organization, 'owner' => $owner] = offboardingOrganization();
+    existingWebhook(['events' => [WebhookEventEnum::OrganizationMembershipChanged->value]]);
+    $isStorageFailing = true;
+    $storedDeliveries = 0;
+    DB::beforeExecuting(function (string $query) use (&$isStorageFailing, &$storedDeliveries): void {
+        if ($isStorageFailing && str_starts_with(strtolower(ltrim($query)), 'insert') && str_contains($query, 'webhook_deliveries') && ++$storedDeliveries === 2) {
+            throw new RuntimeException('The delivery write failed.');
+        }
+    });
+
+    expect(fn () => app(DeleteOrganizationAction::class)->execute($organization))->toThrow(RuntimeException::class, 'The delivery write failed.');
+
+    expect(Organization::query()->whereKey($organization->getKey())->exists())->toBeTrue()
+        ->and(OrganizationMembership::query()->where('organization_id', $organization->getKey())->count())->toBe(2)
+        ->and(WebhookDelivery::query()->count())->toBe(0);
+
+    $isStorageFailing = false;
+    $this->actingAs($owner)->delete(route('organizations.destroy', $organization))->assertRedirect();
+
+    expect(WebhookDelivery::query()->count())->toBe(2);
 });
 
 // A request that resolved the organisation before it was deleted must not add a member to it

@@ -16,6 +16,5 @@ final readonly class WebhookData
         public string $url,
         public array $events,
         public bool $isActive,
-        public ?string $secret = null,
     ) {}
 }
