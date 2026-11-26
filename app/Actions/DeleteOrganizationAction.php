@@ -29,7 +29,9 @@ use Illuminate\Support\Facades\Storage;
  * - deactivates every principal of the organisation as `offboarded` (one already deactivated
  *   as `admin` keeps that reason: an administrator's decision outlives the offboarding);
  * - revokes the API keys they own;
- * - removes the memberships and pending invitations, and soft-deletes the organisation.
+ * - removes the memberships and pending invitations, and soft-deletes the organisation;
+ * - stores one `organization.membership_changed` webhook delivery (`removed`) per member, as for
+ *   a single removal, so a failure there rolls the offboarding back and a retry sends them all.
  *
  * Principals, keys and activity rows stay as evidence; `principals.organisation_id` is
  * restrict, so the organisation row is never hard-deleted, and its slug stays taken. Deleting
@@ -37,9 +39,8 @@ use Illuminate\Support\Facades\Storage;
  *
  * Side effects: the activity entries of the two member actions, `organization_deleted` with
  * `organisation_id`, and `revoked` in the `api-keys` log for each key it revokes; queues one
- * `EndOrganizationMemberOidcSessionsJob` per member; after commit, one
- * `organization.membership_changed` webhook (`removed`) per member, as for a single removal,
- * and removes uploaded branding files under `branding/organizations/{id}/`.
+ * `EndOrganizationMemberOidcSessionsJob` per member; after commit, the webhooks' first-send
+ * job, and removes uploaded branding files under `branding/organizations/{id}/`.
  */
 final class DeleteOrganizationAction
 {
@@ -110,21 +111,23 @@ final class DeleteOrganizationAction
 
             $organization->delete();
 
+            // Stored in this transaction (an outbox): the offboarding and its events commit or
+            // roll back together; the first-send job is queued after commit.
+            foreach ($removedMemberSubjects as $removedMemberSubject) {
+                $this->webhookDispatcher->dispatch(WebhookEventEnum::OrganizationMembershipChanged, [
+                    'organization_id' => $organizationId,
+                    'organization_slug' => $organization->slug,
+                    'user_id' => $removedMemberSubject,
+                    'action' => 'removed',
+                    'roles' => [],
+                ]);
+            }
+
             return $removedMemberSubjects;
         });
 
         if ($removedMemberSubjects === null) {
             return;
-        }
-
-        foreach ($removedMemberSubjects as $removedMemberSubject) {
-            $this->webhookDispatcher->dispatch(WebhookEventEnum::OrganizationMembershipChanged, [
-                'organization_id' => $organizationId,
-                'organization_slug' => $organization->slug,
-                'user_id' => $removedMemberSubject,
-                'action' => 'removed',
-                'roles' => [],
-            ]);
         }
 
         foreach ([$organization->logo_path, $organization->logo_dark_path] as $path) {

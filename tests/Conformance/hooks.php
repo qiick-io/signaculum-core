@@ -8,6 +8,7 @@ use App\Enums\ApiKeyScopeEnum;
 use App\Enums\LdapEncryptionEnum;
 use App\Enums\PermissionEnum;
 use App\Enums\RoleEnum;
+use App\Enums\WebhookEventEnum;
 use App\Models\OrganizationMembership;
 use App\Models\SigningKey;
 use App\Models\User;
@@ -16,7 +17,7 @@ use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\InitialSuperAdminPasswordService;
 use App\Services\LdapSettingsService;
 use App\Services\SigningKeyService;
-use App\Services\WebhookUrlGuardService;
+use App\Services\WebhookDispatcherService;
 use Database\Seeders\CreateSuperAdminSeeder;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
@@ -28,7 +29,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Fortify;
+use Qiick\Outbound\Delivery\WebhookDeliveryCoordinator;
+use Qiick\Outbound\Models\WebhookEndpointSecret;
+use Qiick\Outbound\Ssrf\RemoteUrlGuard;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -300,28 +305,56 @@ return [
     },
 
     'assertSsrfGuard' => static function (): void {
-        $guard = app(WebhookUrlGuardService::class);
+        // qiick/laravel-outbound's guard, with a fixed DNS answer so the check needs no network.
+        fakeWebhookNetwork(['example.com' => ['93.184.216.34']]);
+        $guard = app(RemoteUrlGuard::class);
 
-        $metadata = $guard->authorizeOutbound('http://169.254.169.254/latest/meta-data/');
-
-        if (($metadata['ok'] ?? true) === true) {
+        if ($guard->tryAuthorize('http://169.254.169.254/latest/meta-data/')['ok']) {
             throw new RuntimeException('SSRF guard must refuse the EC2 metadata address.');
         }
 
-        $decimal = $guard->authorizeOutbound('http://2852039166/');
-
-        if (($decimal['ok'] ?? true) === true) {
+        if ($guard->tryAuthorize('http://2852039166/')['ok']) {
             throw new RuntimeException('SSRF guard must refuse non-dotted-decimal IPv4 spellings of metadata.');
         }
 
-        $safe = $guard->authorizeOutbound('https://example.com/hooks');
+        $safe = $guard->tryAuthorize('https://example.com/hooks');
 
-        if (($safe['ok'] ?? false) !== true) {
-            throw new RuntimeException('SSRF guard must allow a public HTTPS URL: '.($safe['reason'] ?? 'unknown'));
+        if (! $safe['ok']) {
+            throw new RuntimeException('SSRF guard must allow a public HTTPS URL: '.$safe['reason']);
         }
 
-        if (! isset($safe['curl_connect_to']) || $safe['curl_connect_to'] === []) {
+        if ($safe['destination']->curlConnectToEntry === '') {
             throw new RuntimeException('SSRF guard must pin with CURLOPT_CONNECT_TO entries.');
+        }
+    },
+
+    'assertWebhooks' => static function (): void {
+        // C27: Standard Webhooks headers, a whsec_ secret and the {type, timestamp, data} body.
+        $http = fakeWebhookNetwork();
+        $endpoint = existingWebhook(['events' => [WebhookEventEnum::UserCreated->value]]);
+        app(WebhookDispatcherService::class)->dispatch(WebhookEventEnum::UserCreated, ['user_id' => 'conformance']);
+        app(WebhookDeliveryCoordinator::class)->work(10);
+
+        $request = $http->recorded()[0][0] ?? null;
+
+        if ($request === null) {
+            throw new RuntimeException('A subscribed endpoint must receive the event.');
+        }
+
+        foreach (['webhook-id', 'webhook-timestamp', 'webhook-signature'] as $header) {
+            if ($request->header($header) === []) {
+                throw new RuntimeException("Webhook requests must carry the {$header} header.");
+            }
+        }
+
+        if (array_keys(json_decode($request->body(), true, flags: JSON_THROW_ON_ERROR)) !== ['type', 'timestamp', 'data']) {
+            throw new RuntimeException('The webhook body must be {type, timestamp, data}.');
+        }
+
+        $secret = (string) WebhookEndpointSecret::query()->where('endpoint_id', $endpoint->id)->sole()->secret;
+
+        if (! str_starts_with($secret, 'whsec_')) {
+            throw new RuntimeException('Webhook secrets must be whsec_ secrets.');
         }
     },
 
@@ -375,7 +408,7 @@ return [
         $user = User::factory()->create(['password' => 'password']);
 
         // Real Fortify enable path (same action as POST /user/two-factor-authentication).
-        app(\Laravel\Fortify\Actions\EnableTwoFactorAuthentication::class)($user);
+        app(EnableTwoFactorAuthentication::class)($user);
 
         $user->refresh();
 
@@ -395,8 +428,8 @@ return [
             throw new RuntimeException('The raw encrypted 2FA secret does not decrypt to a non-empty string.');
         }
 
-        $webhook = existingWebhook(['secret' => 'whsec_conformance_secret']);
-        $webhookRow = DB::table('webhooks')->where('id', $webhook->getKey())->first();
+        $webhook = existingWebhook();
+        $webhookRow = DB::table('webhook_endpoint_secrets')->where('endpoint_id', $webhook->getKey())->first();
 
         if ($webhookRow === null || ! str_starts_with((string) $webhookRow->secret, 'eyJpdiI6')) {
             throw new RuntimeException('Webhook secrets must use the encrypted cast.');

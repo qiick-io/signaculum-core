@@ -57,12 +57,6 @@
             "decision": "knowledge/decisions/2026-11-20-fleet-contracts",
             "review_by": "2027-05-01",
             "issue": "https://github.com/qiick-io/signaculum-core/issues/221"
-        },
-        "C27": {
-            "reason": "Standard Webhooks envelope lands with qiick/laravel-outbound adoption",
-            "decision": "knowledge/decisions/2026-11-19-shared-packages-for-api-keys-and-outbound-http",
-            "review_by": "2027-05-01",
-            "issue": "https://github.com/qiick-io/signaculum-core/issues/222"
         }
     }
 }

@@ -28,7 +28,6 @@ final class UpdateWebhookRequest extends FormRequest
             'events' => ['required', 'array', 'min:1'],
             'events.*' => ['required', 'string', Rule::in(WebhookEventEnum::values())],
             'is_active' => ['required', 'boolean'],
-            'secret' => ['nullable', 'string', 'min:16', 'max:128'],
         ];
     }
 
@@ -36,13 +35,11 @@ final class UpdateWebhookRequest extends FormRequest
     {
         /** @var list<string> $events */
         $events = array_values(array_unique($this->array('events')));
-        $secret = $this->input('secret');
 
         return new WebhookData(
             url: $this->string('url')->toString(),
             events: $events,
             isActive: $this->boolean('is_active'),
-            secret: is_string($secret) && $secret !== '' ? $secret : null,
         );
     }
 }

@@ -16,12 +16,12 @@ use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\SigningKey;
 use App\Models\User;
-use App\Models\Webhook;
 use App\Services\SigningKeyService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Client;
@@ -37,6 +37,15 @@ use Lcobucci\JWT\UnencryptedToken;
 use Lcobucci\JWT\Validation\Constraint\SignedWith;
 use Lcobucci\JWT\Validation\Validator;
 use LdapRecord\Laravel\Testing\DirectoryEmulator;
+use Qiick\Outbound\Contracts\HostResolver;
+use Qiick\Outbound\Delivery\WebhookDeliveryCoordinator;
+use Qiick\Outbound\Http\OutboundHttpLimits;
+use Qiick\Outbound\Http\PinnedHttpClient;
+use Qiick\Outbound\Models\WebhookEndpoint;
+use Qiick\Outbound\Ssrf\RemoteUrlGuard;
+use Qiick\Outbound\Testing\FakeHostResolver;
+use Qiick\Outbound\Testing\FakeOutboundHttpFactory;
+use Qiick\Outbound\Webhooks\SecretRotator;
 use Tests\TestCase;
 
 /*
@@ -489,19 +498,49 @@ function permissionReader(): User
 }
 
 /**
- * An outbound webhook endpoint with a stable URL and signing secret for settings tests.
+ * A qiick/laravel-outbound webhook endpoint with a stable URL, subscriptions and a `whsec_`
+ * signing secret, written directly (no URL guard, no activity entry) for tests.
  *
- * @param  array<string, mixed>  $attributes
+ * @param  array{url?: string, events?: list<string>, is_active?: bool}  $attributes
  */
-function existingWebhook(array $attributes = []): Webhook
+function existingWebhook(array $attributes = []): WebhookEndpoint
 {
-    return Webhook::query()->create([
-        'url' => 'https://hooks.example.com/existing',
-        'secret' => 'existing-signing-secret-value',
-        'events' => [WebhookEventEnum::UserCreated->value],
-        'is_active' => true,
-        ...$attributes,
-    ]);
+    $endpoint = new WebhookEndpoint(['url' => $attributes['url'] ?? 'https://hooks.example.com/existing']);
+    $endpoint->forceFill(['is_active' => $attributes['is_active'] ?? true])->save();
+
+    foreach ($attributes['events'] ?? [WebhookEventEnum::UserCreated->value] as $eventType) {
+        $endpoint->subscriptions()->create(['event_type' => $eventType]);
+    }
+
+    app(SecretRotator::class)->issue($endpoint);
+
+    return $endpoint;
+}
+
+/**
+ * Points qiick/laravel-outbound's DNS and HTTP at fakes: `$hosts` maps a host to the addresses it
+ * resolves to (the SSRF guard checks them), and the returned factory records every request the
+ * pinned client sends and answers with `$response` (Http::fake() does not reach it).
+ *
+ * @param  array<string, list<string>>  $hosts
+ * @param  array<string, mixed>|Closure|null  $response
+ */
+function fakeWebhookNetwork(array $hosts = ['hooks.example.com' => ['93.184.216.34']], array|Closure|null $response = null): HttpFactory
+{
+    $resolver = new FakeHostResolver;
+
+    foreach ($hosts as $host => $addresses) {
+        $resolver = $resolver->with($host, $addresses);
+    }
+
+    app()->instance(HostResolver::class, $resolver);
+    app()->forgetInstance(RemoteUrlGuard::class);
+
+    $factory = FakeOutboundHttpFactory::fake($response ?? ['*' => HttpFactory::response('', 204)]);
+    app()->instance(PinnedHttpClient::class, new PinnedHttpClient($factory, app(RemoteUrlGuard::class), app(OutboundHttpLimits::class)));
+    app()->forgetInstance(WebhookDeliveryCoordinator::class);
+
+    return $factory;
 }
 
 /**

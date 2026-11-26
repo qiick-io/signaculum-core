@@ -47,7 +47,7 @@ type WebhookDeliveryRow = {
 };
 
 type WebhookRow = {
-    uuid: string;
+    public_id: string;
     url: string;
     events: string[];
     is_active: boolean;
@@ -194,7 +194,7 @@ export default function InstanceWebhooksPage({
                         <ul className="space-y-4">
                             {webhooks.map((webhook) => (
                                 <li
-                                    key={webhook.uuid}
+                                    key={webhook.public_id}
                                     className="space-y-3 rounded-lg border border-border p-4"
                                 >
                                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -248,7 +248,7 @@ export default function InstanceWebhooksPage({
                                                 onClick={() =>
                                                     router.delete(
                                                         destroyWebhook.url(
-                                                            webhook.uuid,
+                                                            webhook.public_id,
                                                         ),
                                                     )
                                                 }
@@ -316,7 +316,7 @@ export default function InstanceWebhooksPage({
                         <Form
                             action={
                                 editing
-                                    ? updateWebhook.url(editing.uuid)
+                                    ? updateWebhook.url(editing.public_id)
                                     : storeWebhook.url()
                             }
                             method={editing ? 'put' : 'post'}

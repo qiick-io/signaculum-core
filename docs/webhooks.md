@@ -1,22 +1,23 @@
 # Outbound webhooks
 
 Instance admins register HTTPS (or http) endpoints under **Settings → Webhooks**.
-Signaculum POSTs a signed JSON body when a subscribed domain event occurs.
+Signaculum POSTs a signed [Standard Webhooks](https://www.standardwebhooks.com/)
+request when a subscribed domain event occurs. Delivery, signing, retries and
+the SSRF guard come from [`qiick/laravel-outbound`](https://github.com/qiick-io/laravel-outbound)
+(`^0.2.0-beta.3`, `config/outbound.php`).
 
 This is not telemetry: deliveries go only to URLs an admin registers. Private,
 loopback and link-local hosts are refused unless **Allow private webhook URLs**
-is enabled (local QA). Cloud metadata hosts stay blocked either way, whether the
-URL names them or a hostname resolves to them.
+is enabled (local QA); the setting applies to every endpoint, at once for
+deliveries still pending, and no environment variable overrides it. Cloud metadata
+hosts stay blocked either way, whether the URL names them or a hostname
+resolves to them.
 
-Every delivery is pinned to an address the guard checked. A hostname is resolved
-once, for A and AAAA (falling back to the system resolver, so a hosts-file entry
-works); any disallowed address refuses the URL, and a hostname that resolves to
-nothing is refused, because there is nothing checked to send to. One validated
-address (IPv4 first) is handed to curl with `CURLOPT_CONNECT_TO` and an empty
-source host (`::93.184.216.34:443`, IPv6 in brackets: `::[2001:db8::1]:443`), so
-neither DNS rebinding nor the way the host is spelt can send the POST elsewhere.
-An IP literal is pinned to itself. An IPv4 address must be written in dotted
-decimal: `2852039166`, `0251.0376.0251.0376` or `169.254.169.254.` are refused.
+Every attempt is pinned to an address the guard checked (resolved for A and
+AAAA, any disallowed address refuses the URL, one validated address handed to
+curl with `CURLOPT_CONNECT_TO`), so neither DNS rebinding nor the way the host
+is spelt can send the request elsewhere. Redirects are never followed. An IPv4
+address must be written in dotted decimal.
 
 ## Events
 
@@ -31,13 +32,12 @@ decimal: `2852039166`, `0251.0376.0251.0376` or `169.254.169.254.` are refused.
 | `application.created`             | OIDC application registered            |
 | `application.deleted`             | OIDC application revoked               |
 
-## Payload (stable wire format)
+## Payload
 
 ```json
 {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
     "type": "user.created",
-    "created_at": "2026-11-16T16:00:00+00:00",
+    "timestamp": "2026-11-16T16:00:00+00:00",
     "data": {
         "id": "user-subject-uuid",
         "email": "alex@example.com",
@@ -46,33 +46,84 @@ decimal: `2852039166`, `0251.0376.0251.0376` or `169.254.169.254.` are refused.
 }
 ```
 
-- `id`: event id (UUID). At-least-once delivery; treat as idempotency key.
 - `type`: one of the event strings above.
-- `created_at`: ISO-8601 timestamp when the event was queued.
-- `data`: event-specific object (never empty array).
+- `timestamp`: when the event happened (RFC 3339).
+- `data`: event-specific object.
+
+The event id is the `webhook-id` header (`msg_` followed by a ULID). Delivery is
+at least once: treat `webhook-id` as the idempotency key; a retry or a
+redelivery keeps it.
 
 ## Headers
 
-| Header                   | Value                                                                            |
-| ------------------------ | -------------------------------------------------------------------------------- |
-| `Content-Type`           | `application/json`                                                               |
-| `X-Signaculum-Event`     | Event type                                                                       |
-| `X-Signaculum-Event-Id`  | Same as payload `id`                                                             |
-| `X-Signaculum-Timestamp` | Unix seconds when the request was signed                                         |
-| `X-Signaculum-Signature` | `sha256=` + HMAC-SHA256 of `timestamp + "." + raw_body` with the endpoint secret |
-| `User-Agent`             | `Signaculum-Webhooks/1.0`                                                        |
+| Header              | Value                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `Content-Type`      | `application/json`                                                                      |
+| `webhook-id`        | Event id, stable across retries                                                         |
+| `webhook-timestamp` | Unix seconds when this attempt was signed                                               |
+| `webhook-signature` | Space-separated `v1,<base64>` signatures, one per active secret (two during a rotation) |
 
 ### Verifying the signature
 
+The secret shown once when the endpoint is created is a `whsec_` secret. Use
+any Standard Webhooks library, or compute it yourself:
+
 ```text
-expected = "sha256=" + hmac_sha256(secret, timestamp + "." + body)
+key      = base64_decode(secret without the "whsec_" prefix)
+expected = base64(hmac_sha256(key, webhook-id + "." + webhook-timestamp + "." + raw_body))
 ```
 
-Reject when the timestamp is older than a few minutes (replay window) or the
-signature does not match.
+Accept the request when one of the `v1,…` signatures equals `expected`, and
+reject it when `webhook-timestamp` is more than five minutes away from your
+clock (replay window).
 
 ## Delivery
 
-Queued job with three tries and backoff (10s, 30s, 60s). Non-2xx responses are
-retried. SSRF refusals and empty secrets are logged as `refused` and not
-retried. Recent attempts appear on the Webhooks settings page.
+The event stores one delivery per subscribed endpoint, in the same transaction
+as the change it reports, and queues a small job (`SendWebhookDeliveriesJob`,
+after the database commit) that sends the first attempts at once. The job starts
+no new send after 20 seconds, so with a send taking at most 30 seconds it ends
+inside a queue worker's default 60-second timeout; what is left stays due. The
+scheduler runs `outbound:webhooks:work` **once a minute** (`onOneServer()`, up
+to 50 attempts a run, a run still busy skips the next), for the retries and for
+anything a lost job left behind; nothing polls more often, so an idle instance
+costs nothing between events. Each delivery is leased just before its send, so
+the job and the scheduled run never send one twice; a send cut off by a worker
+timeout is sent again once its lease runs out, which delivery at least once
+allows.
+
+**When an attempt is sent:**
+
+| Attempt                      | Sent                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| First                        | when a queue worker picks up the job (at once with `QUEUE_CONNECTION=sync`) |
+| First, if the job never runs | by a scheduled run, which starts every minute                               |
+| Retry                        | by the first scheduled run after it is due (`next_attempt_at`)              |
+
+Sixty seconds is the scheduler's cadence, not a latency bound: a backlog of more
+than 50 due attempts, or slow receivers, push attempts to later runs.
+
+The queue worker and the scheduler (`php artisan schedule:run` every minute, or
+`schedule:work`) must both run; `onOneServer()` needs a cache store with locks
+(`database` or Redis, the defaults).
+
+A failed attempt (any non-2xx answer, a timeout or a connection error) is
+retried on the Standard Webhooks schedule, 10 attempts over about 75 hours,
+honouring `Retry-After`. `410 Gone` stops at once and disables the endpoint. An
+endpoint that keeps failing (five days without a success and at least ten
+failures in a row) is disabled and a mail names its host to its creator while
+still an active instance admin, otherwise to every active instance admin.
+Disabling an endpoint by hand while changing its URL holds its pending
+deliveries before the new URL is saved. Turning it back on
+in the settings resumes its pending deliveries. Request bodies are kept for 30
+days and delivery records for 90 (`outbound:webhooks:prune`, daily, on one
+server). The five most recent deliveries of each endpoint appear on the
+Webhooks settings page.
+
+## Changed in this beta
+
+Before `qiick/laravel-outbound`, Signaculum sent its own format: body
+`{id, type, created_at, data}` and `X-Signaculum-Event`, `X-Signaculum-Event-Id`,
+`X-Signaculum-Timestamp` and `X-Signaculum-Signature` (`sha256=` HMAC) headers.
+Receivers verify the Standard Webhooks headers instead, with the new `whsec_`
+secret.

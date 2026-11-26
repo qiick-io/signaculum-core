@@ -7,8 +7,8 @@ use App\Models\Activity;
 use App\Models\Principal;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Models\Webhook;
 use Illuminate\Support\Facades\DB;
+use Qiick\Outbound\Models\WebhookEndpoint;
 
 /**
  * The activity log row as the console receives it: who caused it (a user, the Admin API service
@@ -93,8 +93,8 @@ it('labels a subject by its trimmed name or url, and by its id when that is empt
     expect(subjectLabelOf((new UserGroup)->forceFill(['id' => 5, 'name' => '  Operators  '])))->toBe('Operators')
         ->and(subjectLabelOf((new UserGroup)->forceFill(['id' => 5, 'name' => '   '])))->toBe('#5')
         ->and(subjectLabelOf((new UserGroup)->forceFill(['id' => 6, 'name' => null])))->toBe('#6')
-        ->and(subjectLabelOf((new Webhook)->forceFill(['id' => 7, 'url' => ' https://hooks.example.test/in '])))->toBe('https://hooks.example.test/in')
-        ->and(subjectLabelOf((new Webhook)->forceFill(['id' => 8, 'url' => null])))->toBe('#8');
+        ->and(subjectLabelOf((new WebhookEndpoint)->forceFill(['id' => 7, 'url' => ' https://hooks.example.test/in '])))->toBe('https://hooks.example.test/in')
+        ->and(subjectLabelOf((new WebhookEndpoint)->forceFill(['id' => 8, 'url' => null])))->toBe('#8');
 });
 
 it('refuses to label a subject it has no arm for', function (): void {
