@@ -64,7 +64,7 @@ return new class extends Migration
             $table->timestamp('exposed_at')->nullable()->index();
             $table->string('exposure_source', 64)->nullable();
             $table->timestamp('revoked_at')->nullable()->index();
-            $table->foreignId('revoked_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('revoked_by')->nullable()->index()->constrained('users')->nullOnDelete();
             $table->string('revoked_reason', 32)->nullable();
             $table->text('revocation_note')->nullable();
             $table->index(['credential_kind', 'revoked_at']);

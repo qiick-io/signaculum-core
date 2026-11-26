@@ -144,3 +144,22 @@ test('creating organisations is throttled per user', function () {
 
     expect(Organization::query()->count())->toBe(3);
 });
+
+test('a member sees the organisation with its members, and an outsider is refused', function () {
+    $owner = User::factory()->create(['first_name' => 'Ada', 'last_name' => 'Lovelace']);
+    $organization = createOrganizationWithOwner($owner, ['name' => 'Acme Corp', 'slug' => 'acme-corp']);
+
+    $this->actingAs($owner)
+        ->get(route('organizations.show', $organization))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('organizations/show')
+            ->where('organization.name', 'Acme Corp')
+            ->where('members.0.name', 'Ada Lovelace')
+            ->where('members.0.roles', [OrganizationRoleEnum::Owner->value])
+            ->where('can.manageMembers', true));
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('organizations.show', $organization))
+        ->assertForbidden();
+});

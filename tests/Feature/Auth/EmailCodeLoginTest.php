@@ -267,3 +267,13 @@ test('an instance admin can enable email code login from security settings', fun
 
     expect(app(SettingsRepositoryService::class)->isEmailCodeLoginEnabled())->toBeTrue();
 });
+
+test('the email code mail carries the code and its lifetime', function () {
+    $user = User::factory()->create(['first_name' => 'Ada', 'last_name' => 'Lovelace', 'locale' => 'en']);
+
+    $mail = (new EmailLoginCodeNotification('123456', 10))->toMail($user);
+    $renderedMail = $mail->subject.' '.implode(' ', $mail->introLines).' '.implode(' ', $mail->outroLines).' '.$mail->greeting;
+
+    expect($renderedMail)->toContain('is 123456.')
+        ->and($renderedMail)->toContain('expires in 10 minutes');
+});
