@@ -119,7 +119,8 @@ return [
      * Set this to false if you want to implement custom logic for checking permissions.
      */
 
-    'register_permission_check_method' => true,
+    // qiick/laravel-access decides permissions through its resolver and Gate::before (R4).
+    'register_permission_check_method' => false,
 
     /*
      * When set to true, Laravel\Octane\Events\OperationTerminated event listener will be registered
@@ -138,7 +139,8 @@ return [
      * To enable, set to true, and then create listeners to watch these events.
      */
     // No listeners registered; leave false until an audit hook needs Spatie events.
-    'events_enabled' => false,
+    // qiick/laravel-access flushes its resolver on Spatie's role and permission events (A1).
+    'events_enabled' => true,
 
     /*
      * Teams Feature.

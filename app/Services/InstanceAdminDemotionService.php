@@ -7,10 +7,10 @@ namespace App\Services;
 use App\Enums\InstanceAdminDemotionReasonEnum;
 use App\Events\InstanceAdminDemotedEvent;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Database\Eloquent\Collection;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Detects instance admins who lose that status through a change, and raises
@@ -35,7 +35,7 @@ final class InstanceAdminDemotionService
 
     public function __construct(
         private readonly InstanceAdminPresenceService $instanceAdminPresenceService,
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
     ) {}
 
     /**

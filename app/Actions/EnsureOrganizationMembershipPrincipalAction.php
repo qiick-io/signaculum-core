@@ -4,35 +4,41 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Enums\PrincipalTypeEnum;
 use App\Models\Organization;
 use App\Models\Principal;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Qiick\Access\Principals\DeactivationReason;
+use Qiick\Access\Principals\PrincipalDirectory;
 
 /**
- * Creates (or reactivates) the human principal for a user in one organisation.
- *
- * One principal per membership: unique `(organisation_id, user_id)`.
+ * The user's principal in an organisation, created on joining it, through qiick/laravel-access'
+ * {@see PrincipalDirectory::forMember()}: idempotent, and a principal offboarded by an earlier
+ * departure is reactivated while the account is active. For a deactivated account the principal
+ * is deactivated as `admin`, and stays so until the user is reactivated ({@see ReactivateUserAction}).
  */
 final class EnsureOrganizationMembershipPrincipalAction
 {
+    public function __construct(
+        private readonly PrincipalDirectory $principalDirectory,
+    ) {}
+
     public function execute(Organization $organization, User $user): Principal
     {
-        $principal = Principal::query()->firstOrNew([
-            'organisation_id' => $organization->getKey(),
-            'user_id' => $user->getKey(),
-            'type' => PrincipalTypeEnum::User,
-        ]);
+        return DB::transaction(function () use ($organization, $user): Principal {
+            // The account state is read under the user-row lock that deactivation and reactivation
+            // take, never from the caller's copy: a deactivation committed after the member was
+            // loaded still counts.
+            $isAccountActive = (bool) User::query()->whereKey($user->getKey())->lockForUpdate()->value('is_active');
+            $principal = $this->principalDirectory->forMember($user, (string) $organization->getKey());
 
-        $displayName = $user->name !== '' ? $user->name : (string) $user->email;
+            // A deactivated account's new membership stays inactive until the account is
+            // reactivated, with the reason ReactivateUserAction undoes.
+            if (! $isAccountActive) {
+                $this->principalDirectory->deactivate($principal, DeactivationReason::Admin);
+            }
 
-        $principal->fill([
-            'name' => $displayName,
-            'deactivated_at' => null,
-            'deactivation_reason' => null,
-        ]);
-        $principal->save();
-
-        return $principal;
+            return Principal::query()->whereKey($principal->getKey())->firstOrFail();
+        });
     }
 }

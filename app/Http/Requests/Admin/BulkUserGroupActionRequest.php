@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin;
 
 use App\Enums\PermissionEnum;
-use App\Http\Requests\Concerns\AuthorizesWithPermissionTrait;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Qiick\Access\Http\Concerns\AuthorizesWithPermission;
 
 /**
  * Validate bulk restore / force-delete of soft-deleted user groups.
  */
 class BulkUserGroupActionRequest extends FormRequest
 {
-    use AuthorizesWithPermissionTrait;
+    use AuthorizesWithPermission;
 
     public function authorize(): bool
     {

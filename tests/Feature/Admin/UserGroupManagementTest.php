@@ -6,8 +6,8 @@ use App\Enums\PermissionEnum;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use Inertia\Testing\AssertableInertia;
+use Qiick\Access\EffectivePermissionResolver;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -257,7 +257,7 @@ it('unions permissions from multiple group roles', function (): void {
     $user = User::factory()->create();
     $user->groups()->sync([$groupA->id, $groupB->id]);
 
-    $resolver = app(EffectivePermissionResolverService::class);
+    $resolver = app(EffectivePermissionResolver::class);
 
     expect($resolver->hasPermission($user, PermissionEnum::CanShowGroups->value))->toBeTrue();
     expect($resolver->hasPermission($user, PermissionEnum::CanEditUsers->value))->toBeTrue();
@@ -319,7 +319,7 @@ it('refuses a delegated group manager deleting a group that grants super-admin',
     $owners = UserGroup::factory()->create();
     $owners->users()->attach(User::factory()->instanceAdmin()->create());
     $owners->roles()->attach(Role::findByName(RoleEnum::SuperAdmin->value));
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
     $this->actingAs($actor)
         ->delete(route('admin.groups.destroy', $owners))
@@ -359,7 +359,7 @@ it('authorizes every group of a bulk action before touching any', function (): v
     $owners->roles()->attach(Role::findByName(RoleEnum::SuperAdmin->value));
     $plain->delete();
     $owners->delete();
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
     $this->actingAs($actor)
         ->post(route('admin.groups.bulk'), ['action' => 'force_delete', 'ids' => [$plain->getKey(), $owners->getKey()]])

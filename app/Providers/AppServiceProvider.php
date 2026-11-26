@@ -24,13 +24,17 @@ use App\Oidc\OidcDeviceCodeRepository;
 use App\Oidc\OidcRefreshTokenGrant;
 use App\Policies\ActivityPolicy;
 use App\Policies\ApplicationPolicy;
+use App\Services\Access\AccessActiveUsersService;
+use App\Services\Access\AccessAuthorizationResponderService;
+use App\Services\Access\AccessRoleCatalogService;
+use App\Services\Access\AccessTwoFactorPolicyService;
+use App\Services\Access\AccessTwoFactorResponderService;
 use App\Services\ActivityOrganisationResolverService;
 use App\Services\ApiKeyAuthorizerService;
 use App\Services\ApiKeyExpiryRecipientService;
 use App\Services\ApiKeyLifetimeService;
 use App\Services\ApiKeyRepositoryService;
 use App\Services\ApiKeyScopeVocabularyService;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\EmailTemplateService;
 use App\Services\InstanceAdminDemotionService;
 use App\Services\PendingAuthorizationService;
@@ -67,6 +71,13 @@ use Laravel\Passport\Bridge\RefreshTokenRepository;
 use Laravel\Passport\Passport;
 use Laravel\Passport\Scope;
 use League\OAuth2\Server\AuthorizationServer;
+use Qiick\Access\Contracts\ActiveUsers;
+use Qiick\Access\Contracts\ActorResolver;
+use Qiick\Access\Contracts\AuthorizationResponder;
+use Qiick\Access\Contracts\RoleCatalog;
+use Qiick\Access\Contracts\TwoFactorPolicy;
+use Qiick\Access\Contracts\TwoFactorResponder;
+use Qiick\Access\Laravel\ContainerActorResolver;
 use Qiick\ApiKeys\ApiKeyAuthenticator;
 use Qiick\ApiKeys\Audit;
 use Qiick\ApiKeys\Contracts\ApiKeyRepository;
@@ -82,10 +93,6 @@ use Qiick\ApiKeys\TokenCodec;
 use Qiick\ApiKeys\UsageRecorder;
 use Qiick\Outbound\Contracts\WebhookEndpointNoticeRecipientsContract;
 use Spatie\Activitylog\Facades\Activity;
-use Spatie\Permission\Events\PermissionAttachedEvent;
-use Spatie\Permission\Events\PermissionDetachedEvent;
-use Spatie\Permission\Events\RoleAttachedEvent;
-use Spatie\Permission\Events\RoleDetachedEvent;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -105,12 +112,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AuthCodeRepository::class, OidcAuthCodeRepository::class);
         $this->app->bind(DeviceCodeRepository::class, OidcDeviceCodeRepository::class);
         $this->app->singleton(SettingsRepositoryService::class);
-        $this->app->singleton(EffectivePermissionResolverService::class);
         // One instance per process, so a tracked change nested in another is reported once.
         $this->app->singleton(InstanceAdminDemotionService::class);
         $this->app->bind(WebhookEndpointNoticeRecipientsContract::class, WebhookEndpointNoticeRecipientsService::class);
 
         $this->registerApiKeys();
+        $this->registerAccess();
     }
 
     /**
@@ -143,6 +150,24 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * Roles, groups, principals and the super-admin `Gate::before` run on qiick/laravel-access,
+     * which registers the one `Gate::before` itself and flushes its resolver on Spatie's role
+     * and permission events: super-admin passes permission-name abilities for web sessions only,
+     * never for API actors, and model policies decide for themselves (they keep invariants that
+     * bind super-admins too). The product binds its role names, its two-factor rule and its
+     * refusals; boot fails without them (AC12).
+     */
+    protected function registerAccess(): void
+    {
+        $this->app->singleton(ActorResolver::class, ContainerActorResolver::class);
+        $this->app->singleton(RoleCatalog::class, AccessRoleCatalogService::class);
+        $this->app->singleton(TwoFactorPolicy::class, AccessTwoFactorPolicyService::class);
+        $this->app->singleton(TwoFactorResponder::class, AccessTwoFactorResponderService::class);
+        $this->app->singleton(AuthorizationResponder::class, AccessAuthorizationResponderService::class);
+        $this->app->singleton(ActiveUsers::class, AccessActiveUsersService::class);
+    }
+
+    /**
      * Bootstrap any application services.
      */
     public function boot(): void
@@ -151,7 +176,6 @@ class AppServiceProvider extends ServiceProvider
         app(ApiKeyLifetimeService::class)->maximumLifetimeDays();
 
         $this->configureDefaults();
-        $this->configureAuthorization();
         $this->configureTrustedProxies();
         $this->configureTransactionalEmailTemplates();
         $this->configureRateLimiting();
@@ -166,42 +190,6 @@ class AppServiceProvider extends ServiceProvider
         $this->attachPushedAuthorizationRequestMiddleware();
         $this->attachMaximumAuthenticationAgeMiddleware();
         $this->configureAuthorizationEndpointPost();
-    }
-
-    /**
-     * Super-admin bypass for permission-name abilities. Model policies decide for themselves
-     * (they keep invariants that bind super-admins too), matching externa-core.
-     */
-    protected function configureAuthorization(): void
-    {
-        Gate::before(function (?User $user, string $ability, array $arguments): ?bool {
-            if ($user === null) {
-                return null;
-            }
-
-            if ($arguments !== [] && Gate::getPolicyFor($arguments[0]) !== null) {
-                return null;
-            }
-
-            if (app(EffectivePermissionResolverService::class)->isSuperAdmin($user)) {
-                return true;
-            }
-
-            return null;
-        });
-
-        $forgetEffectivePermissions = function (object $event): void {
-            $model = $event->model ?? null;
-
-            if ($model instanceof User) {
-                app(EffectivePermissionResolverService::class)->forget($model);
-            }
-        };
-
-        Event::listen(RoleAttachedEvent::class, $forgetEffectivePermissions);
-        Event::listen(RoleDetachedEvent::class, $forgetEffectivePermissions);
-        Event::listen(PermissionAttachedEvent::class, $forgetEffectivePermissions);
-        Event::listen(PermissionDetachedEvent::class, $forgetEffectivePermissions);
     }
 
     /**

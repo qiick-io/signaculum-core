@@ -9,7 +9,7 @@ use App\Enums\PermissionEnum;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Organisation access: any member may view; owners/admins may manage members and settings.
@@ -17,7 +17,7 @@ use App\Services\Authorization\EffectivePermissionResolverService;
 final class OrganizationPolicy
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
     ) {}
 
     public function viewAny(User $user): bool

@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Enums\WebhookEventEnum;
-use App\Models\ApiKey;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\OrganizationMembership;
@@ -14,9 +12,10 @@ use App\Models\Principal;
 use App\Models\User;
 use App\Services\WebhookDispatcherService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Qiick\Access\Principals\DeactivationReason;
+use Qiick\Access\Principals\PrincipalDirectory;
 
 /**
  * Offboards an organisation: deleting one is a job, never a database CASCADE (laravel-access
@@ -38,9 +37,9 @@ use Illuminate\Support\Facades\Storage;
  * an organisation that is already deleted does nothing.
  *
  * Side effects: the activity entries of the two member actions, `organization_deleted` with
- * `organisation_id`, and `revoked` in the `api-keys` log for each key it revokes; queues one
- * `EndOrganizationMemberOidcSessionsJob` per member; after commit, the webhooks' first-send
- * job, and removes uploaded branding files under `branding/organizations/{id}/`.
+ * `organisation_id`; `PrincipalDeactivated` per principal, whose listener revokes their API keys
+ * after commit; queues one `EndOrganizationMemberOidcSessionsJob` per member; after commit, the
+ * webhooks' first-send job, and removes uploaded branding files under `branding/organizations/{id}/`.
  */
 final class DeleteOrganizationAction
 {
@@ -48,6 +47,7 @@ final class DeleteOrganizationAction
         private readonly RevokeOrganizationMemberTokensAction $revokeOrganizationMemberTokensAction,
         private readonly DispatchOrganizationMfaBackChannelLogoutAction $dispatchOrganizationMemberBackChannelLogoutAction,
         private readonly WebhookDispatcherService $webhookDispatcher,
+        private readonly PrincipalDirectory $principalDirectory,
     ) {}
 
     public function execute(Organization $organization): void
@@ -74,21 +74,13 @@ final class DeleteOrganizationAction
                 ->pluck('subject')
                 ->all();
 
-            /** @var list<string> $principalIds */
-            $principalIds = Principal::query()
-                ->where('organisation_id', $organizationId)
-                ->pluck('id')
-                ->all();
-
+            // Through the directory: principals they own follow, and PrincipalDeactivated revokes
+            // their API keys after commit (RevokeDeactivatedPrincipalApiKeysListener).
             Principal::query()
-                ->whereKey($principalIds)
+                ->where('organisation_id', $organizationId)
                 ->whereNull('deactivated_at')
-                ->update([
-                    'deactivated_at' => Date::now(),
-                    'deactivation_reason' => PrincipalDeactivationReasonEnum::Offboarded->value,
-                ]);
-
-            $this->revokeApiKeysOwnedBy($principalIds, $actor);
+                ->get()
+                ->each(fn (Principal $principal) => $this->principalDirectory->deactivate($principal, DeactivationReason::Offboarded));
 
             OrganizationMembership::query()->where('organization_id', $organizationId)->delete();
             OrganizationInvitation::query()->where('organization_id', $organizationId)->delete();
@@ -137,37 +129,5 @@ final class DeleteOrganizationAction
         }
 
         Storage::disk('local')->deleteDirectory('branding/organizations/'.$organizationId);
-    }
-
-    /**
-     * A key owned by an offboarded principal stops at once, with an audit entry per key.
-     *
-     * @param  list<string>  $principalIds
-     */
-    private function revokeApiKeysOwnedBy(array $principalIds, ?User $actor): void
-    {
-        $apiKeys = ApiKey::query()
-            ->whereIn('owner_principal_id', $principalIds)
-            ->whereNull('revoked_at')
-            ->get();
-
-        foreach ($apiKeys as $apiKey) {
-            $apiKey->forceFill([
-                'revoked_at' => Date::now(),
-                'previous_key_hash' => null,
-                'previous_key_valid_until' => null,
-            ])->save();
-
-            $activity = activity('api-keys')
-                ->performedOn($apiKey)
-                ->event('revoked')
-                ->withProperties(['name' => $apiKey->name, 'scopes' => $apiKey->scopes, 'reason' => 'owner']);
-
-            if ($actor !== null) {
-                $activity->causedBy($actor);
-            }
-
-            $activity->log('API key revoked');
-        }
     }
 }

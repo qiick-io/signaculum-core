@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\WebhookEndpointNoticeRecipientsService;
 use Carbon\CarbonImmutable;
 use Illuminate\Notifications\ChannelManager;
@@ -14,6 +13,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\URL;
+use Qiick\Access\EffectivePermissionResolver;
 use Qiick\Outbound\Enums\WebhookEndpointDisabledReasonEnum;
 use Qiick\Outbound\Events\WebhookEndpointDisabledEvent;
 use Qiick\Outbound\Models\WebhookEndpoint;
@@ -87,7 +87,7 @@ it('mails the active instance admins instead of a creator demoted after the work
     $creator = instanceAdmin();
     $activeAdmin = User::factory()->instanceAdmin()->create();
 
-    expect(app(EffectivePermissionResolverService::class)->hasPermission($creator, 'can-manage-settings'))->toBeTrue();
+    expect(app(EffectivePermissionResolver::class)->hasPermission($creator, 'can-manage-settings'))->toBeTrue();
 
     DB::table('model_has_roles')->where('model_id', $creator->getKey())->delete();
     disableAutomatically(disabledEndpointCreatedBy($creator));

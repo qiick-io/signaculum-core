@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-use App\Services\Authorization\EffectivePermissionResolverService;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Built-in instance roles. Organisation membership roles stay JSON on the pivot (declared
  * divergence: Spatie `teams => false`). Super-admin bypasses every permission check through
- * `Gate::before` via {@see EffectivePermissionResolverService}.
+ * `Gate::before` via {@see EffectivePermissionResolver}.
  */
 enum RoleEnum: string
 {

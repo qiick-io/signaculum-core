@@ -10,9 +10,9 @@ use App\Enums\ApiKeyScopeEnum;
 use App\Models\User;
 use App\Notifications\ApiKeyExpiringNotification;
 use App\Services\ApiKeyRepositoryService;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Notification;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * `api-keys:notify-expiring` (qiick/laravel-api-keys) warns once per key and expiry, as soon as the
@@ -104,7 +104,7 @@ it('warns the other instance admins when the issuer is no longer one', function 
     $regularUser = User::factory()->create();
     keyExpiringAt($issuer, CarbonImmutable::now()->addDays(6));
     $issuer->syncRoles([]);
-    app(EffectivePermissionResolverService::class)->forget();
+    app(EffectivePermissionResolver::class)->forget();
 
     $this->artisan('api-keys:notify-expiring')->assertSuccessful();
 

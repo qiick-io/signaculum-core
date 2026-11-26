@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Traits\LogsApplicationActivityTrait;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -27,6 +26,7 @@ use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
+use Qiick\Access\EffectivePermissionResolver;
 use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -90,7 +90,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     }
 
     /**
-     * Groups the user belongs to; their roles add to the user's own (EffectivePermissionResolverService).
+     * Groups the user belongs to; their roles add to the user's own (EffectivePermissionResolver).
      *
      * @return BelongsToMany<UserGroup, $this>
      */
@@ -104,7 +104,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
      */
     public function isSuperAdmin(): bool
     {
-        return app(EffectivePermissionResolverService::class)->isSuperAdmin($this);
+        return app(EffectivePermissionResolver::class)->isSuperAdmin($this);
     }
 
     /**

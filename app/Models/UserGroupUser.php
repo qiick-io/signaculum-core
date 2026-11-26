@@ -6,18 +6,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Support\Carbon;
 
 /**
  * Pivot between {@see UserGroup} and {@see User}.
  *
- * @property int $id
+ * The table is qiick/laravel-access' (`user_group_user`): no surrogate id, unique on
+ * (group, user), with an optional membership `expires_at`.
+ *
  * @property int $user_group_id
  * @property int $user_id
+ * @property Carbon|null $expires_at
  */
 class UserGroupUser extends Pivot
 {
-    public $incrementing = true;
-
     protected $table = 'user_group_user';
 
     /**

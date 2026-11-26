@@ -8,7 +8,8 @@ use App\Enums\PermissionEnum;
 use App\Enums\PrincipalTypeEnum;
 use App\Models\ApiKey;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
+use Qiick\Access\EffectivePermissionResolver;
+use Qiick\Access\Principals\PrincipalDirectory;
 use Qiick\ApiKeys\AuthorizationDecision;
 use Qiick\ApiKeys\Contracts\ApiKeyRecord;
 use Qiick\ApiKeys\Contracts\KeyAuthorizer;
@@ -32,7 +33,8 @@ final class ApiKeyAuthorizerService implements KeyAuthorizer
 {
     public function __construct(
         private readonly InstanceAdminPresenceService $instanceAdminPresenceService,
-        private readonly EffectivePermissionResolverService $effectivePermissionResolverService,
+        private readonly EffectivePermissionResolver $effectivePermissionResolver,
+        private readonly PrincipalDirectory $principalDirectory,
     ) {}
 
     public function authorizeActor(ApiKeyRecord $record, KeyContext $context): AuthorizationDecision
@@ -45,8 +47,9 @@ final class ApiKeyAuthorizerService implements KeyAuthorizer
 
         if (
             $ownerPrincipal === null
-            || $ownerPrincipal->type !== PrincipalTypeEnum::InstanceService
-            || $ownerPrincipal->deactivated_at !== null
+            || $ownerPrincipal->type !== PrincipalTypeEnum::InstanceService->value
+            // The package's live check: not deactivated, not expired, and its owner chain active.
+            || ! $this->principalDirectory->isActive((string) $ownerPrincipal->getKey())
             || $this->actingAdminFor($record) === null
         ) {
             return AuthorizationDecision::deny(__('API key owner may not use the API.'));
@@ -96,7 +99,7 @@ final class ApiKeyAuthorizerService implements KeyAuthorizer
         if (
             $creator instanceof User
             && $creator->is_active
-            && $this->effectivePermissionResolverService->hasPermission($creator, PermissionEnum::CanManageApiKeys->value)
+            && $this->effectivePermissionResolver->hasPermission($creator, PermissionEnum::CanManageApiKeys->value)
         ) {
             return $creator;
         }

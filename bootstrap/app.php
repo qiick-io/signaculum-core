@@ -5,8 +5,6 @@ use App\Http\Middleware\AcceptFormBodyAccessTokenMiddleware;
 use App\Http\Middleware\BlockAdminWritesWhileImpersonatingMiddleware;
 use App\Http\Middleware\CaptureOrganizationBrandingMiddleware;
 use App\Http\Middleware\EnsureOrganizationMfaIsSatisfiedMiddleware;
-use App\Http\Middleware\EnsureTwoFactorIsEnabledMiddleware;
-use App\Http\Middleware\EnsureUserHasPermissionMiddleware;
 use App\Http\Middleware\EnsureUserIsActiveMiddleware;
 use App\Http\Middleware\ExpireImpersonationMiddleware;
 use App\Http\Middleware\HandleAppearance;
@@ -27,6 +25,8 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
+use Qiick\Access\Http\EnsureTwoFactorIsEnabled;
+use Qiick\Access\Http\EnsureUserHasPermission;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -45,12 +45,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'permission' => EnsureUserHasPermissionMiddleware::class,
+            'permission' => EnsureUserHasPermission::class,
         ]);
 
         // Before route-model binding: a user without the permission learns nothing about which
         // records exist (403 for a missing id as for an existing one).
-        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureUserHasPermissionMiddleware::class);
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureUserHasPermission::class);
 
         // Before route-model binding too: an Admin API lookup of a missing record still counts
         // against the address throttle, so id guessing is throttled before any query.
@@ -80,7 +80,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
-            EnsureTwoFactorIsEnabledMiddleware::class,
+            EnsureTwoFactorIsEnabled::class,
             EnsureOrganizationMfaIsSatisfiedMiddleware::class,
             // Last so defense headers apply to the final HTML (app-ui security-headers.md).
             SetSecurityHeadersMiddleware::class,

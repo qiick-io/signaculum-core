@@ -10,6 +10,9 @@ use App\Services\ApiKeyAuthorizerService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Qiick\Access\Contracts\ActorContext;
+use Qiick\Access\Contracts\ActorKind;
+use Qiick\Access\Laravel\AccessContext;
 use Qiick\ApiKeys\ApiKeyAuthenticator;
 use Qiick\ApiKeys\Exceptions\ApiKeyRejection;
 use Qiick\ApiKeys\Http\BearerTokenExtractor;
@@ -30,7 +33,8 @@ use Symfony\Component\HttpFoundation\Response;
  * Side effects: authenticates the acting admin on the separate `api-key` guard (never the
  * session guard), puts the key on the request as `apiKey`, records `last_used_*` (throttled by
  * the package), counts the key's rate limits and failed guesses per client address, and applies
- * the actor's locale when no supported `Accept-Language` was requested.
+ * the actor's locale when no supported `Accept-Language` was requested, and binds the key as the
+ * qiick/laravel-access API actor (AccessContext).
  */
 final class AuthenticateApiKeyMiddleware
 {
@@ -65,6 +69,9 @@ final class AuthenticateApiKeyMiddleware
         $request->attributes->set('apiKey', $apiKey);
         Auth::guard('api-key')->setUser($actingAdmin);
         Auth::shouldUse('api-key');
+        // The verified actor for qiick/laravel-access: an API actor (no super-admin authority),
+        // carried by the jobs this request queues.
+        AccessContext::enter(new ActorContext(ActorKind::ApiKey, $actingAdmin, $apiKey->uuid));
 
         // The global locale middleware ran before key auth; apply the actor's locale here.
         SetLocaleMiddleware::applyPrincipalLocale($request, is_string($actingAdmin->locale) ? $actingAdmin->locale : null);

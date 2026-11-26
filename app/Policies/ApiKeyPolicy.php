@@ -8,7 +8,7 @@ use App\Enums\PermissionEnum;
 use App\Enums\PrincipalTypeEnum;
 use App\Models\ApiKey;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Admin REST API keys belong to the instance_service principal. Any active admin with
@@ -17,7 +17,7 @@ use App\Services\Authorization\EffectivePermissionResolverService;
 final class ApiKeyPolicy
 {
     public function __construct(
-        private readonly EffectivePermissionResolverService $permissionResolver,
+        private readonly EffectivePermissionResolver $permissionResolver,
     ) {}
 
     public function viewAny(User $actor): bool
@@ -48,7 +48,7 @@ final class ApiKeyPolicy
         $ownerPrincipal = $apiKey->ownerPrincipal;
 
         return $ownerPrincipal !== null
-            && $ownerPrincipal->type === PrincipalTypeEnum::InstanceService;
+            && $ownerPrincipal->type === PrincipalTypeEnum::InstanceService->value;
     }
 
     private function isActiveWithPermission(User $actor, string $permission): bool

@@ -13,12 +13,12 @@ use App\Http\Requests\Organizations\UpdateOrganizationRequest;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Organisations the signed-in user belongs to (or all for instance admins).
@@ -34,7 +34,7 @@ final class OrganizationController extends Controller
 
         $organizations = Organization::query()
             ->when(
-                ! app(EffectivePermissionResolverService::class)->hasPermission(
+                ! app(EffectivePermissionResolver::class)->hasPermission(
                     $user,
                     PermissionEnum::CanManageOrganizations->value,
                 ),

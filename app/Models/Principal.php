@@ -4,64 +4,20 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Enums\PrincipalTypeEnum;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
+use Qiick\Access\Principals\Principal as PackagePrincipal;
 
 /**
- * Actor that can own API keys: a human membership (`user`), an org `service`
- * account, or the singleton `instance_service` Admin API owner (#229).
- *
- * @property string $id
- * @property PrincipalTypeEnum|string $type
- * @property int|null $user_id
- * @property string|null $organisation_id
- * @property string $name
- * @property Carbon|null $deactivated_at
- * @property PrincipalDeactivationReasonEnum|null $deactivation_reason
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * qiick/laravel-access' principal (`access.principals.model`) with Signaculum's relations: a
+ * human membership (`user`), an organisation `service` account, or the singleton
+ * `instance_service` Admin API owner (#229). Rows are written only through
+ * `Qiick\Access\Principals\PrincipalDirectory`; `type` is the plain string the package compares
+ * ({@see PrincipalTypeEnum} holds the values).
  */
-class Principal extends Model
+class Principal extends PackagePrincipal
 {
-    use HasUuids;
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'type',
-        'user_id',
-        'organisation_id',
-        'name',
-        'deactivated_at',
-        'deactivation_reason',
-    ];
-
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'type' => PrincipalTypeEnum::class,
-            'deactivated_at' => 'datetime',
-            'deactivation_reason' => PrincipalDeactivationReasonEnum::class,
-        ];
-    }
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     /**
      * @return BelongsTo<Organization, $this>
      */

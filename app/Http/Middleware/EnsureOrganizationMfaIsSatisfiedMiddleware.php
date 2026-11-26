@@ -52,7 +52,7 @@ use Symfony\Component\HttpFoundation\Response;
  * device flow has no `prompt` parameter: every request here comes from a user typing a
  * code, so there is no silent variant and the enrolment or sign-in page is always shown.
  *
- * Instance-wide 2FA (`EnsureTwoFactorIsEnabledMiddleware`) remains separate.
+ * Instance-wide 2FA (qiick/laravel-access `EnsureTwoFactorIsEnabled`) remains separate.
  */
 final class EnsureOrganizationMfaIsSatisfiedMiddleware
 {

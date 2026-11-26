@@ -8,6 +8,8 @@ use App\Enums\RoleEnum;
 use App\Models\User;
 use App\Models\UserGroup;
 use Illuminate\Database\Eloquent\Builder;
+use Qiick\Access\Contracts\ActorResolver;
+use Qiick\Access\EffectivePermissionResolver;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -23,14 +25,23 @@ use Spatie\Permission\Models\Role;
  */
 class SuperAdminGuardService
 {
-    public function __construct(private EffectivePermissionResolverService $permissionResolver) {}
+    public function __construct(
+        private EffectivePermissionResolver $permissionResolver,
+        private ActorResolver $actorResolver,
+    ) {}
 
     /**
-     * Whether the actor may grant, revoke, or manage super-admin access.
+     * Whether the actor may grant, revoke, or manage super-admin access. Never for an API actor
+     * (an Admin API key, an OAuth grant), whichever admin it acts as: a scoped credential carries
+     * no super-admin authority, as the package's Gate::before already rules for permissions.
      */
     public function canManageSuperAdmins(?User $actor): bool
     {
-        return $actor !== null && $this->permissionResolver->isSuperAdmin($actor);
+        if ($actor === null || $this->actorResolver->current()->isApiActor()) {
+            return false;
+        }
+
+        return $this->permissionResolver->isSuperAdmin($actor);
     }
 
     /**
@@ -55,7 +66,7 @@ class SuperAdminGuardService
             ->when($exceptUserIds !== [], fn (Builder $query) => $query->whereKeyNot($exceptUserIds))
             ->where(fn (Builder $userQuery) => $userQuery
                 ->whereHas('roles', $isSuperAdminRole)
-                ->orWhereHas('groups.roles', $isSuperAdminRole))
+                ->orWhereHas('groups', fn (Builder $groupQuery) => $this->grantingSuperAdmin($groupQuery)))
             ->count();
     }
 
@@ -86,9 +97,21 @@ class SuperAdminGuardService
             return false;
         }
 
-        $resolvedUserIds = $nextUserIds ?? $group->users()->pluck('users.id')->map(fn ($id): int => (int) $id)->all();
+        // sync() keeps a retained member's expires_at and attaches a new one without: after the
+        // edit, the members granting the role are the listed ones minus those already expired.
+        $expiredMemberIds = $group->users()
+            ->whereNotNull('user_group_user.expires_at')
+            ->where('user_group_user.expires_at', '<=', now())
+            ->pluck('users.id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+        $resolvedUserIds = array_values(array_diff(
+            $nextUserIds ?? $group->users()->pluck('users.id')->map(fn ($id): int => (int) $id)->all(),
+            $expiredMemberIds,
+        ));
         $resolvedRoleIds = $nextRoleIds ?? $group->roles()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all();
-        $groupKeepsSuperAdmin = $this->hasSuperAdminRole($resolvedRoleIds);
+        // Only an instance group's super-admin role counts (the package's instanceRoleIdsFor()).
+        $groupKeepsSuperAdmin = $group->is_instance && $this->hasSuperAdminRole($resolvedRoleIds);
         $isSuperAdminRole = fn (Builder $roleQuery) => $roleQuery->where('name', RoleEnum::SuperAdmin->value);
 
         $remaining = User::query()
@@ -98,9 +121,7 @@ class SuperAdminGuardService
                     ->whereHas('roles', $isSuperAdminRole)
                     ->orWhereHas(
                         'groups',
-                        fn (Builder $groupQuery) => $groupQuery
-                            ->whereKeyNot($group->id)
-                            ->whereHas('roles', $isSuperAdminRole),
+                        fn (Builder $groupQuery) => $this->grantingSuperAdmin($groupQuery->whereKeyNot($group->id)),
                     );
 
                 if ($groupKeepsSuperAdmin && $resolvedUserIds !== []) {
@@ -127,7 +148,7 @@ class SuperAdminGuardService
 
         $memberIds = User::query()
             ->where('is_active', true)
-            ->whereHas('groups', fn (Builder $groupQuery) => $groupQuery->whereIn('user_groups.id', $groupIds))
+            ->whereHas('groups', fn (Builder $groupQuery) => $this->grantingSuperAdmin($groupQuery->whereIn('user_groups.id', $groupIds)))
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->all();
@@ -147,10 +168,7 @@ class SuperAdminGuardService
             }
 
             $hasDirect = $member->roles()->where('name', RoleEnum::SuperAdmin->value)->exists();
-            $hasOtherGroup = $member->groups()
-                ->whereNotIn('user_groups.id', $groupIds)
-                ->whereHas('roles', fn (Builder $roleQuery) => $roleQuery->where('name', RoleEnum::SuperAdmin->value))
-                ->exists();
+            $hasOtherGroup = $this->grantingSuperAdmin($member->groups()->whereNotIn('user_groups.id', $groupIds)->getQuery())->exists();
 
             if (! $hasDirect && ! $hasOtherGroup) {
                 $solelyViaTheseGroups++;
@@ -162,6 +180,40 @@ class SuperAdminGuardService
         }
 
         return $this->countActiveSuperAdmins() <= $solelyViaTheseGroups;
+    }
+
+    /**
+     * Groups through which a member is a super-admin, by the same rules as qiick/laravel-access'
+     * resolver (EloquentGroupRoleSource::instanceRoleIdsFor()): a live instance group holding
+     * the role, with a membership that has not expired. Soft-deleted groups are left out by the
+     * model's scope. For a query on the user's `groups` relation (the pivot is joined).
+     *
+     * @template TBuilder of Builder
+     *
+     * @param  TBuilder  $groupQuery
+     * @return TBuilder
+     */
+    private function grantingSuperAdmin(Builder $groupQuery): Builder
+    {
+        return $groupQuery
+            ->where('user_groups.is_instance', true)
+            ->where(fn (Builder $membershipQuery) => $this->unexpiredMembership($membershipQuery))
+            ->whereHas('roles', fn (Builder $roleQuery) => $roleQuery->where('name', RoleEnum::SuperAdmin->value));
+    }
+
+    /**
+     * A membership with no expiry, or one still in the future (the pivot `user_group_user`).
+     *
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $membershipQuery
+     * @return Builder<TModel>
+     */
+    private function unexpiredMembership(Builder $membershipQuery): Builder
+    {
+        return $membershipQuery
+            ->whereNull('user_group_user.expires_at')
+            ->orWhere('user_group_user.expires_at', '>', now());
     }
 
     /**
@@ -207,13 +259,11 @@ class SuperAdminGuardService
      */
     public function hasSuperAdminUser(array $userIds): bool
     {
-        $isSuperAdminRole = fn (Builder $roleQuery) => $roleQuery->where('name', RoleEnum::SuperAdmin->value);
-
         return User::query()
             ->whereIn('id', $this->integerIds($userIds))
             ->where(fn (Builder $userQuery) => $userQuery
-                ->whereHas('roles', $isSuperAdminRole)
-                ->orWhereHas('groups.roles', $isSuperAdminRole))
+                ->whereHas('roles', fn (Builder $roleQuery) => $roleQuery->where('name', RoleEnum::SuperAdmin->value))
+                ->orWhereHas('groups', fn (Builder $groupQuery) => $this->grantingSuperAdmin($groupQuery)))
             ->exists();
     }
 

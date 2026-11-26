@@ -7,12 +7,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkUserGroupActionRequest;
 use App\Models\UserGroup;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use App\Services\Authorization\SuperAdminGuardService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Restore and permanent delete for soft-deleted user groups.
@@ -25,7 +25,7 @@ class UserGroupTrashController extends Controller
         $userGroup = UserGroup::onlyTrashed()->findOrFail($group);
         Gate::authorize('restore', $userGroup);
         $userGroup->restore();
-        app(EffectivePermissionResolverService::class)->forget();
+        app(EffectivePermissionResolver::class)->forget();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group restored.')]);
 
@@ -45,7 +45,7 @@ class UserGroupTrashController extends Controller
         }
 
         $userGroup->forceDelete();
-        app(EffectivePermissionResolverService::class)->forget();
+        app(EffectivePermissionResolver::class)->forget();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Group permanently deleted.')]);
 
@@ -82,7 +82,7 @@ class UserGroupTrashController extends Controller
             }
         });
 
-        app(EffectivePermissionResolverService::class)->forget();
+        app(EffectivePermissionResolver::class)->forget();
 
         Inertia::flash('toast', [
             'type' => 'success',

@@ -7,8 +7,8 @@ use App\Enums\RoleEnum;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserGroup;
-use App\Services\Authorization\EffectivePermissionResolverService;
 use Inertia\Testing\AssertableInertia as Assert;
+use Qiick\Access\EffectivePermissionResolver;
 
 /**
  * Admin → Groups field by field: the list (sort, search, trash, JSON), and what a create, edit
@@ -93,7 +93,7 @@ it('answers JSON with counts and without loading members', function (): void {
 
 it('creates a group with its members and roles, effective at once', function (): void {
     $member = User::factory()->create();
-    $resolver = app(EffectivePermissionResolverService::class);
+    $resolver = app(EffectivePermissionResolver::class);
 
     expect($resolver->hasPermission($member, PermissionEnum::CanManageApiKeys->value))->toBeFalse();
 
@@ -131,7 +131,7 @@ it('edits a group, keeping what the edit leaves out and clearing what it empties
     $group = UserGroup::factory()->create(['name' => 'Operators', 'description' => 'Before']);
     $group->users()->attach($member);
     $group->roles()->attach($this->adminRole);
-    $resolver = app(EffectivePermissionResolverService::class);
+    $resolver = app(EffectivePermissionResolver::class);
 
     expect($resolver->hasPermission($member, PermissionEnum::CanManageApiKeys->value))->toBeTrue();
 
@@ -167,7 +167,7 @@ it('deletes a group, effective at once', function (): void {
     $group = UserGroup::factory()->create();
     $group->users()->attach($member);
     $group->roles()->attach($this->adminRole);
-    $resolver = app(EffectivePermissionResolverService::class);
+    $resolver = app(EffectivePermissionResolver::class);
 
     expect($resolver->hasPermission($member, PermissionEnum::CanManageApiKeys->value))->toBeTrue();
 

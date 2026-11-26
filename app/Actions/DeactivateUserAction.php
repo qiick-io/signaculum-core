@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\InstanceAdminDemotionReasonEnum;
-use App\Enums\PrincipalDeactivationReasonEnum;
 use App\Models\OidcSession;
 use App\Models\Principal;
 use App\Models\User;
@@ -15,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Passport;
+use Qiick\Access\Principals\DeactivationReason;
+use Qiick\Access\Principals\PrincipalDirectory;
 
 /**
  * Deactivate an IdP account: refuse further login, revoke Passport tokens, clear
@@ -29,6 +30,7 @@ final class DeactivateUserAction
         private readonly DispatchBackChannelLogoutAction $dispatchBackChannelLogoutAction,
         private readonly SuperAdminGuardService $superAdminGuard,
         private readonly InstanceAdminDemotionService $instanceAdminDemotionService,
+        private readonly PrincipalDirectory $principalDirectory,
     ) {}
 
     /**
@@ -56,15 +58,16 @@ final class DeactivateUserAction
     private function deactivate(User $user): void
     {
         DB::transaction(function () use ($user): void {
+            // The lock a new membership's principal reads the account state under.
+            User::query()->whereKey($user->getKey())->lockForUpdate()->first();
             $user->forceFill(['is_active' => false])->save();
 
+            // Through the directory, so owned principals follow and PrincipalDeactivated revokes keys.
             Principal::query()
                 ->where('user_id', $user->getKey())
                 ->whereNull('deactivated_at')
-                ->update([
-                    'deactivated_at' => now(),
-                    'deactivation_reason' => PrincipalDeactivationReasonEnum::Admin->value,
-                ]);
+                ->get()
+                ->each(fn (Principal $principal) => $this->principalDirectory->deactivate($principal, DeactivationReason::Admin));
 
             $accessTokenIds = Passport::token()->newQuery()
                 ->where('user_id', $user->getKey())
