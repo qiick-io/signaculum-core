@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Actions\AddOrganizationMemberAction;
+use App\Actions\CreateOrganizationAction;
+use App\Data\OrganizationData;
 use App\Enums\OrganizationRoleEnum;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
@@ -12,7 +14,8 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 
 /**
- * A real two-session race: the same user is added to two organisations at once. Inserting a
+ * A real two-session race: the same user joins two organisations at once, by being added or by
+ * creating them. Inserting a
  * membership takes a key-share lock on the user row (the foreign key), and the principal then
  * locks that row for update; without taking the user lock first, two adds each hold the
  * key-share lock the other's update waits for, and PostgreSQL aborts one as a deadlock.
@@ -88,4 +91,56 @@ test('two organisations adding the same user at once both succeed', function () 
     expect([$parentOutcome, $childOutcome])->toBe(['added', 'added'])
         ->and(OrganizationMembership::query()->where('user_id', $member->getKey())->count())->toBe(2)
         ->and(Principal::query()->where('user_id', $member->getKey())->whereNull('deactivated_at')->count())->toBe(2);
+});
+
+test('one user creating two organisations at once gets both', function () {
+    $creator = User::factory()->create();
+    $outcomeFile = tempnam(sys_get_temp_dir(), 'signaculum-organization-race-');
+
+    $hasForked = false;
+    $forkedProcessId = null;
+
+    // Pause the first creation once its owner membership is inserted, and create a second one.
+    DB::listen(function (QueryExecuted $query) use (&$hasForked, &$forkedProcessId, $creator, $outcomeFile): void {
+        if ($hasForked || ! str_starts_with(strtolower($query->sql), 'insert') || ! str_contains($query->sql, 'organization_user')) {
+            return;
+        }
+
+        $hasForked = true;
+        $forkedProcessId = pcntl_fork();
+
+        if ($forkedProcessId === 0) {
+            $GLOBALS['inheritedDatabaseConnection'] = DB::connection()->getPdo();
+            DB::connection()->setPdo(null)->setReadPdo(null);
+            DB::reconnect();
+
+            try {
+                app(CreateOrganizationAction::class)->execute(new OrganizationData('Second Corp', 'second-corp'), $creator);
+                file_put_contents($outcomeFile, 'created');
+            } catch (Throwable $exception) {
+                file_put_contents($outcomeFile, 'error: '.$exception->getMessage());
+            } finally {
+                posix_kill(posix_getpid(), SIGKILL);
+            }
+        }
+
+        sleep(2);
+    });
+
+    $parentOutcome = 'created';
+
+    try {
+        app(CreateOrganizationAction::class)->execute(new OrganizationData('First Corp', 'first-corp'), $creator);
+    } catch (Throwable $exception) {
+        $parentOutcome = 'error: '.$exception->getMessage();
+    }
+
+    expect($forkedProcessId)->toBeInt()->toBeGreaterThan(0);
+
+    pcntl_waitpid($forkedProcessId, $forkedProcessStatus);
+    $childOutcome = (string) file_get_contents($outcomeFile);
+    unlink($outcomeFile);
+
+    expect([$parentOutcome, $childOutcome])->toBe(['created', 'created'])
+        ->and(OrganizationMembership::query()->where('user_id', $creator->getKey())->count())->toBe(2);
 });
