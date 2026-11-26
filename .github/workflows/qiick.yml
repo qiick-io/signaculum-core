@@ -29,6 +29,9 @@ jobs:
 
   php-quality:
     uses: qiick-io/app-ui/.github/workflows/php-quality.yml@0d97ae1429a856411c76e6de1ec258cae0eabab6
+    with:
+      # Generate one Passport key pair before parallel Pest workers start.
+      build-command: php artisan passport:keys --ansi && npm ci && npm run build
 
   ui-quality:
     uses: qiick-io/app-ui/.github/workflows/ui-quality.yml@0d97ae1429a856411c76e6de1ec258cae0eabab6
