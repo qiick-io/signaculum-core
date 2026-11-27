@@ -8,6 +8,10 @@
 
 # Signaculum
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/qiick-io/signaculum-core/badge)](https://scorecard.dev/viewer/?uri=github.com/qiick-io/signaculum-core)
+
+PHPStan at `max` runs as an advisory check for PHP alongside the existing PHP quality gate. CodeQL covers GitHub Actions and JavaScript/TypeScript.
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-%5E8.4-777BB4?logo=php&logoColor=white)](./composer.json)
 [![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)](./composer.json)
