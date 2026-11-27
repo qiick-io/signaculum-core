@@ -31,7 +31,6 @@ jobs:
     uses: qiick-io/app-ui/.github/workflows/php-quality.yml@e08e28b1f61250335337bf706a676bd7c4ab844a # F31-F33 standards (app-ui #291)
     with:
       phpstan-max-advisory: true
-    with:
       # Generate one Passport key pair before parallel Pest workers start.
       build-command: php artisan passport:keys --ansi && npm ci && npm run build
 
