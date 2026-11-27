@@ -14,9 +14,9 @@ Reusable workflow checks are named `<caller job id> / <job>` (see `.qiick/standa
 
 ### OpenID conformance (`oidc-conformance.yml`)
 
-| Check name         | Source                                                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `oidc-conformance` | `.github/workflows/oidc-conformance.yml` (Basic OP, RP-initiated and back-channel logout; see [docs/oidc-conformance.md](./oidc-conformance.md)) |
+| Check name         | Source                                                                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `oidc-conformance` | `.github/workflows/oidc-conformance.yml` (Basic OP, RP-initiated and back-channel logout; see [docs/conformance/openid.md](./conformance/openid.md)) |
 
 ### Shared (`qiick.yml` → app-ui `@v0.6.1`)
 
