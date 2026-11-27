@@ -38,7 +38,7 @@ Every qiick app keeps working standalone with local login. Signaculum is one sta
 - Admin REST API (`/api/v1`) with scoped Bearer API keys and OpenAPI — [Admin API](./docs/admin-api.md)
 - Outbound signed webhooks for domain events (SSRF-guarded delivery URLs) — [Webhooks](./docs/webhooks.md)
 - Optional read-only LDAP / Active Directory user sync (TLS required by default) — [LDAP](./docs/ldap.md); settings UI is a follow-up
-- Tested against the OpenID Foundation conformance suite (Basic OP, RP-initiated and back-channel logout) — [Conformance](./docs/oidc-conformance.md)
+- Tested against the OpenID Foundation conformance suite (Basic, Config, RP-initiated, back-channel and front-channel logout OP plans) — [Conformance](./docs/conformance/openid.md)
 - Self-registration **off by default** (closed IdP); instance admins enable it under Settings → Authentication & security
 
 Not in v1: SAML, SCIM, IdP-initiated login, dynamic client registration, social logins.
@@ -112,7 +112,7 @@ The list the maintainer sets on `develop` and `main` is in [docs/required-checks
 
 - [Install](docs/install.md) · [Upgrade](docs/upgrade.md)
 - [OIDC profile](docs/oidc-profile.md) — implemented wire contract
-- [OIDC conformance](docs/oidc-conformance.md) — OpenID Foundation suite in CI and locally ([`conformance/`](conformance/README.md))
+- [OIDC conformance](docs/conformance/openid.md) — OpenID Foundation suite in CI and locally ([`conformance/`](conformance/README.md))
 - [OIDC clients](docs/clients.md) · [Organisations](docs/organizations.md) · [Key rotation and backup](docs/key-rotation-and-backup.md)
 - [Admin REST API](docs/admin-api.md) — Bearer API keys, scopes, OpenAPI at `/api/v1/openapi.json`
 - [Outbound webhooks](docs/webhooks.md) — signed domain events with SSRF guard
