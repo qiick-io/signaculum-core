@@ -42,7 +42,7 @@
         "@radix-ui/react-tooltip": "^1.1.8",
         "@tailwindcss/vite": "^4.1.11",
         "@tanstack/react-table": "^8.21.3",
-        "@types/react": "^19.2.0",
+        "@types/react": "^19.3.2",
         "@types/react-dom": "^19.2.0",
         "@vitejs/plugin-react": "^6.1.1",
         "class-variance-authority": "^0.7.1",
@@ -72,12 +72,12 @@
         "babel-plugin-react-compiler": "^1.0.0",
         "eslint-plugin-i18next": "^6.1.5",
         "knip": "^6.46.1",
-        "vite-plus": "1.7.0"
+        "vite-plus": "1.8.0"
     },
     "optionalDependencies": {
         "@laravel/multiplex": "^0.4.1",
-        "@rollup/rollup-linux-x64-gnu": "4.68.7",
-        "@rollup/rollup-win32-x64-msvc": "4.68.7",
+        "@rollup/rollup-linux-x64-gnu": "4.68.8",
+        "@rollup/rollup-win32-x64-msvc": "4.68.8",
         "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
         "@tailwindcss/oxide-win32-x64-msvc": "^4.0.1",
         "lightningcss-linux-x64-gnu": "^1.29.1",
